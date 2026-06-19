@@ -1,0 +1,54 @@
+{
+  "name": "nexoat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @nexoat/frontend dev",
+    "build": "pnpm --filter @nexoat/frontend build",
+    "build:backend": "pnpm --filter @nexoat/backend build",
+    "preview": "pnpm --filter @nexoat/frontend preview",
+    "type-check": "pnpm -r type-check",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "test": "pnpm -r test",
+    "test:cov": "pnpm -r test:cov",
+    "release": "pnpm build && changeset publish"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,cjs,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,html,json,yaml,yml,md}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "prettier": "^3.8.4",
+    "typescript-eslint": "^8.61.1"
+  }
+}

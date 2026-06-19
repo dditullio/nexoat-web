@@ -1,0 +1,26 @@
+{
+  "recommendations": [
+    // Vue
+    "Vue.volar",
+    // Tailwind CSS
+    "bradlc.vscode-tailwindcss",
+    // ESLint
+    "dbaeumer.vscode-eslint",
+    // Prettier
+    "esbenp.prettier-vscode",
+    // EditorConfig
+    "editorconfig.editorconfig",
+    // Prisma
+    "Prisma.prisma",
+    // Docker
+    "ms-azuretools.vscode-docker",
+    // GitLens
+    "eamodio.gitlens",
+    // Conventional Commits
+    "vivaxy.vscode-conventional-commits",
+    // Error Lens
+    "usernamehw.errorlens",
+    // Path IntelliSense
+    "christian-kohler.path-intellisense"
+  ]
+}

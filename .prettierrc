@@ -1,0 +1,23 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "useTabs": false,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "vueIndentScriptAndStyle": false,
+  "htmlWhitespaceSensitivity": "css",
+  "overrides": [
+    {
+      "files": "*.vue",
+      "options": { "parser": "vue" }
+    },
+    {
+      "files": ["*.json", "*.yaml", "*.yml"],
+      "options": { "tabWidth": 2 }
+    }
+  ]
+}

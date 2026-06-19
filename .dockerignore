@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.gitignore
+.env*
+!.env.example
+.changeset
+*.md
+*.log
+.vscode
+.husky
+coverage
+**/coverage

@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enumeraciones ──────────────────────────────────────────────────────────
+
+enum Level {
+  basico
+  intermedio
+  avanzado
+}
+
+enum Audience {
+  cuidadores_familiares
+  profesionales
+  ambos
+}
+
+enum ArticleStatus {
+  borrador
+  publicado
+  archivado
+}
+
+// ─── Modelos ────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  icon        String?
+  articles    Article[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Tag {
+  id       String        @id @default(cuid())
+  slug     String        @unique
+  name     String
+  articles ArticleTag[]
+
+  @@map("tags")
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  excerpt     String?
+  content     String
+  coverImage  String?
+  level       Level         @default(basico)
+  audience    Audience      @default(ambos)
+  status      ArticleStatus @default(borrador)
+  publishedAt DateTime?
+  readingTime Int?          // minutos estimados
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  tags        ArticleTag[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([categoryId])
+  @@index([status, publishedAt])
+  @@map("articles")
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("article_tags")
+}

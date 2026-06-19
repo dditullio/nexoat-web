@@ -1,0 +1,123 @@
+import type { Article } from '@/types'
+
+export const mockArticles: Article[] = [
+  {
+    slug: 'que-es-el-acompanamiento-terapeutico',
+    title: '¿Qué es el Acompañamiento Terapéutico y para quién está indicado?',
+    subtitle: 'Una guía clara para familias que acaban de escuchar el término por primera vez.',
+    date: '2026-06-12',
+    categories: ['acompanamiento-terapeutico'],
+    audience: ['cuidadores-familiares'],
+    level: 'basico',
+    excerpt:
+      'Una guía clara para familias que acaban de escuchar el término por primera vez. Qué hace un AT, cómo trabaja en equipo interdisciplinario y cuándo es la indicación adecuada.',
+    keywords: ['acompañamiento terapéutico', 'rol del AT', 'salud mental', 'adulto mayor'],
+    readingTimeMinutes: 7,
+  },
+  {
+    slug: 'sindrome-cuidador-quemado',
+    title: 'Burnout del cuidador familiar: señales de alerta y cómo pedir ayuda',
+    subtitle: 'El agotamiento no es un fallo personal, es una señal de alerta.',
+    date: '2026-06-08',
+    categories: ['cuidar-al-cuidador'],
+    audience: ['cuidadores-familiares'],
+    level: 'intermedio',
+    excerpt:
+      'El agotamiento del cuidador es real y tiene nombre. Cómo reconocerlo a tiempo y dónde encontrar apoyo antes de llegar al límite.',
+    keywords: ['burnout', 'síndrome del cuidador', 'agotamiento', 'autocuidado'],
+    readingTimeMinutes: 8,
+  },
+  {
+    slug: 'tdah-severo-rutinas-regulacion-emocional',
+    title: 'TDAH en la adolescencia: una guía práctica para familias',
+    subtitle: 'Entender el TDAH requiere mirar más allá de los síntomas.',
+    date: '2026-06-03',
+    categories: ['neurodiversidad-y-discapacidad'],
+    audience: ['cuidadores-familiares'],
+    level: 'basico',
+    excerpt:
+      'Entender el TDAH en la adolescencia requiere mirar más allá de los síntomas. Esta guía te ayuda a acompañar desde la comprensión, no desde el control.',
+    keywords: ['TDAH', 'adolescencia', 'familia', 'regulación emocional'],
+    readingTimeMinutes: 9,
+  },
+  {
+    slug: 'parkinson-mas-alla-temblor',
+    title: 'Parkinson y vida cotidiana: adaptaciones del hogar para mayor autonomía',
+    subtitle: 'Pequeñas modificaciones que marcan una gran diferencia.',
+    date: '2026-05-28',
+    categories: ['patologias-en-la-vejez'],
+    audience: ['cuidadores-familiares'],
+    level: 'intermedio',
+    excerpt:
+      'Pequeñas modificaciones en el espacio físico pueden marcar una gran diferencia en la calidad de vida de una persona con Parkinson.',
+    keywords: ['Parkinson', 'adaptaciones hogar', 'autonomía', 'adulto mayor'],
+    readingTimeMinutes: 6,
+  },
+  {
+    slug: 'familia-y-at-duelo-diagnostico',
+    title: 'El duelo diagnóstico: qué siente la familia cuando llega el diagnóstico',
+    subtitle: 'Explorar esas emociones complejas es el primer paso hacia el acompañamiento real.',
+    date: '2026-05-21',
+    categories: ['familia-y-vinculos'],
+    audience: ['cuidadores-familiares', 'profesionales'],
+    level: 'intermedio',
+    excerpt:
+      'Recibir un diagnóstico cambia la vida de toda la familia. Explorar esas emociones complejas es el primer paso hacia el acompañamiento real.',
+    keywords: ['duelo diagnóstico', 'familia', 'diagnóstico', 'emociones'],
+    readingTimeMinutes: 7,
+  },
+  {
+    slug: 'el-lugar-del-at-en-los-equipos-interdisciplinarios',
+    title: 'Encuadre terapéutico en el AT: fundamentos para la práctica clínica',
+    subtitle: 'Análisis de los marcos conceptuales que sostienen la práctica del AT.',
+    date: '2026-05-15',
+    categories: ['acompanamiento-terapeutico'],
+    audience: ['profesionales'],
+    level: 'avanzado',
+    excerpt:
+      'Análisis de los marcos conceptuales que sostienen la práctica del AT desde una perspectiva clínica e institucional con profundidad teórica.',
+    keywords: ['encuadre terapéutico', 'AT', 'práctica clínica', 'interdisciplinario'],
+    readingTimeMinutes: 11,
+  },
+  {
+    slug: 'abordaje-trastornos-conducta-escuela-at',
+    title: 'Trastornos de conducta en la escuela: el rol del AT como puente',
+    subtitle: 'Cuando la conducta habla más que las palabras.',
+    date: '2026-05-10',
+    categories: ['acompanamiento-terapeutico', 'neurodiversidad-y-discapacidad'],
+    audience: ['profesionales', 'cuidadores-familiares'],
+    level: 'intermedio',
+    excerpt:
+      'El AT puede ser el enlace entre la institución escolar y la familia cuando los trastornos de conducta generan conflicto en el aula.',
+    keywords: ['conducta escolar', 'AT', 'integración', 'niños'],
+    readingTimeMinutes: 8,
+  },
+  {
+    slug: 'movilizacion-segura-cama-silla',
+    title: 'Cómo movilizar de forma segura a un adulto mayor: de la cama a la silla',
+    subtitle: 'Técnica correcta para proteger tanto al cuidador como al paciente.',
+    date: '2026-05-05',
+    categories: ['guia-cuidador'],
+    audience: ['cuidadores-familiares'],
+    level: 'basico',
+    excerpt:
+      'La movilización incorrecta es una de las principales causas de caídas y lesiones. Esta guía paso a paso protege a ambas partes.',
+    keywords: ['movilización', 'adulto mayor', 'cuidador', 'técnica segura'],
+    readingTimeMinutes: 5,
+  },
+  {
+    slug: 'discapacidad-intelectual-autonomia',
+    title: 'Discapacidad intelectual y autonomía: dejar hacer para que puedan crecer',
+    subtitle: 'La sobreprotección también limita.',
+    date: '2026-04-28',
+    categories: ['neurodiversidad-y-discapacidad', 'acompanamiento-terapeutico'],
+    audience: ['cuidadores-familiares', 'profesionales'],
+    level: 'intermedio',
+    excerpt:
+      'La sobreprotección es una forma de no confiar. Aprender a dejar espacio para que la persona con discapacidad intelectual desarrolle su autonomía real.',
+    keywords: ['discapacidad intelectual', 'autonomía', 'sobreprotección', 'AT'],
+    readingTimeMinutes: 8,
+  },
+]
+
+export const featuredArticle = mockArticles[0]

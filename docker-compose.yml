@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexoat-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexoat}
+      POSTGRES_USER: ${POSTGRES_USER:-nexoat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexoat_dev}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nexoat}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nexoat-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexoat}:${POSTGRES_PASSWORD:-nexoat_dev}@postgres:5432/${POSTGRES_DB:-nexoat}
+    ports:
+      - '${BACKEND_PORT:-3001}:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nexoat-frontend
+    restart: unless-stopped
+    ports:
+      - '${FRONTEND_PORT:-80}:80'
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
