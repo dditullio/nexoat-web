@@ -60,6 +60,7 @@
 
       <!-- Right actions -->
       <div class="header__actions">
+        <ThemeToggle />
         <RouterLink to="/buscar" class="header__icon-btn" aria-label="Buscar">
           <svg
             width="17"
@@ -157,6 +158,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useBlogStore } from '@/stores/blog'
+import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 
 const store = useBlogStore()
 const showCats = ref(false)
@@ -168,8 +170,8 @@ const menuOpen = ref(false)
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(247, 245, 242, 0.96);
-  border-bottom: 1px solid rgba(224, 220, 214, 0.9);
+  background: var(--nx-header-bg);
+  border-bottom: 1px solid var(--nx-header-border);
   backdrop-filter: blur(8px);
 }
 
@@ -206,7 +208,7 @@ const menuOpen = ref(false)
 .header__nav-link {
   font-size: 14px;
   font-weight: 600;
-  color: #5a6178;
+  color: var(--color-ink-secondary);
   padding: 7px 12px;
   border-radius: 8px;
   display: inline-flex;
@@ -219,13 +221,13 @@ const menuOpen = ref(false)
   white-space: nowrap;
 }
 .header__nav-link:hover {
-  background: rgba(42, 46, 61, 0.05);
+  background: var(--color-hover-bg);
   color: var(--color-text);
 }
 .header__nav-link--active {
   font-weight: 700;
   color: var(--color-primary);
-  background: rgba(69, 104, 160, 0.07);
+  background: var(--color-primary-tint);
 }
 .header__nav-link--btn {
   background: none;
@@ -233,7 +235,7 @@ const menuOpen = ref(false)
   cursor: pointer;
 }
 .header__nav-link--disabled {
-  color: #c0bab2;
+  color: var(--color-ink-faint);
   pointer-events: none;
 }
 
@@ -311,7 +313,7 @@ const menuOpen = ref(false)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6a7390;
+  color: var(--color-ink-muted);
   background: none;
   text-decoration: none;
   transition:
@@ -319,7 +321,7 @@ const menuOpen = ref(false)
     color 0.15s;
 }
 .header__icon-btn:hover {
-  background: rgba(42, 46, 61, 0.06);
+  background: var(--color-hover-bg);
   color: var(--color-text);
 }
 
@@ -357,7 +359,7 @@ const menuOpen = ref(false)
   transition: background 0.15s;
 }
 .header__burger:hover {
-  background: rgba(42, 46, 61, 0.06);
+  background: var(--color-hover-bg);
 }
 
 /* Mobile drawer */
@@ -404,7 +406,7 @@ const menuOpen = ref(false)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6a7390;
+  color: var(--color-ink-muted);
   background: none;
   transition: background 0.15s;
 }
@@ -434,7 +436,7 @@ const menuOpen = ref(false)
   align-items: center;
   font-size: 16px;
   font-weight: 600;
-  color: #5a6178;
+  color: var(--color-ink-secondary);
   padding: 13px 14px;
   border-radius: 10px;
   text-decoration: none;
@@ -446,14 +448,14 @@ const menuOpen = ref(false)
 .drawer__link--primary {
   font-weight: 700;
   color: var(--color-text);
-  background: rgba(69, 104, 160, 0.06);
+  background: var(--color-primary-tint);
 }
 .drawer__link--sub {
   font-size: 14px;
   padding: 10px 14px 10px 20px;
 }
 .drawer__link--disabled {
-  color: #c0bab2;
+  color: var(--color-ink-faint);
   pointer-events: none;
   font-style: italic;
   font-size: 14px;

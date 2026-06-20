@@ -619,7 +619,7 @@ function subscribe() {
   background: var(--color-white);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(42, 46, 61, 0.07);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--color-border);
   display: flex;
 }
@@ -672,7 +672,7 @@ function subscribe() {
 
 .featured-card__chip {
   display: inline-block;
-  background: #eef2fa;
+  background: var(--color-primary-soft);
   color: var(--color-primary);
   font-size: 12px;
   font-weight: 700;
@@ -718,7 +718,7 @@ function subscribe() {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: #c8c4bc;
+  background: var(--color-line);
   flex-shrink: 0;
 }
 
@@ -727,16 +727,16 @@ function subscribe() {
   font-weight: 700;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: #edf7ed;
-  color: #2e7a2e;
+  background: var(--color-level-basico-bg);
+  color: var(--color-level-basico-text);
 }
 .chip-cuidadores {
   font-size: 11px;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: #fef5e6;
-  color: #9a6a22;
+  background: var(--color-aud-cuidadores-bg);
+  color: var(--color-aud-cuidadores-text);
 }
 
 .featured-card__cta {
@@ -796,7 +796,7 @@ function subscribe() {
   font-family: var(--font-sans);
 }
 .btn-outline:hover {
-  background: #eef2fa;
+  background: var(--color-primary-soft);
 }
 
 /* ── Categorías ── */
@@ -1013,7 +1013,7 @@ function subscribe() {
 }
 
 .newsletter-sec__btn {
-  background: #1c2238;
+  background: var(--color-audience-bg);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -1025,7 +1025,7 @@ function subscribe() {
   font-family: var(--font-sans);
 }
 .newsletter-sec__btn:hover {
-  background: #0e1428;
+  background: var(--color-footer-bg);
 }
 
 .newsletter-sec__disclaimer {

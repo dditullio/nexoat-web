@@ -43,7 +43,7 @@ defineProps<{
 }
 
 .chip--category {
-  background: #e8f0e0;
+  background: var(--color-primary-soft);
   color: var(--color-primary);
 }
 

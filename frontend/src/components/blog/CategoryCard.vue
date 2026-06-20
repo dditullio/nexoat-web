@@ -30,7 +30,7 @@ defineProps<{ category: Category }>()
     transform 0.22s;
 }
 .cat-card:hover {
-  box-shadow: 0 8px 32px rgba(42, 46, 61, 0.1);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-3px);
 }
 

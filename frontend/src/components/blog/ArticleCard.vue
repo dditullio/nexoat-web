@@ -79,7 +79,7 @@ function audienceChip(aud: Audience) {
 .card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-3px);
-  border-color: #ccc8c0;
+  border-color: var(--color-line);
 }
 
 .card__img {

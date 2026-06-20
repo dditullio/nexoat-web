@@ -1,56 +1,50 @@
 @import 'tailwindcss';
 
+/*
+ * ══════════════════════════════════════════════════════════════════
+ *  NexoAT — Sistema de diseño visual
+ * ══════════════════════════════════════════════════════════════════
+ *
+ *  Arquitectura de tokens:
+ *
+ *  1. @theme  →  registra tokens ESTÁTICOS (tipografía, espaciado,
+ *               radios, secciones fijas) como utilidades Tailwind.
+ *
+ *  2. :root   →  define los tokens DINÁMICOS de color como custom
+ *               properties CSS normales (no @property), apuntando
+ *               a primitivas `--nx-*` del tema claro.
+ *
+ *  3. .dark   →  sobreescribe las primitivas `--nx-*` con valores
+ *               del tema oscuro. Los tokens `--color-*` se
+ *               actualizan automáticamente por cascada CSS.
+ *
+ *  ¿Por qué los colores están fuera de @theme?
+ *  Tailwind v4 registra tokens de @theme con @property, que exige
+ *  un initial-value concreto — no acepta var(). Al definirlos como
+ *  custom properties normales en :root, conservan la reactividad.
+ *
+ *  Regla de uso en componentes:
+ *  - Nuevos: usar var(--color-ink), var(--color-canvas), etc.
+ *  - Existentes: var(--color-text), var(--color-bg) siguen como aliases.
+ * ══════════════════════════════════════════════════════════════════
+ */
+
+/* ── Modo oscuro basado en clase `.dark` en <html> (Tailwind v4) ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Tokens estáticos para Tailwind (no cambian con el tema) ── */
 @theme {
-  /* ── Tipografía ── */
+  /* Tipografía */
   --font-sans: 'Nunito Sans', sans-serif;
   --font-serif: 'Libre Baskerville', serif;
 
-  /* ── Paleta principal ── */
-  --color-primary: #4568a0;
-  --color-primary-dark: #2e4a80;
-  --color-primary-light: #7fa3d1;
-  --color-coral: #e07b68;
-  --color-coral-dark: #c86050;
-
-  /* ── Texto ── */
-  --color-text: #2a2e3d;
-  --color-text-secondary: #5a6178;
-  --color-text-muted: #6a7390;
-  --color-text-faint: #8a93a8;
-
-  /* ── Fondos ── */
-  --color-bg: #f7f5f2;
-  --color-bg-alt: #f2f0ec;
-  --color-white: #ffffff;
-
-  /* ── Bordes ── */
-  --color-border: #e4e0d8;
-  --color-border-light: #e8e4dd;
-  --color-border-faint: #f0ede8;
-
-  /* ── Secciones oscuras ── */
+  /* Secciones fijas oscuras */
   --color-hero-from: #192e58;
   --color-hero-to: #4e6eb8;
   --color-audience-bg: #1c2238;
   --color-footer-bg: #111728;
 
-  /* ── Chips nivel ── */
-  --color-level-basico-bg: #edf7ed;
-  --color-level-basico-text: #2e7a2e;
-  --color-level-intermedio-bg: #eef2fa;
-  --color-level-intermedio-text: #4568a0;
-  --color-level-avanzado-bg: #f2eefa;
-  --color-level-avanzado-text: #6b4fa5;
-
-  /* ── Chips audiencia ── */
-  --color-aud-cuidadores-bg: #fef5e6;
-  --color-aud-cuidadores-text: #9a6a22;
-  --color-aud-profesionales-bg: #eeeafa;
-  --color-aud-profesionales-text: #5548a0;
-  --color-aud-mixto-bg: #f0eee8;
-  --color-aud-mixto-text: #5a6178;
-
-  /* ── Espaciado ── */
+  /* Espaciado */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
@@ -59,25 +53,219 @@
   --spacing-2xl: 3rem;
   --spacing-3xl: 5rem;
 
-  /* ── Radios ── */
+  /* Radios */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* ── Sombras ── */
-  --shadow-sm: 0 2px 8px rgba(42, 46, 61, 0.06);
-  --shadow-md: 0 4px 24px rgba(42, 46, 61, 0.08);
-  --shadow-lg: 0 10px 40px rgba(42, 46, 61, 0.1);
+  /* Sombra estática */
   --shadow-hero: 0 12px 48px rgba(0, 0, 0, 0.22);
 
-  /* ── Contenedores ── */
+  /* Contenedores */
   --container-max: 1280px;
   --container-article: 720px;
 }
 
-/* ── Reset ── */
+/* ══════════════════════════════════════════════════════════════════
+   TEMA CLARO (por defecto)
+   Tokens dinámicos como custom properties normales (no @property).
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+
+  /* ── Primitivas ── */
+
+  /* Brand */
+  --nx-primary: #4568a0;
+  --nx-primary-dark: #2e4a80;
+  --nx-primary-light: #7fa3d1;
+  --nx-primary-soft: #eef2fa;
+  --nx-primary-tint: rgba(69, 104, 160, 0.07);
+  --nx-coral: #e07b68;
+  --nx-coral-dark: #c86050;
+
+  /* Superficies */
+  --nx-canvas: #f7f5f2;
+  --nx-canvas-alt: #f2f0ec;
+  --nx-surface: #ffffff;
+  --nx-surface-raised: #faf9f7;
+
+  /* Texto */
+  --nx-ink: #2a2e3d;
+  --nx-ink-secondary: #5a6178;
+  --nx-ink-muted: #6a7390;
+  --nx-ink-faint: #8a93a8;
+
+  /* Bordes */
+  --nx-line: #e4e0d8;
+  --nx-line-light: #e8e4dd;
+  --nx-line-faint: #f0ede8;
+
+  /* Interacción */
+  --nx-hover-bg: rgba(42, 46, 61, 0.05);
+
+  /* Header glassmorphism */
+  --nx-header-bg: rgba(247, 245, 242, 0.95);
+  --nx-header-border: rgba(228, 224, 216, 0.9);
+
+  /* Sombras */
+  --nx-shadow-sm: 0 2px 8px rgba(42, 46, 61, 0.06);
+  --nx-shadow-md: 0 4px 24px rgba(42, 46, 61, 0.08);
+  --nx-shadow-lg: 0 10px 40px rgba(42, 46, 61, 0.1);
+
+  /* Chips: nivel */
+  --nx-level-basico-bg: #edf7ed;
+  --nx-level-basico-text: #2e7a2e;
+  --nx-level-intermedio-bg: #eef2fa;
+  --nx-level-intermedio-text: #4568a0;
+  --nx-level-avanzado-bg: #f2eefa;
+  --nx-level-avanzado-text: #6b4fa5;
+
+  /* Chips: audiencia */
+  --nx-aud-cuidadores-bg: #fef5e6;
+  --nx-aud-cuidadores-text: #9a6a22;
+  --nx-aud-profesionales-bg: #eeeafa;
+  --nx-aud-profesionales-text: #5548a0;
+  --nx-aud-mixto-bg: #f0eee8;
+  --nx-aud-mixto-text: #5a6178;
+
+  /* ── Tokens semánticos (apuntan a primitivas) ── */
+
+  /* Brand */
+  --color-primary: var(--nx-primary);
+  --color-primary-dark: var(--nx-primary-dark);
+  --color-primary-light: var(--nx-primary-light);
+  --color-primary-soft: var(--nx-primary-soft);
+  --color-primary-tint: var(--nx-primary-tint);
+  --color-coral: var(--nx-coral);
+  --color-coral-dark: var(--nx-coral-dark);
+
+  /* Superficies */
+  --color-canvas: var(--nx-canvas);
+  --color-canvas-alt: var(--nx-canvas-alt);
+  --color-surface: var(--nx-surface);
+  --color-surface-raised: var(--nx-surface-raised);
+
+  /* Aliases de compatibilidad */
+  --color-bg: var(--nx-canvas);
+  --color-bg-alt: var(--nx-canvas-alt);
+  --color-white: var(--nx-surface);
+
+  /* Texto */
+  --color-ink: var(--nx-ink);
+  --color-ink-secondary: var(--nx-ink-secondary);
+  --color-ink-muted: var(--nx-ink-muted);
+  --color-ink-faint: var(--nx-ink-faint);
+
+  /* Aliases de compatibilidad */
+  --color-text: var(--nx-ink);
+  --color-text-secondary: var(--nx-ink-secondary);
+  --color-text-muted: var(--nx-ink-muted);
+  --color-text-faint: var(--nx-ink-faint);
+
+  /* Bordes */
+  --color-line: var(--nx-line);
+  --color-line-light: var(--nx-line-light);
+  --color-line-faint: var(--nx-line-faint);
+
+  /* Aliases de compatibilidad */
+  --color-border: var(--nx-line);
+  --color-border-light: var(--nx-line-light);
+  --color-border-faint: var(--nx-line-faint);
+
+  /* Interacción */
+  --color-hover-bg: var(--nx-hover-bg);
+
+  /* Sombras */
+  --shadow-sm: var(--nx-shadow-sm);
+  --shadow-md: var(--nx-shadow-md);
+  --shadow-lg: var(--nx-shadow-lg);
+
+  /* Chips: nivel */
+  --color-level-basico-bg: var(--nx-level-basico-bg);
+  --color-level-basico-text: var(--nx-level-basico-text);
+  --color-level-intermedio-bg: var(--nx-level-intermedio-bg);
+  --color-level-intermedio-text: var(--nx-level-intermedio-text);
+  --color-level-avanzado-bg: var(--nx-level-avanzado-bg);
+  --color-level-avanzado-text: var(--nx-level-avanzado-text);
+
+  /* Chips: audiencia */
+  --color-aud-cuidadores-bg: var(--nx-aud-cuidadores-bg);
+  --color-aud-cuidadores-text: var(--nx-aud-cuidadores-text);
+  --color-aud-profesionales-bg: var(--nx-aud-profesionales-bg);
+  --color-aud-profesionales-text: var(--nx-aud-profesionales-text);
+  --color-aud-mixto-bg: var(--nx-aud-mixto-bg);
+  --color-aud-mixto-text: var(--nx-aud-mixto-text);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TEMA OSCURO
+   Solo sobreescribe las primitivas --nx-*; los tokens --color-*
+   se actualizan automáticamente por cascada.
+   ══════════════════════════════════════════════════════════════════ */
+.dark {
+  color-scheme: dark;
+
+  /* Brand */
+  --nx-primary: #7fa3d1;
+  --nx-primary-dark: #9bb8e0;
+  --nx-primary-light: #9bb8e0;
+  --nx-primary-soft: #1a2540;
+  --nx-primary-tint: rgba(127, 163, 209, 0.1);
+  --nx-coral: #e8907f;
+  --nx-coral-dark: #e07b68;
+
+  /* Superficies */
+  --nx-canvas: #111520;
+  --nx-canvas-alt: #181c2e;
+  --nx-surface: #1e2235;
+  --nx-surface-raised: #252b3d;
+
+  /* Texto */
+  --nx-ink: #e2e8f0;
+  --nx-ink-secondary: #a0aec0;
+  --nx-ink-muted: #7a8ca0;
+  --nx-ink-faint: #526070;
+
+  /* Bordes */
+  --nx-line: #2a3148;
+  --nx-line-light: #232a3e;
+  --nx-line-faint: #1e2438;
+
+  /* Interacción */
+  --nx-hover-bg: rgba(255, 255, 255, 0.06);
+
+  /* Header glassmorphism */
+  --nx-header-bg: rgba(17, 21, 32, 0.94);
+  --nx-header-border: rgba(42, 49, 72, 0.9);
+
+  /* Sombras */
+  --nx-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --nx-shadow-md: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --nx-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.5);
+
+  /* Chips: nivel */
+  --nx-level-basico-bg: #1a3520;
+  --nx-level-basico-text: #6dbf6d;
+  --nx-level-intermedio-bg: #1a2540;
+  --nx-level-intermedio-text: #7fa3d1;
+  --nx-level-avanzado-bg: #281a40;
+  --nx-level-avanzado-text: #a882e0;
+
+  /* Chips: audiencia */
+  --nx-aud-cuidadores-bg: #3d2a10;
+  --nx-aud-cuidadores-text: #e0a850;
+  --nx-aud-profesionales-bg: #1e1a40;
+  --nx-aud-profesionales-text: #9b90e0;
+  --nx-aud-mixto-bg: #252030;
+  --nx-aud-mixto-text: #a0aec0;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESET Y BASE
+   ══════════════════════════════════════════════════════════════════ */
 *,
 *::before,
 *::after {
@@ -85,17 +273,20 @@
   margin: 0;
   padding: 0;
 }
+
 html {
   scroll-behavior: smooth;
-  color-scheme: light;
 }
 
 body {
   font-family: var(--font-sans);
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-canvas);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 img,
@@ -104,23 +295,28 @@ video {
   height: auto;
   display: block;
 }
+
 a {
   text-decoration: none;
   color: inherit;
 }
+
 button {
   cursor: pointer;
   border: none;
   font-family: inherit;
 }
+
 input,
 select {
   font-family: inherit;
 }
+
 input:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
 button:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -133,6 +329,7 @@ button:focus-visible {
   margin-inline: auto;
   padding-inline: 28px;
 }
+
 @media (max-width: 640px) {
   .container {
     padding-inline: 20px;
@@ -144,6 +341,7 @@ button:focus-visible {
   flex-direction: column;
   min-height: 100vh;
 }
+
 .app__main {
   flex: 1;
 }
