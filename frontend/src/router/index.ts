@@ -1,5 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
+import { useAuthStore } from '@/stores/auth'
+import type { Role } from '@/types/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    title?: string
+    /** 'admin' = sin AppHeader/AppFooter público (ver App.vue). */
+    layout?: 'admin'
+    /** Rutas admin sin sesión, ej. login. */
+    public?: boolean
+    /** Si falta, cualquier rol autenticado entra — solo el guard de admin lo mira. */
+    minRole?: Role[]
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,12 +54,95 @@ const router = createRouter({
       meta: { title: 'Acerca de' },
     },
     {
+      path: '/nexoat-admin',
+      meta: { layout: 'admin' },
+      children: [
+        {
+          path: 'login',
+          name: 'admin-login',
+          component: () => import('@/views/admin/AdminLoginView.vue'),
+          meta: { title: 'Ingresar', public: true },
+        },
+        {
+          path: 'oauth-callback',
+          name: 'admin-oauth-callback',
+          component: () => import('@/views/admin/AdminOAuthCallbackView.vue'),
+          meta: { title: 'Ingresando…', public: true },
+        },
+        {
+          path: '',
+          component: () => import('@/layouts/AdminLayout.vue'),
+          children: [
+            {
+              path: '',
+              name: 'admin-dashboard',
+              component: () => import('@/views/admin/AdminDashboardView.vue'),
+              meta: { title: 'Panel' },
+            },
+            {
+              path: 'articulos',
+              name: 'admin-articles',
+              component: () => import('@/views/admin/AdminArticlesView.vue'),
+              meta: { title: 'Artículos', minRole: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
+              path: 'articulos/nuevo',
+              name: 'admin-article-new',
+              component: () => import('@/views/admin/AdminArticleFormView.vue'),
+              meta: { title: 'Nuevo artículo', minRole: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
+              path: 'articulos/:id',
+              name: 'admin-article-edit',
+              component: () => import('@/views/admin/AdminArticleFormView.vue'),
+              meta: { title: 'Editar artículo', minRole: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
+              path: 'usuarios',
+              name: 'admin-users',
+              component: () => import('@/views/admin/AdminUsersView.vue'),
+              meta: { title: 'Usuarios', minRole: ['ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
+              path: 'auditoria',
+              name: 'admin-audit',
+              component: () => import('@/views/admin/AdminAuditView.vue'),
+              meta: { title: 'Auditoría', minRole: ['ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
+              path: 'suscripciones',
+              name: 'admin-subscribers',
+              component: () => import('@/views/admin/AdminSubscribersView.vue'),
+              meta: { title: 'Suscripciones', minRole: ['ADMIN', 'SUPER_ADMIN'] },
+            },
+          ],
+        },
+      ],
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFoundView.vue'),
       meta: { title: 'Página no encontrada' },
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  if (to.meta.layout !== 'admin' || to.meta.public) return true
+
+  const authStore = useAuthStore()
+  await authStore.bootstrap()
+
+  if (!authStore.isAuthenticated) {
+    return { name: 'admin-login', query: { redirect: to.fullPath } }
+  }
+
+  if (to.meta.minRole && !authStore.hasRole(...to.meta.minRole)) {
+    return { name: 'admin-dashboard' }
+  }
+
+  return true
 })
 
 router.afterEach((to) => {

@@ -10,6 +10,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // El .env vive en la raíz del monorepo (junto a .env.example), no acá —
+  // sin esto Vite busca frontend/.env y VITE_API_URL queda undefined.
+  envDir: fileURLToPath(new URL('..', import.meta.url)),
   server: {
     port: 3000,
   },

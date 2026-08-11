@@ -38,17 +38,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { getCategoryTheme, LEVEL_CHIPS, AUDIENCE_CHIPS } from '@/utils/theme'
-import { CATEGORIES } from '@/stores/blog'
+import { useBlogStore } from '@/stores/blog'
 import type { Article, Audience } from '@/types'
 
 const props = defineProps<{ article: Article }>()
+const store = useBlogStore()
 
 const theme = computed(() => getCategoryTheme(props.article.categories[0]))
 
 const primaryCategoryName = computed(
-  () =>
-    CATEGORIES.find((c) => c.slug === props.article.categories[0])?.name ??
-    props.article.categories[0]
+  () => store.getCategoryBySlug(props.article.categories[0])?.name ?? props.article.categories[0]
 )
 
 const formattedDate = computed(() =>

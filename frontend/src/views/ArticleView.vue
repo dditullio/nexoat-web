@@ -1,5 +1,9 @@
 <template>
-  <div v-if="article" class="art-page">
+  <div v-if="isLoading" class="container art-loading">
+    <p class="section-lead">Cargando artículo…</p>
+  </div>
+
+  <div v-else-if="article" class="art-page">
     <!-- Cabecera a ancho completo -->
     <header class="art-head">
       <div class="art-head__wash" :style="{ background: theme.gradient }" aria-hidden="true"></div>
@@ -44,11 +48,9 @@
           <img :src="article.coverImage" :alt="article.title" />
         </figure>
 
-        <div class="prose art__body">
-          <p class="art__note">
-            El contenido del artículo se cargará acá una vez integrado el backend o el parser de
-            Markdown.
-          </p>
+        <div v-if="contentHtml" class="prose art__body" v-html="contentHtml"></div>
+        <div v-else class="prose art__body">
+          <p class="art__note">No se pudo cargar el contenido de este artículo.</p>
         </div>
 
         <footer class="art__foot">
@@ -129,20 +131,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
-import { useBlogStore, CATEGORIES } from '@/stores/blog'
+import { useBlogStore } from '@/stores/blog'
 import { getCategoryTheme } from '@/utils/theme'
+import { http } from '@/services/http'
+import { renderMarkdown } from '@/utils/markdown'
 import AppChip from '@/components/ui/AppChip.vue'
+import type { ArticleFull } from '@/types'
 
 const route = useRoute()
 const store = useBlogStore()
 const copied = ref(false)
 
-const article = computed(() => store.articles.find((a) => a.slug === route.params.slug))
+// Se pide directo por slug (no se deriva de store.articles): trae el
+// contenido completo, que la lista pública no incluye, y no depende de que
+// fetchArticles() ya haya resuelto al entrar directo a esta URL.
+const article = ref<ArticleFull | null>(null)
+const isLoading = ref(true)
+
+const contentHtml = computed(() => (article.value ? renderMarkdown(article.value.content) : ''))
+
+watchEffect(async () => {
+  const slug = route.params.slug
+  if (typeof slug !== 'string') return
+  isLoading.value = true
+  try {
+    article.value = await http<ArticleFull>(`/articles/${slug}`, { skipAuthRetry: true })
+  } catch {
+    article.value = null
+  } finally {
+    isLoading.value = false
+  }
+})
 
 const primaryCategory = computed(() =>
-  article.value ? CATEGORIES.find((c) => c.slug === article.value!.categories[0]) : undefined
+  article.value ? store.getCategoryBySlug(article.value.categories[0]) : undefined
 )
 
 const theme = computed(() =>
@@ -495,6 +519,10 @@ async function copyLink() {
 }
 
 /* ── Sin artículo ── */
+.art-loading {
+  padding-block: 120px;
+}
+
 .art-missing {
   padding-block: 120px;
   display: flex;

@@ -23,6 +23,10 @@ async function bootstrap() {
     // 'credentials: include' y el servidor necesita reflejar el origin
     // (no '*') más esta flag para que el navegador la acepte.
     credentials: true,
+    // @fastify/cors no incluye DELETE en su default — sin esto, cualquier
+    // DELETE (ej. borrar un artículo) falla en el preflight con
+    // "Method DELETE is not allowed by Access-Control-Allow-Methods".
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
 
   app.useGlobalPipes(

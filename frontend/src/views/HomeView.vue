@@ -302,10 +302,14 @@
               class="news__input"
               aria-label="Tu correo electrónico"
               required
+              :disabled="subscribing"
             />
-            <button type="submit" class="btn btn--primary news__btn">Me sumo</button>
+            <button type="submit" class="btn btn--primary news__btn" :disabled="subscribing">
+              {{ subscribing ? 'Enviando…' : 'Me sumo' }}
+            </button>
           </form>
-          <p v-if="!submitted" class="news__fine">Cancelás cuando quieras, en un clic.</p>
+          <p v-if="subscribeError" class="news__error" role="alert">{{ subscribeError }}</p>
+          <p v-else-if="!submitted" class="news__fine">Cancelás cuando quieras, en un clic.</p>
 
           <div v-else class="news__ok" role="status">
             <svg
@@ -333,9 +337,10 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { useBlogStore, CATEGORIES } from '@/stores/blog'
+import { useBlogStore } from '@/stores/blog'
 import { getCategoryTheme, LEVEL_CHIPS } from '@/utils/theme'
 import { useReveal } from '@/composables/useReveal'
+import { http } from '@/services/http'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CategoryCard from '@/components/blog/CategoryCard.vue'
 
@@ -348,6 +353,8 @@ useReveal()
 const searchQuery = ref('')
 const email = ref('')
 const submitted = ref(false)
+const subscribing = ref(false)
+const subscribeError = ref('')
 
 const quickCategories = computed(() => store.categories.slice(0, 3))
 const featured = computed(() => store.articles[0])
@@ -355,7 +362,11 @@ const featuredTheme = computed(() =>
   getCategoryTheme(featured.value?.categories[0] ?? 'acompanamiento-terapeutico')
 )
 const featuredCategoryName = computed(
-  () => CATEGORIES.find((c) => c.slug === featured.value?.categories[0])?.name ?? ''
+  () =>
+    (featured.value?.categories[0]
+      ? store.getCategoryBySlug(featured.value.categories[0])
+      : undefined
+    )?.name ?? ''
 )
 const displayedArticles = computed(() => filteredArticles.value.slice(0, 6))
 
@@ -374,9 +385,22 @@ function goToSearch() {
   router.push({ name: 'search', query: { q } })
 }
 
-function subscribe() {
-  submitted.value = true
-  email.value = ''
+async function subscribe() {
+  subscribing.value = true
+  subscribeError.value = ''
+  try {
+    await http('/newsletter/subscribe', {
+      method: 'POST',
+      body: { email: email.value, source: 'homepage-hero' },
+      skipAuthRetry: true,
+    })
+    submitted.value = true
+    email.value = ''
+  } catch {
+    subscribeError.value = 'No pudimos guardar tu suscripción. Probá de nuevo en un momento.'
+  } finally {
+    subscribing.value = false
+  }
 }
 </script>
 
@@ -969,6 +993,12 @@ function subscribe() {
 .news__fine {
   font-size: 0.78rem;
   color: var(--color-ink-faint);
+}
+
+.news__error {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-accent-dark);
 }
 
 .news__ok {

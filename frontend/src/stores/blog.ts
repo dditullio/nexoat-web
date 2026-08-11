@@ -1,89 +1,86 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { CATEGORY_THEMES } from '@/utils/theme'
+import { http, toQueryString } from '@/services/http'
 import type { Article, Category, CategorySlug, FilterState } from '@/types'
+import type { Paginated } from '@/types/admin'
 
-export const CATEGORIES: Category[] = [
+interface CategoryMeta {
+  slug: CategorySlug
+  name: string
+  description: string
+}
+
+// Semilla estática: evita que el nav/las tarjetas parpadeen sin nombre de
+// categoría mientras fetchCategories() resuelve. La pisa la respuesta real
+// de GET /categories apenas llega — hoy trae exactamente estos mismos
+// valores (ver backend/prisma/seed.ts, sembrado a partir de esta misma
+// lista). El tema visual (bg/accent/gradient/icon) sigue viviendo 100% acá
+// en el frontend vía CATEGORY_THEMES, nunca lo devuelve la API.
+const CATEGORY_SEED: CategoryMeta[] = [
   {
     slug: 'acompanamiento-terapeutico',
     name: 'Acompañamiento Terapéutico',
     description: 'Qué es el AT, cómo funciona y el rol del acompañante en equipos de salud',
-    articleCount: 0,
-    ...CATEGORY_THEMES['acompanamiento-terapeutico'],
   },
   {
     slug: 'guia-cuidador',
     name: 'Guía del Cuidador',
     description: 'Técnicas prácticas: higiene, movilización, medicación y rutinas de cuidado',
-    articleCount: 0,
-    ...CATEGORY_THEMES['guia-cuidador'],
   },
   {
     slug: 'cuidar-al-cuidador',
     name: 'Cuidar al Cuidador',
     description: 'Burnout, autocuidado y límites emocionales del cuidador familiar',
-    articleCount: 0,
-    ...CATEGORY_THEMES['cuidar-al-cuidador'],
   },
   {
     slug: 'neurodiversidad-y-discapacidad',
     name: 'Neurodiversidad y Discapacidad',
     description: 'TDAH, TEA, discapacidad intelectual y abordaje de conductas disruptivas',
-    articleCount: 0,
-    ...CATEGORY_THEMES['neurodiversidad-y-discapacidad'],
   },
   {
     slug: 'familia-y-vinculos',
     name: 'Familia y Vínculos',
     description: 'Duelo diagnóstico, dinámicas familiares, crianza y relaciones de cuidado',
-    articleCount: 0,
-    ...CATEGORY_THEMES['familia-y-vinculos'],
   },
   {
     slug: 'salud-mental',
     name: 'Salud Mental',
     description: 'Psicosis, trastornos alimentarios, adicciones y conductas autolesivas',
-    articleCount: 0,
-    ...CATEGORY_THEMES['salud-mental'],
   },
   {
     slug: 'patologias-en-la-vejez',
     name: 'Vejez y Salud',
     description: 'Parkinson, Alzheimer, centros de día y mitos del envejecimiento',
-    articleCount: 0,
-    ...CATEGORY_THEMES['patologias-en-la-vejez'],
   },
   {
     slug: 'sistema-de-salud-y-recursos',
     name: 'Sistema de Salud',
     description: 'Cómo navegar el sistema sanitario, recursos disponibles y derivaciones',
-    articleCount: 0,
-    ...CATEGORY_THEMES['sistema-de-salud-y-recursos'],
   },
   {
     slug: 'herramientas-practicas',
     name: 'Herramientas Prácticas',
     description: 'Guías paso a paso, checklists y organizadores de cuidado',
-    articleCount: 0,
-    ...CATEGORY_THEMES['herramientas-practicas'],
   },
   {
     slug: 'evidencia-en-foco',
     name: 'Evidencia en Foco',
     description: 'Artículos basados en investigación, datos y estudios clínicos',
-    articleCount: 0,
-    ...CATEGORY_THEMES['evidencia-en-foco'],
   },
 ]
 
 export const useBlogStore = defineStore('blog', () => {
   const articles = ref<Article[]>([])
+  const categoriesRaw = ref<CategoryMeta[]>(CATEGORY_SEED)
   const isLoading = ref(false)
+  const isLoadingCategories = ref(false)
   const filters = ref<FilterState>({ category: null, audience: null, level: null, query: '' })
 
   const categories = computed<Category[]>(() =>
-    CATEGORIES.map((cat) => ({
+    categoriesRaw.value.map((cat) => ({
       ...cat,
+      ...CATEGORY_THEMES[cat.slug],
       articleCount: articles.value.filter((a) => a.categories.includes(cat.slug)).length,
     }))
   )
@@ -118,19 +115,42 @@ export const useBlogStore = defineStore('blog', () => {
     return categories.value.find((c) => c.slug === slug)
   }
 
-  function loadArticles(data: Article[]) {
-    articles.value = data
+  /** Trae los artículos publicados. pageSize generoso: las vistas públicas
+   * todavía filtran/paginan client-side sobre el array completo, no hay UI
+   * de paginación de servidor todavía. */
+  async function fetchArticles() {
+    isLoading.value = true
+    try {
+      const res = await http<Paginated<Article>>('/articles' + toQueryString({ pageSize: 100 }))
+      articles.value = res.items
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function fetchCategories() {
+    isLoadingCategories.value = true
+    try {
+      categoriesRaw.value = await http<CategoryMeta[]>('/categories')
+    } catch {
+      // Se queda con CATEGORY_SEED si falla — mejor mostrar la última
+      // versión conocida que romper toda la navegación por categorías.
+    } finally {
+      isLoadingCategories.value = false
+    }
   }
 
   return {
     articles,
     isLoading,
+    isLoadingCategories,
     filters,
     categories,
     filteredArticles,
     setFilter,
     clearFilters,
     getCategoryBySlug,
-    loadArticles,
+    fetchArticles,
+    fetchCategories,
   }
 })
