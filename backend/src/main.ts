@@ -6,16 +6,21 @@ import { loadEnv } from './common/load-env'
 loadEnv()
 
 import fastifyCookie from '@fastify/cookie'
+import fastifyMultipart from '@fastify/multipart'
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { ValidationPipe, VersioningType } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
+import { MAX_IMAGE_SIZE_BYTES } from './media/media.service'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())
 
   await app.register(fastifyCookie)
+  // Portadas de artículo (MediaController) — límite acá corta la subida a
+  // mitad de archivo si se pasa, MediaController solo confirma el corte.
+  await app.register(fastifyMultipart, { limits: { fileSize: MAX_IMAGE_SIZE_BYTES } })
 
   app.enableCors({
     origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',

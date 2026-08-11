@@ -9,7 +9,8 @@
 
 ## Documentos
 
-- [`features/auth-and-admin-dashboard.md`](features/auth-and-admin-dashboard.md) — Gestión de usuarios (email + Google/Facebook OAuth), roles, y dashboard administrativo en `/nexoat-admin` (artículos, usuarios, auditoría, suscripciones). **Estado: documentado, pendiente de implementar.**
+- [`features/auth-and-admin-dashboard.md`](features/auth-and-admin-dashboard.md) — Gestión de usuarios (email + Google/Facebook OAuth), roles, y dashboard administrativo en `/nexoat-admin` (artículos, usuarios, auditoría, suscripciones). **Estado: implementado y verificado.**
+- [`features/media-uploads-cloudinary.md`](features/media-uploads-cloudinary.md) — Subida/reemplazo/borrado de imágenes de portada de artículos vía Cloudinary, directo desde el formulario del admin. **Estado: implementado.**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

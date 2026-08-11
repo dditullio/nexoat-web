@@ -62,8 +62,8 @@ model Category {
 }
 
 model Tag {
-  id       String        @id @default(cuid())
-  slug     String        @unique
+  id       String       @id @default(cuid())
+  slug     String       @unique
   name     String
   articles ArticleTag[]
 
@@ -71,26 +71,30 @@ model Tag {
 }
 
 model Article {
-  id          String            @id @default(cuid())
-  slug        String            @unique
-  title       String
-  subtitle    String?
-  excerpt     String?
-  content     String
-  coverImage  String?
-  level       Level             @default(basico)
+  id                 String            @id @default(cuid())
+  slug               String            @unique
+  title              String
+  subtitle           String?
+  excerpt            String?
+  content            String
+  coverImage         String?
+  // ID de Cloudinary del asset de coverImage (ej. "nexoat/articles/xyz") —
+  // necesario para poder borrarlo del hosting cuando se reemplaza o se
+  // quita la portada. No se expone en la lectura pública del artículo.
+  coverImagePublicId String?
+  level              Level             @default(basico)
   // Array, no un enum singular: un artículo puede estar dirigido a más de
   // una audiencia a la vez (ver frontend/src/data/mockArticles.ts).
-  audience    Audience[]
-  status      ArticleStatus     @default(borrador)
-  publishedAt DateTime?
-  readingTime Int? // minutos estimados
-  categories  ArticleCategory[]
-  tags        ArticleTag[]
-  authorId    String?
-  author      User?             @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  audience           Audience[]
+  status             ArticleStatus     @default(borrador)
+  publishedAt        DateTime?
+  readingTime        Int? // minutos estimados
+  categories         ArticleCategory[]
+  tags               ArticleTag[]
+  authorId           String?
+  author             User?             @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   @@index([status, publishedAt])
   @@map("articles")

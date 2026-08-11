@@ -105,15 +105,34 @@
           />
         </label>
 
-        <label class="side-block">
-          <span class="field__label">Imagen de portada (URL)</span>
-          <input
-            v-model="form.coverImage"
-            type="text"
-            class="field__input"
-            placeholder="https://…"
-          />
-        </label>
+        <div class="side-block">
+          <span class="field__label">Imagen de portada</span>
+
+          <div v-if="form.coverImage" class="cover">
+            <img :src="form.coverImage" alt="Portada del artículo" class="cover__img" />
+            <button
+              type="button"
+              class="cover__remove"
+              :disabled="isUploadingCover"
+              @click="onRemoveCover"
+            >
+              Quitar imagen
+            </button>
+          </div>
+
+          <label v-else class="cover-upload" :class="{ 'is-disabled': isUploadingCover }">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              class="cover-upload__input"
+              :disabled="isUploadingCover"
+              @change="onSelectCoverFile"
+            />
+            {{ isUploadingCover ? 'Subiendo…' : 'Elegir imagen…' }}
+          </label>
+
+          <p v-if="coverError" class="cover-error" role="alert">{{ coverError }}</p>
+        </div>
 
         <label class="side-block">
           <span class="field__label">Minutos de lectura</span>
@@ -140,6 +159,7 @@ import {
   updateArticle,
   type CategoryOption,
 } from '@/services/admin/articles.api'
+import { deleteMedia, uploadMedia } from '@/services/admin/media.api'
 import { renderMarkdown } from '@/utils/markdown'
 import { ApiError } from '@/services/http'
 import type { ArticleFormPayload, ArticleStatus } from '@/types/admin'
@@ -157,6 +177,8 @@ const isSaving = ref(false)
 const errorMessage = ref('')
 const showPreview = ref(false)
 const tagsInput = ref('')
+const isUploadingCover = ref(false)
+const coverError = ref('')
 
 const form = ref<ArticleFormPayload>({
   title: '',
@@ -165,6 +187,7 @@ const form = ref<ArticleFormPayload>({
   excerpt: '',
   content: '',
   coverImage: '',
+  coverImagePublicId: undefined,
   level: 'basico',
   audience: [],
   status: 'borrador',
@@ -205,6 +228,49 @@ function toggleCategory(slug: string) {
   else form.value.categorySlugs.splice(idx, 1)
 }
 
+async function onSelectCoverFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // permite volver a elegir el mismo archivo más adelante si hace falta
+
+  if (!file) return
+
+  coverError.value = ''
+  isUploadingCover.value = true
+  const previousPublicId = form.value.coverImagePublicId
+
+  try {
+    const uploaded = await uploadMedia(file)
+    form.value.coverImage = uploaded.url
+    form.value.coverImagePublicId = uploaded.publicId
+
+    // Recién se borra la vieja una vez que la nueva subió bien — si la
+    // subida fallara, mejor quedarse con la imagen anterior que sin ninguna.
+    if (previousPublicId) {
+      await deleteMedia(previousPublicId).catch(() => {
+        // Queda huérfana en Cloudinary — no es grave, no bloquea el flujo.
+      })
+    }
+  } catch (err) {
+    coverError.value = err instanceof ApiError ? err.message : 'No pudimos subir la imagen.'
+  } finally {
+    isUploadingCover.value = false
+  }
+}
+
+async function onRemoveCover() {
+  const publicId = form.value.coverImagePublicId
+  form.value.coverImage = ''
+  form.value.coverImagePublicId = undefined
+  coverError.value = ''
+
+  if (publicId) {
+    await deleteMedia(publicId).catch(() => {
+      coverError.value = 'La imagen se quitó del artículo, pero no pudimos borrarla de Cloudinary.'
+    })
+  }
+}
+
 async function loadArticle(id: string) {
   isLoading.value = true
   errorMessage.value = ''
@@ -217,6 +283,7 @@ async function loadArticle(id: string) {
       excerpt: article.excerpt,
       content: article.content,
       coverImage: article.coverImage ?? '',
+      coverImagePublicId: article.coverImagePublicId,
       level: article.level,
       audience: [...article.audience],
       status: article.status,
@@ -351,6 +418,74 @@ async function onSubmit() {
   gap: 8px;
   font-size: 0.86rem;
   color: var(--color-ink-secondary);
+}
+
+.cover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cover__img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-line);
+}
+
+.cover__remove {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-accent-dark);
+}
+
+.cover__remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cover-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px dashed var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 22px 14px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.cover-upload:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.cover-upload.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cover-upload__input {
+  /* Input real oculto, el <label> hace de botón — patrón estándar de file picker estilizado */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.cover-error {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-accent-dark);
 }
 
 .field {

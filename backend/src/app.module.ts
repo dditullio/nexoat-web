@@ -11,6 +11,7 @@ import { ArticlesModule } from './articles/articles.module'
 import { AuditModule } from './audit/audit.module'
 import { NewsletterModule } from './newsletter/newsletter.module'
 import { MailModule } from './mail/mail.module'
+import { MediaModule } from './media/media.module'
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { MailModule } from './mail/mail.module'
     ArticlesModule,
     AuditModule,
     NewsletterModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

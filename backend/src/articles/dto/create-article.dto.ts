@@ -44,6 +44,13 @@ export class CreateArticleDto {
   @IsString()
   coverImage?: string
 
+  @ApiPropertyOptional({
+    description: 'ID de Cloudinary de coverImage, para poder borrarla después',
+  })
+  @IsOptional()
+  @IsString()
+  coverImagePublicId?: string
+
   @ApiProperty({ enum: Level })
   @IsEnum(Level)
   level!: Level

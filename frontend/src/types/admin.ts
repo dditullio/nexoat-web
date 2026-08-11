@@ -17,6 +17,7 @@ export interface AdminArticle {
   level: Level
   keywords: string[]
   coverImage?: string
+  coverImagePublicId?: string
   readingTimeMinutes?: number
   status: ArticleStatus
   authorId: string | null
@@ -33,6 +34,7 @@ export interface ArticleFormPayload {
   excerpt?: string
   content: string
   coverImage?: string
+  coverImagePublicId?: string
   level: Level
   audience: Audience[]
   status?: ArticleStatus
