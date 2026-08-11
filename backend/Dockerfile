@@ -27,7 +27,11 @@ RUN pnpm install --frozen-lockfile --filter @nexoat/backend... --prod
 
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
+COPY backend/prisma ./backend/prisma
 
 EXPOSE 3001
 
-CMD ["node", "backend/dist/main"]
+# "prisma" es dependencia normal (no dev) justamente para que la CLI esté
+# disponible acá: el contenedor de producción nunca corría las migraciones
+# antes de este cambio.
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=./backend/prisma/schema.prisma && node backend/dist/main"]

@@ -1,6 +1,6 @@
 # Gestión de usuarios robusta + Dashboard admin (`/nexoat-admin`)
 
-**Estado:** documentado, pendiente de implementar. Este documento es la especificación completa para que una sesión de desarrollo (con o sin el historial de chat que lo originó) pueda implementarlo sin ambigüedad.
+**Estado:** implementado y verificado end-to-end (backend + frontend). Este documento queda como referencia de diseño; ver "Notas de implementación" al final para los puntos donde el código final difiere de lo especificado acá y por qué.
 
 ## Contexto
 
@@ -259,7 +259,7 @@ FACEBOOK_CLIENT_SECRET=
 
 ## Docker
 
-`backend/Dockerfile`: el `CMD` final (`["node", "backend/dist/main"]`) debe pasar a aplicar las migraciones antes de arrancar, porque hoy el contenedor de producción nunca las corre. Intención (ajustar sintaxis exacta al implementar, verificando que `prisma` esté disponible en el stage `runner`):
+Implementado: el `CMD` de `backend/Dockerfile` corre las migraciones antes de arrancar. `prisma` se movió de `devDependencies` a `dependencies` en `backend/package.json` para que la CLI esté disponible en el stage `runner` (que instala con `--prod`), y se agregó `COPY backend/prisma ./backend/prisma` para que `migrate deploy` tenga el schema y las migraciones a mano:
 
 ```dockerfile
 CMD ["sh", "-c", "npx prisma migrate deploy --schema=./backend/prisma/schema.prisma && node backend/dist/main"]
@@ -274,3 +274,20 @@ CMD ["sh", "-c", "npx prisma migrate deploy --schema=./backend/prisma/schema.pri
 5. Con backend y frontend corriendo: loguearse en `/nexoat-admin/login` con el admin sembrado, crear y publicar un artículo desde el admin, y confirmar que aparece en el blog público (`/`, `/categoria/:slug`, `/articulo/:slug`) con el contenido Markdown correctamente renderizado. Este es el criterio de éxito central — cierra el ciclo que motivó todo el trabajo (poder mantener el blog sin tocar código).
 6. Confirmar que **sin** `GOOGLE_CLIENT_ID`/`FACEBOOK_CLIENT_ID` seteados, el login sigue funcionando por email y los botones de esos proveedores no se muestran en `AdminLoginView`.
 7. Confirmar la matriz de permisos a mano: un usuario `EDITOR` puede crear/editar artículos pero un `GET /admin/users` le devuelve 403; un `ADMIN` puede ver usuarios pero un `PATCH /admin/users/:id` cambiando `role` le devuelve 403; solo `SUPER_ADMIN` puede cambiar roles.
+
+Los 7 puntos se verificaron — 32 tests de backend, type-check + build de producción del frontend limpios, y un recorrido manual completo contra el backend real (login/refresh con rotación/logout, guard de rutas por rol, alta+publicación de artículo visible en el blog público, cambio de rol, auditoría, newsletter).
+
+## Notas de implementación
+
+Puntos donde el código terminó distinto de lo que dice la especificación de arriba, y por qué:
+
+- **`Article.categoryId` → muchos-a-muchos, `audience` → array, `subtitle` nuevo.** No estaba contemplado en este documento: el schema de Prisma ya existente (`categoryId` único, `audience` enum singular) no calzaba con lo que el frontend ya consumía desde `mockArticles.ts`/`types/index.ts` (categorías múltiples, audiencias múltiples). Se ajustó el schema al frontend, no al revés, para no tocar las vistas públicas ya construidas. Ver migración `align_article_to_frontend_contract`.
+- **Enum `Audience` sin `@map`.** El primer intento usó `@map("cuidadores-familiares")` para que el string con guion llegara "gratis" hasta el cliente — pero `@map` en un valor de enum solo cambia lo que se guarda en la columna de Postgres, **no** el valor que expone Prisma Client en runtime (`Audience.cuidadores_familiares` sigue siendo el string `"cuidadores_familiares"` en JS). La traducción vive en `backend/src/articles/audience.util.ts`, en el borde de `ArticlesModule` (DTOs de entrada y mapper de salida), no en el schema.
+- **Refresh token: guard a mano, no estrategia Passport "jwt-refresh".** El refresh token es un string opaco hasheado (SHA-256) en `RefreshToken.tokenHash`, no un JWT — no hay nada que una `PassportStrategy` pueda verificar criptográficamente. `RefreshTokenGuard` (`backend/src/auth/guards/refresh-token.guard.ts`) lee la cookie y hace el lookup contra la DB directamente. El mecanismo de token (opaco + hash + rotación) es el que describe este documento; solo cambió cómo se conecta con Nest.
+- **Cookie de refresh con `path: /v1/auth`**, no acotada solo a `/auth/refresh`: `POST /auth/logout` también necesita leerla para revocar el token actual.
+- **`views/admin/AdminOAuthCallbackView.vue`** (ruta `/nexoat-admin/oauth-callback`) no estaba en la lista de archivos a crear. Es necesaria para cerrar el flujo de OAuth: el backend redirige ahí después del callback de Google/Facebook (con la cookie de refresh ya puesta, sin el access token en la URL) y esta vista solo llama `POST /auth/refresh` para obtenerlo.
+- **`JWT_REFRESH_SECRET`** (env var) quedó sin uso — coherente con que el refresh token es opaco, no firmado. Se deja declarada en `.env.example` por si en el futuro se decide firmar el refresh token; no hace falta setearla hoy.
+- **`@typescript-eslint/consistent-type-imports` desactivada para `backend/src/**`** (`eslint.config.js`). La regla no distingue un tipo genuinamente solo-de-tipo de una clase que Nest necesita en runtime para inyección de dependencias o para que `ValidationPipe`reconozca un DTO de`@Body()`/`@Query()`—`import type` en esos casos rompe el arranque (`Nest can't resolve dependencies`) o desactiva la validación en silencio. Detectado y corregido durante la verificación en caliente, antes de llegar a producción.
+- **CORS explícito con `methods` en `main.ts`.** `@fastify/cors` no incluye `DELETE` en su lista default de métodos permitidos — borrar un artículo fallaba en el preflight. Encontrado al probar el botón "Borrar" del admin en el navegador real.
+- **`backend/src/common/load-env.ts`** busca `.env` subiendo directorios hasta encontrar `pnpm-workspace.yaml`, en vez de un path relativo fijo — la profundidad de `__dirname` cambia entre `ts-node` (dev), `nest start --watch` (compila a `dist/src/`) y `node dist/main` (prod), así que contar niveles a mano se rompía en al menos uno de los tres casos.
+- **`prisma` movido de `devDependencies` a `dependencies`** en `backend/package.json`, y `Dockerfile` corre `prisma migrate deploy` antes de arrancar (ver sección "Docker" arriba) — este documento ya señalaba el problema pero no la solución exacta.
