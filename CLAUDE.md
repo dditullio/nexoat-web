@@ -19,9 +19,9 @@ Todos se corren desde la raíz del repo.
 | Comando                                          | Qué hace                                        |
 | ------------------------------------------------ | ----------------------------------------------- |
 | `pnpm install`                                   | Instala todo el monorepo                        |
-| `pnpm dev`                                       | Frontend en `http://localhost:3000`             |
+| `pnpm dev` / `pnpm dev:frontend`                 | Frontend en `http://localhost:3000`             |
+| `pnpm dev:backend`                               | Backend en `http://localhost:3001` (watch mode) |
 | `docker-compose -f docker-compose.dev.yml up -d` | Levanta solo PostgreSQL para desarrollo local   |
-| `pnpm --filter @nexoat/backend start:dev`        | Backend en `http://localhost:3001` (watch mode) |
 | `pnpm build` / `pnpm build:backend`              | Build de producción de frontend / backend       |
 | `pnpm type-check`                                | Type-check de todo el monorepo                  |
 | `pnpm test` / `pnpm test:cov`                    | Tests de todo el monorepo (con cobertura)       |

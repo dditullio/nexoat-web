@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @nexoat/frontend dev",
+    "dev:frontend": "pnpm --filter @nexoat/frontend dev",
+    "dev:backend": "pnpm --filter @nexoat/backend start:dev",
     "build": "pnpm --filter @nexoat/frontend build",
     "build:backend": "pnpm --filter @nexoat/backend build",
     "preview": "pnpm --filter @nexoat/frontend preview",
