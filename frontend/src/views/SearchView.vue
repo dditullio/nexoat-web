@@ -1,28 +1,48 @@
 <template>
-  <div class="search-page">
-    <div class="container">
-      <h1 class="search-page__title">Buscar artículos</h1>
+  <div class="srch">
+    <div class="container srch__inner">
+      <header class="srch__head">
+        <span class="eyebrow">Buscador</span>
+        <h1 class="srch__title">¿Qué necesitás encontrar?</h1>
+      </header>
 
-      <form class="search-page__form" @submit.prevent="doSearch">
+      <form class="srch__form" @submit.prevent="doSearch">
+        <svg
+          class="srch__icon"
+          width="19"
+          height="19"
+          viewBox="0 0 18 18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="7.5" cy="7.5" r="5" />
+          <path d="M11.5 11.5L16 16" />
+        </svg>
         <input
           v-model="localQuery"
           type="search"
-          placeholder="Buscá por tema, condición o palabra clave..."
-          class="search-page__input"
+          placeholder="Tema, condición o palabra clave…"
+          class="srch__input"
+          aria-label="Buscar artículos"
           autofocus
         />
-        <button type="submit" class="search-page__btn">Buscar</button>
+        <button type="submit" class="srch__go">Buscar</button>
       </form>
 
+      <FilterBar class="srch__filters" />
+
+      <!-- Con búsqueda activa -->
       <template v-if="store.filters.query">
-        <p class="search-page__results-info">
-          <strong>{{ store.filteredArticles.length }}</strong> resultado(s) para "<em>{{
-            store.filters.query
-          }}</em
-          >"
+        <p class="srch__count">
+          <strong>{{ store.filteredArticles.length }}</strong>
+          {{ store.filteredArticles.length === 1 ? 'resultado' : 'resultados' }} para
+          <em>«{{ store.filters.query }}»</em>
         </p>
 
-        <div v-if="store.filteredArticles.length" class="articles-grid">
+        <div v-if="store.filteredArticles.length" class="grid-3">
           <ArticleCard
             v-for="article in store.filteredArticles"
             :key="article.slug"
@@ -30,17 +50,36 @@
           />
         </div>
 
-        <div v-else class="empty-state">
-          <p>No encontramos artículos para esa búsqueda.</p>
-          <p>Probá con otros términos o explorá las categorías:</p>
-          <div class="empty-state__cats">
+        <div v-else class="empty">
+          <h2 class="empty__title">Sin coincidencias</h2>
+          <p class="empty__desc">
+            No encontramos nada con esos términos. Probá con una palabra más general, o entrá por
+            tema.
+          </p>
+          <div class="empty__cats">
             <RouterLink
-              v-for="cat in store.categories.slice(0, 5)"
+              v-for="cat in store.categories.slice(0, 6)"
               :key="cat.slug"
               :to="`/categoria/${cat.slug}`"
-              class="empty-state__cat-link"
-              >{{ cat.name }}</RouterLink
+              class="empty__cat"
             >
+              <span class="empty__cat-dot" :style="{ background: cat.accent }"></span>
+              {{ cat.name }}
+            </RouterLink>
+          </div>
+        </div>
+      </template>
+
+      <!-- Estado inicial -->
+      <template v-else>
+        <div class="srch__browse">
+          <span class="eyebrow">O explorá</span>
+          <div class="grid-3">
+            <ArticleCard
+              v-for="article in store.articles.slice(0, 6)"
+              :key="article.slug"
+              :article="article"
+            />
           </div>
         </div>
       </template>
@@ -53,6 +92,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
+import FilterBar from '@/components/blog/FilterBar.vue'
 
 const route = useRoute()
 const store = useBlogStore()
@@ -72,105 +112,212 @@ function doSearch() {
 </script>
 
 <style scoped>
-.search-page {
-  padding-block: var(--spacing-3xl);
+.srch {
+  padding-block: 56px 96px;
 }
 
-.search-page__title {
-  font-size: 1.8rem;
-  font-weight: 800;
-  margin-bottom: var(--spacing-xl);
-}
-
-.search-page__form {
-  display: flex;
-  gap: var(--spacing-sm);
-  max-width: 600px;
-  margin-bottom: var(--spacing-2xl);
-}
-
-.search-page__input {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.search-page__input:focus {
-  border-color: var(--color-primary);
-}
-
-.search-page__btn {
-  background: var(--color-primary);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1.5rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.search-page__results-info {
-  margin-bottom: var(--spacing-xl);
-  color: var(--color-text-muted);
-  font-size: 0.95rem;
-}
-
-.articles-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-xl);
-}
-
-.empty-state {
-  padding: var(--spacing-3xl) 0;
-  color: var(--color-text-muted);
+.srch__inner {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 26px;
 }
 
-.empty-state__cats {
+.srch__head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.srch__title {
+  font-size: clamp(1.9rem, 4vw, 2.9rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+/* Formulario */
+.srch__form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full);
+  padding: 5px 5px 5px 22px;
+  max-width: 640px;
+  box-shadow: var(--shadow-md);
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.3s ease;
+}
+
+.srch__form:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.srch__icon {
+  color: var(--color-ink-faint);
+  flex-shrink: 0;
+}
+
+.srch__input {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 14px 12px;
+  font-size: 1rem;
+  min-width: 0;
+  outline: none;
+}
+
+.srch__input::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.srch__input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.srch__go {
+  background: var(--color-primary);
+  color: #fffdfa;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 12px 26px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.dark .srch__go {
+  color: #191512;
+}
+
+.srch__go:hover {
+  background: var(--color-primary-dark);
+}
+
+.srch__filters {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.srch__count {
+  font-size: 0.95rem;
+  color: var(--color-ink-muted);
+}
+
+.srch__count strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.srch__count em {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60;
+  font-style: italic;
+  color: var(--color-ink);
+}
+
+.srch__browse {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+/* Grilla */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
+}
+
+/* Vacío */
+.empty {
+  padding: 64px 24px;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-2xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty__title {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.empty__desc {
+  color: var(--color-ink-muted);
+  max-width: 44ch;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+
+.empty__cats {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-sm);
+  gap: 8px;
+  justify-content: center;
 }
 
-.empty-state__cat-link {
-  background: var(--color-bg-section);
-  border: 1px solid var(--color-border);
+.empty__cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-light);
   border-radius: var(--radius-full);
-  padding: 0.4rem 1rem;
-  font-size: 0.875rem;
-  text-decoration: none;
-  color: var(--color-primary);
-  transition: background 0.15s;
+  padding: 8px 16px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.3s var(--ease-out-soft);
 }
 
-.empty-state__cat-link:hover {
-  background: var(--color-border);
-  text-decoration: none;
+.empty__cat:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+  transform: translateY(-2px);
 }
 
-@media (max-width: 768px) {
-  .articles-grid {
+.empty__cat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 560px) {
-  .articles-grid {
+@media (max-width: 640px) {
+  .grid-3 {
     grid-template-columns: 1fr;
   }
-  .search-page__form {
-    flex-direction: column;
+
+  .srch__form {
+    flex-wrap: wrap;
+    border-radius: var(--radius-lg);
+    padding: 12px;
+  }
+
+  .srch__input {
+    width: 100%;
+    padding: 8px;
+  }
+
+  .srch__go {
+    width: 100%;
   }
 }
 </style>

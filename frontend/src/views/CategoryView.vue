@@ -1,32 +1,57 @@
 <template>
-  <div class="category-page">
-    <div v-if="category" class="category-hero">
-      <div class="container">
-        <nav class="breadcrumb" aria-label="Ruta de navegación">
+  <div v-if="category" class="cat-page">
+    <header class="cat-hero">
+      <div class="cat-hero__wash" :style="{ background: category.gradient }" aria-hidden="true" />
+
+      <div class="container cat-hero__inner">
+        <nav class="crumb" aria-label="Ruta de navegación">
           <RouterLink to="/">Inicio</RouterLink>
-          <span>›</span>
+          <span aria-hidden="true">/</span>
           <span>{{ category.name }}</span>
         </nav>
-        <h1 class="category-hero__title">{{ category.name }}</h1>
-        <p class="category-hero__desc">{{ category.description }}</p>
-        <span class="category-hero__count">{{ categoryArticles.length }} artículos</span>
-      </div>
-    </div>
 
-    <div class="container">
-      <div class="category-page__filters">
-        <FilterBar />
-      </div>
+        <div class="cat-hero__row">
+          <span
+            class="cat-hero__glyph"
+            :style="{ background: category.bg, color: category.accent }"
+            aria-hidden="true"
+          >
+            {{ category.icon }}
+          </span>
 
-      <div v-if="categoryArticles.length" class="articles-grid">
+          <div>
+            <h1 class="cat-hero__title">{{ category.name }}</h1>
+            <p class="cat-hero__desc">{{ category.description }}</p>
+            <span class="cat-hero__count">
+              {{ categoryArticles.length }}
+              {{ categoryArticles.length === 1 ? 'artículo' : 'artículos' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="container cat-body">
+      <FilterBar />
+
+      <div v-if="categoryArticles.length" class="grid-3">
         <ArticleCard v-for="article in categoryArticles" :key="article.slug" :article="article" />
       </div>
 
-      <div v-else class="empty-state">
-        <p>No hay artículos en esta categoría con los filtros seleccionados.</p>
-        <button @click="store.clearFilters()">Ver todos</button>
+      <div v-else class="empty">
+        <h2 class="empty__title">Nada por acá todavía</h2>
+        <p class="empty__desc">
+          No hay artículos en este tema con los filtros que elegiste. Probá quitándolos.
+        </p>
+        <button class="btn btn--primary" @click="store.clearFilters()">Ver todos</button>
       </div>
     </div>
+  </div>
+
+  <div v-else class="container cat-missing">
+    <h1 class="section-title">Ese tema no existe</h1>
+    <p class="section-lead">Puede que el enlace esté mal escrito o que ya no esté disponible.</p>
+    <RouterLink to="/" class="btn btn--primary">Volver al inicio</RouterLink>
   </div>
 </template>
 
@@ -52,82 +77,155 @@ watch(slug, () => store.clearFilters(), { immediate: true })
 </script>
 
 <style scoped>
-.category-hero {
-  background: var(--color-bg-section);
-  border-bottom: 1px solid var(--color-border);
-  padding-block: var(--spacing-2xl);
-  margin-bottom: var(--spacing-2xl);
+.cat-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-canvas-alt);
+  border-bottom: 1px solid var(--color-line-light);
+  padding: 44px 0 48px;
 }
 
-.breadcrumb {
+.cat-hero__wash {
+  position: absolute;
+  top: -70%;
+  left: 50%;
+  width: 900px;
+  height: 500px;
+  transform: translateX(-50%);
+  filter: blur(90px);
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.cat-hero__inner {
+  position: relative;
+}
+
+.crumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-ink-faint);
+  margin-bottom: 28px;
+}
+
+.crumb a {
+  color: var(--color-ink-muted);
+  transition: color 0.2s ease;
+}
+
+.crumb a:hover {
+  color: var(--color-primary-dark);
+}
+
+.cat-hero__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+.cat-hero__glyph {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border-radius: 999px 999px 18px 18px / 36px 36px 18px 18px;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-md);
+  justify-content: center;
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 60,
+    'WONK' 1;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-.breadcrumb a {
-  color: var(--color-primary);
-}
-
-.category-hero__title {
-  font-size: clamp(1.4rem, 3vw, 2rem);
-  font-weight: 800;
-  margin-bottom: var(--spacing-sm);
-}
-
-.category-hero__desc {
-  color: var(--color-text-muted);
-  max-width: 540px;
-  line-height: 1.6;
-  margin-bottom: var(--spacing-md);
-}
-
-.category-hero__count {
-  font-size: 0.85rem;
+.cat-hero__title {
+  font-size: clamp(1.9rem, 4vw, 2.9rem);
   font-weight: 600;
-  color: var(--color-secondary);
+  letter-spacing: -0.035em;
+  margin-bottom: 10px;
 }
 
-.category-page__filters {
-  margin-bottom: var(--spacing-xl);
+.cat-hero__desc {
+  font-size: 1.02rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.72;
+  max-width: 56ch;
+  margin-bottom: 12px;
 }
 
-.articles-grid {
+.cat-hero__count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--color-ink-faint);
+}
+
+/* Cuerpo */
+.cat-body {
+  padding-block: 36px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-xl);
-  padding-bottom: var(--spacing-3xl);
+  gap: 26px;
 }
 
-.empty-state {
+.empty {
   text-align: center;
-  padding: var(--spacing-3xl);
-  color: var(--color-text-muted);
+  padding: 72px 24px;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-2xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
-.empty-state button {
-  margin-top: var(--spacing-md);
-  background: var(--color-primary);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-full);
-  padding: 0.5rem 1.5rem;
-  cursor: pointer;
-  font-family: inherit;
+.empty__title {
+  font-size: 1.4rem;
+  font-weight: 600;
 }
 
-@media (max-width: 768px) {
-  .articles-grid {
+.empty__desc {
+  color: var(--color-ink-muted);
+  max-width: 42ch;
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+
+.cat-missing {
+  padding-block: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+@media (max-width: 1024px) {
+  .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 560px) {
-  .articles-grid {
+@media (max-width: 640px) {
+  .grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .cat-hero__row {
+    flex-direction: column;
+    gap: 16px;
   }
 }
 </style>

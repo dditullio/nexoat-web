@@ -2,49 +2,49 @@
 
 /*
  * ══════════════════════════════════════════════════════════════════
- *  NexoAT — Sistema de diseño visual
+ *  NexoAT — Sistema de diseño «Humanista cálido»
  * ══════════════════════════════════════════════════════════════════
  *
- *  Arquitectura de tokens:
+ *  Principio rector
+ *  ────────────────
+ *  Quien llega acá suele estar cuidando a alguien que quiere, muchas
+ *  veces agotado y con miedo. La interfaz debe sentirse como una
+ *  habitación bien iluminada, no como un consultorio: materiales
+ *  cálidos, formas sin aristas, aire para respirar.
  *
- *  1. @theme  →  registra tokens ESTÁTICOS (tipografía, espaciado,
- *               radios, secciones fijas) como utilidades Tailwind.
+ *  Decisiones que sostienen esa idea
+ *  ─────────────────────────────────
+ *  · Papel, no pantalla — base arena con grano sutil, nunca blanco puro.
+ *  · Nada tiene esquinas vivas — el arco es el motivo estructural.
+ *  · El oscuro también es cálido — negro amarronado, jamás azulado.
+ *  · Fraunces con eje SOFT alto: una serif que redondea sus terminales.
+ *  · Sombras teñidas de tierra, difusas y bajas, como luz de tarde.
  *
- *  2. :root   →  define los tokens DINÁMICOS de color como custom
- *               properties CSS normales (no @property), apuntando
- *               a primitivas `--nx-*` del tema claro.
+ *  Arquitectura de tokens (3 capas)
+ *  ────────────────────────────────
+ *  1. @theme  →  tokens ESTÁTICOS (tipografía, espaciado, radios).
+ *                Tailwind los registra vía @property.
+ *  2. :root   →  primitivas `--nx-*` del tema claro + tokens
+ *                semánticos `--color-*` que apuntan a ellas.
+ *  3. .dark   →  reescribe SOLO las primitivas `--nx-*`; los tokens
+ *                semánticos se actualizan por cascada.
  *
- *  3. .dark   →  sobreescribe las primitivas `--nx-*` con valores
- *               del tema oscuro. Los tokens `--color-*` se
- *               actualizan automáticamente por cascada CSS.
- *
- *  ¿Por qué los colores están fuera de @theme?
- *  Tailwind v4 registra tokens de @theme con @property, que exige
- *  un initial-value concreto — no acepta var(). Al definirlos como
- *  custom properties normales en :root, conservan la reactividad.
- *
- *  Regla de uso en componentes:
- *  - Nuevos: usar var(--color-ink), var(--color-canvas), etc.
- *  - Existentes: var(--color-text), var(--color-bg) siguen como aliases.
+ *  Los colores viven fuera de @theme a propósito: Tailwind v4 los
+ *  registraría con @property, que exige un initial-value concreto y
+ *  no acepta var() — eso congelaría el tema.
  * ══════════════════════════════════════════════════════════════════
  */
 
-/* ── Modo oscuro basado en clase `.dark` en <html> (Tailwind v4) ── */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Tokens estáticos para Tailwind (no cambian con el tema) ── */
+/* ── Tokens estáticos ── */
 @theme {
   /* Tipografía */
-  --font-sans: 'Nunito Sans', sans-serif;
-  --font-serif: 'Libre Baskerville', serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Karla', system-ui, sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
 
-  /* Secciones fijas oscuras */
-  --color-hero-from: #192e58;
-  --color-hero-to: #4e6eb8;
-  --color-audience-bg: #1c2238;
-  --color-footer-bg: #111728;
-
-  /* Espaciado */
+  /* Escala de espaciado */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
@@ -52,105 +52,168 @@
   --spacing-xl: 2rem;
   --spacing-2xl: 3rem;
   --spacing-3xl: 5rem;
+  --spacing-4xl: 8rem;
 
-  /* Radios */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 16px;
+  /* Radios — generosos por definición */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-2xl: 40px;
   --radius-full: 9999px;
 
-  /* Sombra estática */
-  --shadow-hero: 0 12px 48px rgba(0, 0, 0, 0.22);
+  /* Arco: el motivo estructural del sitio */
+  --arch: 999px 999px var(--radius-lg) var(--radius-lg);
+  --arch-soft: 60% 60% var(--radius-lg) var(--radius-lg) / 34% 34% var(--radius-lg) var(--radius-lg);
 
   /* Contenedores */
-  --container-max: 1280px;
-  --container-article: 720px;
+  --container-max: 1240px;
+  --container-prose: 68ch;
+
+  /* Curvas de animación */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   TEMA CLARO (por defecto)
-   Tokens dinámicos como custom properties normales (no @property).
+   TEMA CLARO — «arena»
    ══════════════════════════════════════════════════════════════════ */
 :root {
   color-scheme: light;
 
   /* ── Primitivas ── */
 
-  /* Brand */
-  --nx-primary: #4568a0;
-  --nx-primary-dark: #2e4a80;
-  --nx-primary-light: #7fa3d1;
-  --nx-primary-soft: #eef2fa;
-  --nx-primary-tint: rgba(69, 104, 160, 0.07);
-  --nx-coral: #e07b68;
-  --nx-coral-dark: #c86050;
+  /* Salvia: el acento principal. Vegetal, sereno, no clínico. */
+  --nx-sage: #7a9471;
+  --nx-sage-deep: #5c7454;
+  --nx-sage-bright: #94ad8b;
+  --nx-sage-soft: #e9efe6;
+  --nx-sage-tint: rgba(122, 148, 113, 0.09);
 
-  /* Superficies */
-  --nx-canvas: #f7f5f2;
-  --nx-canvas-alt: #f2f0ec;
-  --nx-surface: #ffffff;
-  --nx-surface-raised: #faf9f7;
+  /* Arcilla: acento cálido de contrapunto (CTA, alertas suaves) */
+  --nx-clay: #c07553;
+  --nx-clay-deep: #a25c3d;
+  --nx-clay-soft: #f8ece4;
 
-  /* Texto */
-  --nx-ink: #2a2e3d;
-  --nx-ink-secondary: #5a6178;
-  --nx-ink-muted: #6a7390;
-  --nx-ink-faint: #8a93a8;
+  /* Ocre: destaque puntual (badges, subrayados) */
+  --nx-ochre: #c99a3f;
+  --nx-ochre-soft: #f9f0dc;
 
-  /* Bordes */
-  --nx-line: #e4e0d8;
-  --nx-line-light: #e8e4dd;
-  --nx-line-faint: #f0ede8;
+  /* Superficies — papel, nunca blanco puro */
+  --nx-canvas: #faf6f0;
+  --nx-canvas-alt: #f3ece1;
+  --nx-surface: #fffdfa;
+  --nx-surface-raised: #ffffff;
+  --nx-surface-sunken: #f1e9dd;
+
+  /* Tinta */
+  --nx-ink: #3d3229;
+  --nx-ink-secondary: #6b5c4d;
+  --nx-ink-muted: #8b7b6a;
+  --nx-ink-faint: #b0a291;
+
+  /* Líneas */
+  --nx-line: #e3d8c8;
+  --nx-line-light: #ece3d6;
+  --nx-line-faint: #f4eee4;
 
   /* Interacción */
-  --nx-hover-bg: rgba(42, 46, 61, 0.05);
+  --nx-hover-bg: rgba(61, 50, 41, 0.045);
 
-  /* Header glassmorphism */
-  --nx-header-bg: rgba(247, 245, 242, 0.95);
-  --nx-header-border: rgba(228, 224, 216, 0.9);
+  /* Header translúcido */
+  --nx-header-bg: rgba(250, 246, 240, 0.82);
+  --nx-header-border: rgba(227, 216, 200, 0.7);
 
-  /* Sombras */
-  --nx-shadow-sm: 0 2px 8px rgba(42, 46, 61, 0.06);
-  --nx-shadow-md: 0 4px 24px rgba(42, 46, 61, 0.08);
-  --nx-shadow-lg: 0 10px 40px rgba(42, 46, 61, 0.1);
+  /* Secciones de acento a pantalla completa */
+  --nx-deep: #2f3a2b;
+  --nx-deep-alt: #26301f;
 
-  /* Chips: nivel */
-  --nx-level-basico-bg: #edf7ed;
-  --nx-level-basico-text: #2e7a2e;
-  --nx-level-intermedio-bg: #eef2fa;
-  --nx-level-intermedio-text: #4568a0;
-  --nx-level-avanzado-bg: #f2eefa;
-  --nx-level-avanzado-text: #6b4fa5;
+  /* Sombras — teñidas de tierra, difusas, bajas */
+  --nx-shadow-sm: 0 1px 2px rgba(61, 50, 41, 0.04), 0 2px 8px rgba(61, 50, 41, 0.04);
+  --nx-shadow-md: 0 2px 4px rgba(61, 50, 41, 0.03), 0 8px 24px rgba(61, 50, 41, 0.07);
+  --nx-shadow-lg: 0 4px 8px rgba(61, 50, 41, 0.04), 0 18px 48px rgba(61, 50, 41, 0.1);
+  --nx-shadow-bloom: 0 8px 16px rgba(61, 50, 41, 0.05), 0 28px 64px rgba(122, 148, 113, 0.16);
 
-  /* Chips: audiencia */
-  --nx-aud-cuidadores-bg: #fef5e6;
-  --nx-aud-cuidadores-text: #9a6a22;
-  --nx-aud-profesionales-bg: #eeeafa;
-  --nx-aud-profesionales-text: #5548a0;
-  --nx-aud-mixto-bg: #f0eee8;
-  --nx-aud-mixto-text: #5a6178;
+  /* Grano: textura de papel */
+  --nx-grain-opacity: 0.035;
 
-  /* ── Tokens semánticos (apuntan a primitivas) ── */
+  /* Chips — nivel */
+  --nx-level-basico-bg: #e6efe3;
+  --nx-level-basico-text: #4a6b41;
+  --nx-level-intermedio-bg: #fbf0da;
+  --nx-level-intermedio-text: #8a6414;
+  --nx-level-avanzado-bg: #f6e6dd;
+  --nx-level-avanzado-text: #9c5330;
 
-  /* Brand */
-  --color-primary: var(--nx-primary);
-  --color-primary-dark: var(--nx-primary-dark);
-  --color-primary-light: var(--nx-primary-light);
-  --color-primary-soft: var(--nx-primary-soft);
-  --color-primary-tint: var(--nx-primary-tint);
-  --color-coral: var(--nx-coral);
-  --color-coral-dark: var(--nx-coral-dark);
+  /* Chips — audiencia */
+  --nx-aud-cuidadores-bg: #f8ece4;
+  --nx-aud-cuidadores-text: #a25c3d;
+  --nx-aud-profesionales-bg: #e7edef;
+  --nx-aud-profesionales-text: #47646d;
+  --nx-aud-mixto-bg: #f0ebe2;
+  --nx-aud-mixto-text: #6b5c4d;
+
+  /* ── Categorías ──
+     Diez familias tierra/vegetal. Cada una distinguible, todas
+     dentro del mismo rango tonal para que no compitan con la base. */
+  --cat-at-bg: #e9efe6;
+  --cat-at-ink: #4d6a44;
+  --cat-at-grad: linear-gradient(145deg, #a8c19f 0%, #5c7454 100%);
+  --cat-gc-bg: #e3eeec;
+  --cat-gc-ink: #3f6f68;
+  --cat-gc-grad: linear-gradient(145deg, #86b3ac 0%, #3f6f68 100%);
+  --cat-cc-bg: #f8ece4;
+  --cat-cc-ink: #9d5734;
+  --cat-cc-grad: linear-gradient(145deg, #dfa17c 0%, #9d5734 100%);
+  --cat-nd-bg: #f2e8ee;
+  --cat-nd-ink: #8a5271;
+  --cat-nd-grad: linear-gradient(145deg, #c295af 0%, #8a5271 100%);
+  --cat-fv-bg: #fbeee0;
+  --cat-fv-ink: #a86a2c;
+  --cat-fv-grad: linear-gradient(145deg, #e8b276 0%, #a86a2c 100%);
+  --cat-sm-bg: #e8edf1;
+  --cat-sm-ink: #4f6579;
+  --cat-sm-grad: linear-gradient(145deg, #93a8bb 0%, #4f6579 100%);
+  --cat-vs-bg: #eeeee0;
+  --cat-vs-ink: #6c6c33;
+  --cat-vs-grad: linear-gradient(145deg, #b0b077 0%, #6c6c33 100%);
+  --cat-ss-bg: #e4eef0;
+  --cat-ss-ink: #3a6670;
+  --cat-ss-grad: linear-gradient(145deg, #85b0b8 0%, #3a6670 100%);
+  --cat-hp-bg: #f9f0dc;
+  --cat-hp-ink: #8f6a1c;
+  --cat-hp-grad: linear-gradient(145deg, #ddb45f 0%, #8f6a1c 100%);
+  --cat-ef-bg: #e8eee4;
+  --cat-ef-ink: #4a6340;
+  --cat-ef-grad: linear-gradient(145deg, #9ab88d 0%, #4a6340 100%);
+
+  /* ══ Tokens semánticos ══ */
+
+  /* Marca */
+  --color-primary: var(--nx-sage);
+  --color-primary-dark: var(--nx-sage-deep);
+  --color-primary-light: var(--nx-sage-bright);
+  --color-primary-soft: var(--nx-sage-soft);
+  --color-primary-tint: var(--nx-sage-tint);
+  --color-accent: var(--nx-clay);
+  --color-accent-dark: var(--nx-clay-deep);
+  --color-accent-soft: var(--nx-clay-soft);
+  --color-ochre: var(--nx-ochre);
+  --color-ochre-soft: var(--nx-ochre-soft);
+
+  /* Compatibilidad con nombres anteriores */
+  --color-coral: var(--nx-clay);
+  --color-coral-dark: var(--nx-clay-deep);
 
   /* Superficies */
   --color-canvas: var(--nx-canvas);
   --color-canvas-alt: var(--nx-canvas-alt);
   --color-surface: var(--nx-surface);
   --color-surface-raised: var(--nx-surface-raised);
-
-  /* Aliases de compatibilidad */
+  --color-surface-sunken: var(--nx-surface-sunken);
   --color-bg: var(--nx-canvas);
   --color-bg-alt: var(--nx-canvas-alt);
+  --color-bg-section: var(--nx-surface-sunken);
   --color-white: var(--nx-surface);
 
   /* Texto */
@@ -158,19 +221,15 @@
   --color-ink-secondary: var(--nx-ink-secondary);
   --color-ink-muted: var(--nx-ink-muted);
   --color-ink-faint: var(--nx-ink-faint);
-
-  /* Aliases de compatibilidad */
   --color-text: var(--nx-ink);
   --color-text-secondary: var(--nx-ink-secondary);
   --color-text-muted: var(--nx-ink-muted);
   --color-text-faint: var(--nx-ink-faint);
 
-  /* Bordes */
+  /* Líneas */
   --color-line: var(--nx-line);
   --color-line-light: var(--nx-line-light);
   --color-line-faint: var(--nx-line-faint);
-
-  /* Aliases de compatibilidad */
   --color-border: var(--nx-line);
   --color-border-light: var(--nx-line-light);
   --color-border-faint: var(--nx-line-faint);
@@ -178,20 +237,25 @@
   /* Interacción */
   --color-hover-bg: var(--nx-hover-bg);
 
+  /* Secciones profundas */
+  --color-deep: var(--nx-deep);
+  --color-deep-alt: var(--nx-deep-alt);
+  --color-audience-bg: var(--nx-deep);
+  --color-footer-bg: var(--nx-deep-alt);
+
   /* Sombras */
   --shadow-sm: var(--nx-shadow-sm);
   --shadow-md: var(--nx-shadow-md);
   --shadow-lg: var(--nx-shadow-lg);
+  --shadow-bloom: var(--nx-shadow-bloom);
 
-  /* Chips: nivel */
+  /* Chips */
   --color-level-basico-bg: var(--nx-level-basico-bg);
   --color-level-basico-text: var(--nx-level-basico-text);
   --color-level-intermedio-bg: var(--nx-level-intermedio-bg);
   --color-level-intermedio-text: var(--nx-level-intermedio-text);
   --color-level-avanzado-bg: var(--nx-level-avanzado-bg);
   --color-level-avanzado-text: var(--nx-level-avanzado-text);
-
-  /* Chips: audiencia */
   --color-aud-cuidadores-bg: var(--nx-aud-cuidadores-bg);
   --color-aud-cuidadores-text: var(--nx-aud-cuidadores-text);
   --color-aud-profesionales-bg: var(--nx-aud-profesionales-bg);
@@ -201,70 +265,104 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   TEMA OSCURO
-   Solo sobreescribe las primitivas --nx-*; los tokens --color-*
-   se actualizan automáticamente por cascada.
+   TEMA OSCURO — «anochecer»
+   Negro amarronado. Un oscuro azulado traicionaría la calidez.
    ══════════════════════════════════════════════════════════════════ */
 .dark {
   color-scheme: dark;
 
-  /* Brand */
-  --nx-primary: #7fa3d1;
-  --nx-primary-dark: #9bb8e0;
-  --nx-primary-light: #9bb8e0;
-  --nx-primary-soft: #1a2540;
-  --nx-primary-tint: rgba(127, 163, 209, 0.1);
-  --nx-coral: #e8907f;
-  --nx-coral-dark: #e07b68;
+  --nx-sage: #9dba92;
+  --nx-sage-deep: #b4cdab;
+  --nx-sage-bright: #b4cdab;
+  --nx-sage-soft: #24301f;
+  --nx-sage-tint: rgba(157, 186, 146, 0.12);
 
-  /* Superficies */
-  --nx-canvas: #111520;
-  --nx-canvas-alt: #181c2e;
-  --nx-surface: #1e2235;
-  --nx-surface-raised: #252b3d;
+  --nx-clay: #dd9670;
+  --nx-clay-deep: #ecab88;
+  --nx-clay-soft: #35251b;
 
-  /* Texto */
-  --nx-ink: #e2e8f0;
-  --nx-ink-secondary: #a0aec0;
-  --nx-ink-muted: #7a8ca0;
-  --nx-ink-faint: #526070;
+  --nx-ochre: #dfb968;
+  --nx-ochre-soft: #33280f;
 
-  /* Bordes */
-  --nx-line: #2a3148;
-  --nx-line-light: #232a3e;
-  --nx-line-faint: #1e2438;
+  --nx-canvas: #191512;
+  --nx-canvas-alt: #211c17;
+  --nx-surface: #232019;
+  --nx-surface-raised: #2c271f;
+  --nx-surface-sunken: #151210;
 
-  /* Interacción */
-  --nx-hover-bg: rgba(255, 255, 255, 0.06);
+  --nx-ink: #f2eae0;
+  --nx-ink-secondary: #c6b8a7;
+  --nx-ink-muted: #9c8f7f;
+  --nx-ink-faint: #6e6455;
 
-  /* Header glassmorphism */
-  --nx-header-bg: rgba(17, 21, 32, 0.94);
-  --nx-header-border: rgba(42, 49, 72, 0.9);
+  --nx-line: #3a332a;
+  --nx-line-light: #322c24;
+  --nx-line-faint: #29241e;
 
-  /* Sombras */
-  --nx-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --nx-shadow-md: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --nx-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.5);
+  --nx-hover-bg: rgba(242, 234, 224, 0.06);
 
-  /* Chips: nivel */
-  --nx-level-basico-bg: #1a3520;
-  --nx-level-basico-text: #6dbf6d;
-  --nx-level-intermedio-bg: #1a2540;
-  --nx-level-intermedio-text: #7fa3d1;
-  --nx-level-avanzado-bg: #281a40;
-  --nx-level-avanzado-text: #a882e0;
+  --nx-header-bg: rgba(25, 21, 18, 0.82);
+  --nx-header-border: rgba(58, 51, 42, 0.7);
 
-  /* Chips: audiencia */
-  --nx-aud-cuidadores-bg: #3d2a10;
-  --nx-aud-cuidadores-text: #e0a850;
-  --nx-aud-profesionales-bg: #1e1a40;
-  --nx-aud-profesionales-text: #9b90e0;
-  --nx-aud-mixto-bg: #252030;
-  --nx-aud-mixto-text: #a0aec0;
+  --nx-deep: #22291e;
+  --nx-deep-alt: #151210;
+
+  --nx-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --nx-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --nx-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3), 0 18px 48px rgba(0, 0, 0, 0.5);
+  --nx-shadow-bloom: 0 8px 16px rgba(0, 0, 0, 0.35), 0 28px 64px rgba(157, 186, 146, 0.14);
+
+  --nx-grain-opacity: 0.055;
+
+  --nx-level-basico-bg: #25321f;
+  --nx-level-basico-text: #a7c79b;
+  --nx-level-intermedio-bg: #34290f;
+  --nx-level-intermedio-text: #e0bc72;
+  --nx-level-avanzado-bg: #36241a;
+  --nx-level-avanzado-text: #dda078;
+
+  --nx-aud-cuidadores-bg: #35251b;
+  --nx-aud-cuidadores-text: #dd9670;
+  --nx-aud-profesionales-bg: #1f2b2e;
+  --nx-aud-profesionales-text: #93b3bb;
+  --nx-aud-mixto-bg: #2a251f;
+  --nx-aud-mixto-text: #c6b8a7;
+
+  /* Categorías — fondo profundo, tinta clara */
+  --cat-at-bg: #24301f;
+  --cat-at-ink: #a7c79b;
+  --cat-at-grad: linear-gradient(145deg, #5c7454 0%, #2f3a2b 100%);
+  --cat-gc-bg: #1c2e2c;
+  --cat-gc-ink: #8fc0b8;
+  --cat-gc-grad: linear-gradient(145deg, #3f6f68 0%, #1f3330 100%);
+  --cat-cc-bg: #35251b;
+  --cat-cc-ink: #dd9670;
+  --cat-cc-grad: linear-gradient(145deg, #9d5734 0%, #3a2519 100%);
+  --cat-nd-bg: #2e2029;
+  --cat-nd-ink: #cb9db6;
+  --cat-nd-grad: linear-gradient(145deg, #8a5271 0%, #32222b 100%);
+  --cat-fv-bg: #362818;
+  --cat-fv-ink: #e0ae72;
+  --cat-fv-grad: linear-gradient(145deg, #a86a2c 0%, #382713 100%);
+  --cat-sm-bg: #222932;
+  --cat-sm-ink: #9db2c6;
+  --cat-sm-grad: linear-gradient(145deg, #4f6579 0%, #232b34 100%);
+  --cat-vs-bg: #2c2c1c;
+  --cat-vs-ink: #b8b87e;
+  --cat-vs-grad: linear-gradient(145deg, #6c6c33 0%, #2e2e1a 100%);
+  --cat-ss-bg: #1d2c30;
+  --cat-ss-ink: #8bb8c0;
+  --cat-ss-grad: linear-gradient(145deg, #3a6670 0%, #1f2e33 100%);
+  --cat-hp-bg: #33280f;
+  --cat-hp-ink: #e0bc72;
+  --cat-hp-grad: linear-gradient(145deg, #8f6a1c 0%, #34280e 100%);
+  --cat-ef-bg: #232c1f;
+  --cat-ef-ink: #a2bd95;
+  --cat-ef-grad: linear-gradient(145deg, #4a6340 0%, #26301f 100%);
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   RESET Y BASE
+   RESET
    ══════════════════════════════════════════════════════════════════ */
 *,
 *::before,
@@ -276,24 +374,46 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.65;
   background: var(--color-canvas);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  position: relative;
   transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
+    background-color 0.35s var(--ease-in-out-soft),
+    color 0.35s var(--ease-in-out-soft);
+}
+
+/* Grano de papel — textura generada, sin assets externos */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: var(--nx-grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  transition: opacity 0.35s var(--ease-in-out-soft);
+}
+
+img,
+video,
+svg {
+  max-width: 100%;
+  display: block;
 }
 
 img,
 video {
-  max-width: 100%;
   height: auto;
-  display: block;
 }
 
 a {
@@ -304,30 +424,104 @@ a {
 button {
   cursor: pointer;
   border: none;
+  background: none;
   font-family: inherit;
+  color: inherit;
 }
 
 input,
-select {
+select,
+textarea {
   font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
-input:focus {
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+:focus-visible {
   outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
 }
 
-button:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+/* ══════════════════════════════════════════════════════════════════
+   TIPOGRAFÍA
+   Fraunces con SOFT alto redondea las terminales; WONK activa las
+   formas alternativas, un poco irregulares — de ahí la calidez.
+   ══════════════════════════════════════════════════════════════════ */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 60,
+    'WONK' 1;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--color-ink);
 }
 
-/* ── Layout ── */
+/* Etiqueta de sección: versalitas espaciadas */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--color-ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.eyebrow--plain::before {
+  display: none;
+}
+
+/* Título de sección */
+.section-title {
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 60,
+    'WONK' 1;
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.section-lead {
+  font-size: 1.05rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.72;
+  max-width: 52ch;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PRIMITIVAS
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Layout */
 .container {
   width: 100%;
   max-width: var(--container-max);
   margin-inline: auto;
-  padding-inline: 28px;
+  padding-inline: 32px;
 }
 
 @media (max-width: 640px) {
@@ -344,4 +538,231 @@ button:focus-visible {
 
 .app__main {
   flex: 1;
+}
+
+.section {
+  padding-block: clamp(4rem, 9vw, 7.5rem);
+}
+
+/* Botones */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.85rem 1.7rem;
+  border-radius: var(--radius-full);
+  transition:
+    transform 0.3s var(--ease-out-soft),
+    box-shadow 0.3s var(--ease-out-soft),
+    background-color 0.2s ease,
+    color 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #fffdfa;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .btn--primary {
+  color: #191512;
+}
+
+.btn--primary:hover {
+  background: var(--color-primary-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.btn--accent {
+  background: var(--color-accent);
+  color: #fffdfa;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .btn--accent {
+  color: #191512;
+}
+
+.btn--accent:hover {
+  background: var(--color-accent-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1.5px solid var(--color-line);
+}
+
+.btn--ghost:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-tint);
+}
+
+/* Enlace con flecha que se desplaza */
+.link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-primary-dark);
+  transition: gap 0.3s var(--ease-out-soft);
+}
+
+.link-arrow:hover {
+  gap: 0.8rem;
+}
+
+/* Tarjeta base */
+.surface-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-light);
+  border-radius: var(--radius-xl);
+  transition:
+    transform 0.4s var(--ease-out-soft),
+    box-shadow 0.4s var(--ease-out-soft),
+    border-color 0.3s ease;
+}
+
+/* Píldora */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* Prosa de artículo */
+.prose {
+  font-size: 1.12rem;
+  line-height: 1.85;
+  color: var(--color-ink-secondary);
+  max-width: var(--container-prose);
+}
+
+.prose > * + * {
+  margin-top: 1.5em;
+}
+
+.prose h2 {
+  font-size: 1.7rem;
+  margin-top: 2.6em;
+  color: var(--color-ink);
+}
+
+.prose h3 {
+  font-size: 1.3rem;
+  margin-top: 2em;
+  color: var(--color-ink);
+}
+
+.prose strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.prose a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-primary-light);
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding-left: 1.5rem;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60;
+  font-size: 1.25rem;
+  font-style: italic;
+  color: var(--color-ink);
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.4rem;
+}
+
+.prose li + li {
+  margin-top: 0.6em;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOVIMIENTO
+   Un revelado escalonado al entrar; nada que distraiga después.
+   ══════════════════════════════════════════════════════════════════ */
+@keyframes nx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nx-breathe {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(2%, -3%) scale(1.06);
+  }
+}
+
+.rise {
+  animation: nx-rise 0.9s var(--ease-out-soft) both;
+}
+
+/* Revelado al hacer scroll — activado por useReveal() */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.85s var(--ease-out-soft),
+    transform 0.85s var(--ease-out-soft);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }

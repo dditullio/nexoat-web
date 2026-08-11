@@ -1,10 +1,21 @@
 <template>
-  <div class="not-found">
-    <div class="container not-found__inner">
-      <h1 class="not-found__code">404</h1>
-      <h2 class="not-found__title">Página no encontrada</h2>
-      <p class="not-found__desc">El contenido que buscás no existe o fue movido.</p>
-      <RouterLink to="/" class="not-found__btn">Volver al inicio</RouterLink>
+  <div class="nf">
+    <div class="nf__orb" aria-hidden="true"></div>
+
+    <div class="container nf__inner">
+      <div class="nf__arch" aria-hidden="true">
+        <span class="nf__code">404</span>
+      </div>
+
+      <h1 class="nf__title">Esta página se perdió</h1>
+      <p class="nf__desc">
+        El contenido que buscabas no existe o cambió de dirección. No es tu culpa — pasa.
+      </p>
+
+      <div class="nf__actions">
+        <RouterLink to="/" class="btn btn--primary">Volver al inicio</RouterLink>
+        <RouterLink to="/buscar" class="btn btn--ghost">Buscar un tema</RouterLink>
+      </div>
     </div>
   </div>
 </template>
@@ -12,47 +23,82 @@
 <script setup lang="ts"></script>
 
 <style scoped>
-.not-found {
-  padding-block: var(--spacing-3xl);
+.nf {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(5rem, 12vw, 9rem);
+  display: flex;
+  align-items: center;
+  min-height: 68vh;
 }
 
-.not-found__inner {
+.nf__orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 620px;
+  height: 620px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(122, 148, 113, 0.15);
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.nf__inner {
+  position: relative;
   text-align: center;
-  max-width: 480px;
+  max-width: 520px;
   margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
-.not-found__code {
-  font-size: 5rem;
-  font-weight: 800;
-  color: var(--color-border);
-  line-height: 1;
+/* Arco: el mismo motivo del resto del sitio */
+.nf__arch {
+  width: 128px;
+  height: 152px;
+  border-radius: 999px 999px var(--radius-lg) var(--radius-lg) / 64px 64px var(--radius-lg)
+    var(--radius-lg);
+  background: var(--cat-at-grad);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-bloom);
 }
 
-.not-found__title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-block: var(--spacing-md);
-}
-
-.not-found__desc {
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-xl);
-}
-
-.not-found__btn {
-  display: inline-block;
-  background: var(--color-primary);
-  color: var(--color-white);
-  padding: 0.65rem 1.5rem;
-  border-radius: var(--radius-full);
+.nf__code {
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 70,
+    'WONK' 1;
+  font-size: 2.2rem;
   font-weight: 600;
-  text-decoration: none;
-  transition: background 0.15s;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: -0.03em;
 }
 
-.not-found__btn:hover {
-  background: var(--color-primary-light);
-  text-decoration: none;
+.nf__title {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.032em;
+}
+
+.nf__desc {
+  font-size: 1.02rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.74;
+  max-width: 44ch;
+  margin-bottom: 10px;
+}
+
+.nf__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 </style>

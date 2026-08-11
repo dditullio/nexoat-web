@@ -1,45 +1,46 @@
 <template>
   <button
-    class="theme-toggle"
+    class="tgl"
     :aria-label="store.isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+    :aria-pressed="store.isDark"
     @click="store.toggle()"
   >
-    <svg
-      v-if="store.isDark"
-      class="theme-toggle__icon"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <circle cx="12" cy="12" r="5" />
-      <line x1="12" y1="1" x2="12" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="23" />
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-      <line x1="1" y1="12" x2="3" y2="12" />
-      <line x1="21" y1="12" x2="23" y2="12" />
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-    </svg>
-    <svg
-      v-else
-      class="theme-toggle__icon"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-    </svg>
+    <span class="tgl__slot">
+      <Transition name="swap" mode="out-in">
+        <svg
+          v-if="store.isDark"
+          key="sun"
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="4.2" />
+          <path
+            d="M12 2v2.2M12 19.8V22M4.22 4.22l1.56 1.56M18.22 18.22l1.56 1.56M2 12h2.2M19.8 12H22M4.22 19.78l1.56-1.56M18.22 5.78l1.56-1.56"
+          />
+        </svg>
+        <svg
+          v-else
+          key="moon"
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      </Transition>
+    </span>
   </button>
 </template>
 
@@ -50,30 +51,45 @@ const store = useThemeStore()
 </script>
 
 <style scoped>
-.theme-toggle {
+.tgl {
   width: 38px;
   height: 38px;
-  border-radius: 8px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-ink-muted);
-  background: none;
   transition:
-    background 0.15s,
-    color 0.15s;
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
-.theme-toggle:hover {
+.tgl:hover {
   background: var(--color-hover-bg);
   color: var(--color-ink);
 }
 
-.theme-toggle__icon {
-  transition: transform 0.3s ease;
+.tgl__slot {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
 }
 
-.theme-toggle:hover .theme-toggle__icon {
-  transform: rotate(15deg);
+.swap-enter-active,
+.swap-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.3s var(--ease-out-soft);
+}
+
+.swap-enter-from {
+  opacity: 0;
+  transform: rotate(-70deg) scale(0.5);
+}
+
+.swap-leave-to {
+  opacity: 0;
+  transform: rotate(70deg) scale(0.5);
 }
 </style>

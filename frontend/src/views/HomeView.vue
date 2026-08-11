@@ -1,347 +1,328 @@
 <template>
   <div>
-    <!-- ── HERO ── -->
+    <!-- ═══ HERO ═══ -->
     <section class="hero">
-      <div class="hero__orb hero__orb--tr"></div>
-      <div class="hero__orb hero__orb--br"></div>
-      <div class="hero__orb hero__orb--tl"></div>
-      <div class="hero__fade"></div>
+      <div class="hero__orb hero__orb--sage" aria-hidden="true"></div>
+      <div class="hero__orb hero__orb--clay" aria-hidden="true"></div>
+      <div class="hero__orb hero__orb--ochre" aria-hidden="true"></div>
 
       <div class="container hero__inner">
-        <div id="hero-content" class="hero__content">
-          <!-- Badge -->
-          <div class="hero__badge">
-            <span class="hero__badge-dot"></span>
-            Blog especializado · AT y Cuidado de Personas
-          </div>
+        <div class="hero__text">
+          <span class="hero__badge rise" style="animation-delay: 0.05s">
+            <span class="hero__badge-dot" aria-hidden="true"></span>
+            Acompañamiento terapéutico y cuidado de personas
+          </span>
 
-          <!-- Headline -->
-          <h1 class="hero__title">
-            Tu nexo con el acompañamiento terapéutico y el cuidado que transforma
+          <h1 class="hero__title rise" style="animation-delay: 0.15s">
+            Cuidar a alguien<br />
+            no debería hacerse<br />
+            <em>a ciegas.</em>
           </h1>
 
-          <!-- Subtítulo -->
-          <p class="hero__sub">
-            Artículos especializados para familias, cuidadores y profesionales que trabajan con el
-            cuidado de personas a lo largo de toda la vida.
+          <p class="hero__lead rise" style="animation-delay: 0.25s">
+            Artículos claros y con respaldo profesional para familias, cuidadores y acompañantes
+            terapéuticos. Sin tecnicismos innecesarios, sin promesas vacías.
           </p>
 
-          <!-- Search -->
-          <div class="hero__search-wrap">
+          <div class="hero__search rise" style="animation-delay: 0.35s">
             <svg
               class="hero__search-icon"
               width="18"
               height="18"
               viewBox="0 0 18 18"
               fill="none"
-              stroke="#8A93A8"
-              stroke-width="1.6"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              aria-hidden="true"
             >
               <circle cx="7.5" cy="7.5" r="5" />
-              <path d="M12 12l4 4" />
+              <path d="M11.5 11.5L16 16" />
             </svg>
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="Buscar artículos, temas, condiciones…"
-              class="hero__search-input"
+              placeholder="¿Sobre qué necesitás leer hoy?"
+              class="hero__input"
+              aria-label="Buscar artículos"
               @keyup.enter="goToSearch"
             />
-            <button class="hero__search-btn" @click="goToSearch">Buscar</button>
+            <button class="hero__go" @click="goToSearch">Buscar</button>
           </div>
 
-          <!-- Quick chips -->
-          <div class="hero__chips">
-            <span class="hero__chips-label">Acceso rápido:</span>
+          <div class="hero__quick rise" style="animation-delay: 0.45s">
+            <span class="hero__quick-label">Empezá por</span>
             <RouterLink
               v-for="cat in quickCategories"
               :key="cat.slug"
               :to="`/categoria/${cat.slug}`"
               class="hero__chip"
-              >{{ cat.name }}</RouterLink
             >
+              {{ cat.name }}
+            </RouterLink>
+          </div>
+        </div>
+
+        <!-- Arco: eco del motivo que se repite en tarjetas y glifos -->
+        <div class="hero__arch rise" style="animation-delay: 0.3s" aria-hidden="true">
+          <div class="hero__arch-inner">
+            <span class="hero__arch-mark">AT</span>
+          </div>
+          <div class="hero__arch-note">
+            <strong>{{ store.articles.length }}</strong>
+            <span>artículos publicados</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ── ARTÍCULO DESTACADO ── -->
-    <section class="sec featured-sec">
+    <!-- ═══ DESTACADO ═══ -->
+    <section class="section feat-sec">
       <div class="container">
-        <div class="featured-sec__header">
-          <h2 class="section-title">Artículo destacado</h2>
-          <span class="featured-sec__badge">✦ De esta semana</span>
+        <div class="sec-head reveal">
+          <div>
+            <span class="eyebrow">Lectura destacada</span>
+            <h2 class="section-title">De esta semana</h2>
+          </div>
         </div>
 
-        <div class="featured-card">
-          <!-- Imagen -->
-          <div class="featured-card__img">
-            <span class="featured-card__img-watermark">AT</span>
-            <span class="featured-card__img-label">
-              <svg
-                style="display: inline; vertical-align: middle; margin-right: 4px"
-                width="10"
-                height="10"
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <rect x="1" y="2" width="10" height="8" rx="1" />
-                <path d="M4 2V1M8 2V1M1 5h10" />
-              </svg>
-              Imagen del artículo
-            </span>
+        <RouterLink
+          v-if="featured"
+          :to="`/articulo/${featured.slug}`"
+          class="feat reveal"
+          :style="{ '--feat-grad': featuredTheme.gradient }"
+        >
+          <div class="feat__cover">
+            <span class="feat__mark">{{ featuredTheme.icon }}</span>
           </div>
 
-          <!-- Contenido -->
-          <div class="featured-card__body">
-            <span class="featured-card__chip">Acompañamiento Terapéutico</span>
-            <h3 class="featured-card__title">
-              ¿Qué es el Acompañamiento Terapéutico y para quién está indicado?
-            </h3>
-            <p class="featured-card__excerpt">
-              Una guía clara para familias que acaban de escuchar el término por primera vez. Qué
-              hace un AT, cómo trabaja en equipo interdisciplinario y cuándo es la indicación
-              adecuada para tu situación.
-            </p>
-            <div class="featured-card__meta">
-              <span class="featured-card__date">12 jun 2026</span>
-              <span class="meta-dot"></span>
-              <span class="featured-card__date">7 min de lectura</span>
-              <span class="meta-dot"></span>
-              <span class="chip-basico">Básico</span>
-              <span class="chip-cuidadores">Para cuidadores</span>
-            </div>
-            <RouterLink
-              to="/articulo/que-es-el-acompanamiento-terapeutico"
-              class="featured-card__cta"
+          <div class="feat__body">
+            <span
+              class="pill feat__cat"
+              :style="{ background: featuredTheme.bg, color: featuredTheme.accent }"
             >
-              Leé el artículo completo
+              {{ featuredCategoryName }}
+            </span>
+
+            <h3 class="feat__title">{{ featured.title }}</h3>
+            <p class="feat__excerpt">{{ featured.excerpt }}</p>
+
+            <div class="feat__meta">
+              <span>{{ formatDate(featured.date) }}</span>
+              <span class="feat__dot" aria-hidden="true"></span>
+              <span>{{ featured.readingTimeMinutes }} min de lectura</span>
+              <span
+                class="pill"
+                :style="{
+                  background: LEVEL_CHIPS[featured.level].bg,
+                  color: LEVEL_CHIPS[featured.level].text,
+                }"
+              >
+                {{ LEVEL_CHIPS[featured.level].label }}
+              </span>
+            </div>
+
+            <span class="link-arrow feat__cta">
+              Leer el artículo
               <svg
-                width="14"
-                height="14"
+                width="15"
+                height="15"
                 viewBox="0 0 14 14"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2.2"
+                stroke-linecap="round"
+                aria-hidden="true"
               >
                 <path d="M2 7h10M7 2l5 5-5 5" />
               </svg>
-            </RouterLink>
+            </span>
           </div>
-        </div>
+        </RouterLink>
       </div>
     </section>
 
-    <!-- ── ARTÍCULOS RECIENTES ── -->
-    <section class="sec recent-sec">
+    <!-- ═══ RECIENTES ═══ -->
+    <section class="section recent-sec">
       <div class="container">
-        <div class="recent-sec__header">
-          <h2 class="section-title">Artículos recientes</h2>
-          <RouterLink to="/categoria/acompanamiento-terapeutico" class="section-link">
-            Ver todos
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 14 14"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-            >
-              <path d="M2 7h10M7 2l5 5-5 5" />
-            </svg>
-          </RouterLink>
-        </div>
-
-        <div class="articles-grid">
-          <ArticleCard
-            v-for="article in displayedArticles"
-            :key="article.slug"
-            :article="article"
-          />
-        </div>
-
-        <div class="recent-sec__more">
-          <button class="btn-outline">
-            Ver más artículos
+        <div class="sec-head reveal">
+          <div>
+            <span class="eyebrow">Publicaciones</span>
+            <h2 class="section-title">Lo más reciente</h2>
+          </div>
+          <RouterLink to="/buscar" class="link-arrow">
+            Ver todo
             <svg
               width="14"
               height="14"
               viewBox="0 0 14 14"
               fill="none"
               stroke="currentColor"
-              stroke-width="2"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              aria-hidden="true"
             >
-              <path d="M7 2v10M2 7l5 5 5-5" />
+              <path d="M2 7h10M7 2l5 5-5 5" />
             </svg>
-          </button>
+          </RouterLink>
         </div>
-      </div>
-    </section>
 
-    <!-- ── CATEGORÍAS ── -->
-    <section id="categorias" class="sec cat-sec">
-      <div class="container">
-        <div class="cat-sec__header">
-          <h2 class="section-title section-title--center">Explorá por tema</h2>
-          <p class="cat-sec__sub">
-            Encontrá los artículos que más necesitás según el área que más te importa en este
-            momento.
-          </p>
-        </div>
-        <div class="cat-grid">
-          <CategoryCard v-for="cat in store.categories" :key="cat.slug" :category="cat" />
-        </div>
-      </div>
-    </section>
-
-    <!-- ── BANNER AUDIENCIAS ── -->
-    <section class="audience-sec">
-      <div class="container">
-        <div class="audience-sec__header">
-          <h2 class="audience-sec__title">¿Qué tipo de contenido buscás?</h2>
-          <p class="audience-sec__sub">
-            Diseñamos el contenido para dos perfiles distintos — aunque podés explorar los dos.
-          </p>
-        </div>
-        <div class="audience-cols">
-          <!-- Familias -->
-          <div class="audience-col audience-col--families">
-            <div class="audience-col__orb"></div>
-            <div class="audience-col__content">
-              <div class="audience-col__icon audience-col__icon--families">
-                <svg
-                  width="26"
-                  height="26"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#E07B68"
-                  stroke-width="1.5"
-                >
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </div>
-              <h3 class="audience-col__title">Para familias<br />y cuidadores</h3>
-              <p class="audience-col__desc">
-                Si estás acompañando a alguien que querés, este espacio es para vos. Guías
-                prácticas, herramientas claras y orientación real sin tecnicismos innecesarios.
-              </p>
-              <RouterLink
-                to="/categoria/guia-cuidador"
-                class="audience-col__btn audience-col__btn--families"
-              >
-                Artículos para familias
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                >
-                  <path d="M2 7h10M7 2l5 5-5 5" />
-                </svg>
-              </RouterLink>
-            </div>
-          </div>
-
-          <!-- Profesionales -->
-          <div class="audience-col audience-col--pros">
-            <div class="audience-col__orb audience-col__orb--pros"></div>
-            <div class="audience-col__content">
-              <div class="audience-col__icon audience-col__icon--pros">
-                <svg
-                  width="26"
-                  height="26"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#7FA3D1"
-                  stroke-width="1.5"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-              </div>
-              <h3 class="audience-col__title">¿Sos profesional<br />del AT?</h3>
-              <p class="audience-col__desc">
-                Artículos de nivel intermedio y avanzado con profundidad clínica, marcos teóricos y
-                reflexión sobre la práctica del acompañamiento terapéutico.
-              </p>
-              <RouterLink
-                to="/categoria/acompanamiento-terapeutico"
-                class="audience-col__btn audience-col__btn--pros"
-              >
-                Artículos para profesionales
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                >
-                  <path d="M2 7h10M7 2l5 5-5 5" />
-                </svg>
-              </RouterLink>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── NEWSLETTER ── -->
-    <section id="newsletter" class="newsletter-sec sec">
-      <div class="newsletter-sec__inner">
-        <div class="newsletter-sec__icon">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#fff"
-            stroke-width="1.5"
-          >
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-            <polyline points="22,6 12,13 2,6" />
-          </svg>
-        </div>
-        <h2 class="newsletter-sec__title">Artículos nuevos,<br />cada semana en tu correo</h2>
-        <p class="newsletter-sec__desc">
-          Recibí el mejor contenido sobre acompañamiento terapéutico y cuidado de personas
-          directamente en tu bandeja de entrada.
-        </p>
-
-        <form v-if="!submitted" class="newsletter-sec__form" @submit.prevent="subscribe">
-          <input
-            v-model="email"
-            type="email"
-            placeholder="tu@email.com"
-            class="newsletter-sec__input"
-            required
+        <div class="grid-3">
+          <ArticleCard
+            v-for="article in displayedArticles"
+            :key="article.slug"
+            :article="article"
+            class="reveal"
           />
-          <button type="submit" class="newsletter-sec__btn">Me sumo</button>
-        </form>
-        <p v-if="!submitted" class="newsletter-sec__disclaimer">
-          Sin spam. Cancelás cuando querés.
-        </p>
+        </div>
+      </div>
+    </section>
 
-        <div v-if="submitted" class="newsletter-sec__success">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="#fff"
-            stroke-width="2.2"
-          >
-            <path d="M2 10l5.5 6L18 4" />
-          </svg>
-          <span>¡Listo! Te suscribiste correctamente.</span>
+    <!-- ═══ TEMAS ═══ -->
+    <section id="temas" class="section topics-sec">
+      <div class="container">
+        <div class="topics-sec__head reveal">
+          <span class="eyebrow eyebrow--plain">Explorá por tema</span>
+          <h2 class="section-title">Diez formas de entrar</h2>
+          <p class="section-lead topics-sec__lead">
+            Cada tema reúne los artículos de un área concreta del cuidado. Entrá por donde más lo
+            necesites hoy.
+          </p>
+        </div>
+
+        <div class="grid-5">
+          <CategoryCard
+            v-for="cat in store.categories"
+            :key="cat.slug"
+            :category="cat"
+            class="reveal"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ AUDIENCIAS ═══ -->
+    <section class="aud-sec">
+      <div class="aud-sec__glow" aria-hidden="true"></div>
+      <div class="container aud-sec__inner">
+        <div class="aud-sec__head reveal">
+          <h2 class="aud-sec__title">¿Desde dónde llegás?</h2>
+          <p class="aud-sec__sub">
+            El contenido está pensado para dos recorridos distintos — y nada impide hacer los dos.
+          </p>
+        </div>
+
+        <div class="aud-cols">
+          <div class="aud reveal">
+            <span class="aud__glyph aud__glyph--fam" aria-hidden="true">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </svg>
+            </span>
+            <h3 class="aud__title">Cuido a alguien</h3>
+            <p class="aud__desc">
+              Si estás acompañando a una persona que querés, este es tu lado. Guías prácticas,
+              herramientas concretas y orientación honesta sobre lo que también te pasa a vos.
+            </p>
+            <RouterLink to="/categoria/guia-cuidador" class="btn btn--accent">
+              Artículos para familias
+            </RouterLink>
+          </div>
+
+          <div class="aud reveal">
+            <span class="aud__glyph aud__glyph--pro" aria-hidden="true">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+            </span>
+            <h3 class="aud__title">Trabajo en AT</h3>
+            <p class="aud__desc">
+              Material de nivel intermedio y avanzado: profundidad clínica, marcos teóricos y
+              reflexión sobre la práctica del acompañamiento terapéutico.
+            </p>
+            <RouterLink to="/categoria/acompanamiento-terapeutico" class="btn btn--primary">
+              Artículos para profesionales
+            </RouterLink>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ NEWSLETTER ═══ -->
+    <section id="newsletter" class="section news-sec">
+      <div class="container">
+        <div class="news reveal">
+          <div class="news__arch" aria-hidden="true">
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="2" y="4" width="20" height="16" rx="3" />
+              <path d="M2.5 6.5L12 13l9.5-6.5" />
+            </svg>
+          </div>
+
+          <h2 class="news__title">Un artículo nuevo por semana</h2>
+          <p class="news__desc">
+            Sin ruido y sin spam. Solo el contenido nuevo, cuando sale, directo a tu correo.
+          </p>
+
+          <form v-if="!submitted" class="news__form" @submit.prevent="subscribe">
+            <input
+              v-model="email"
+              type="email"
+              placeholder="tu@correo.com"
+              class="news__input"
+              aria-label="Tu correo electrónico"
+              required
+            />
+            <button type="submit" class="btn btn--primary news__btn">Me sumo</button>
+          </form>
+          <p v-if="!submitted" class="news__fine">Cancelás cuando quieras, en un clic.</p>
+
+          <div v-else class="news__ok" role="status">
+            <svg
+              width="19"
+              height="19"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2.5 10.5l5 5L17.5 5" />
+            </svg>
+            <span>¡Listo! Te suscribiste correctamente.</span>
+          </div>
         </div>
       </div>
     </section>
@@ -352,7 +333,9 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { useBlogStore } from '@/stores/blog'
+import { useBlogStore, CATEGORIES } from '@/stores/blog'
+import { getCategoryTheme, LEVEL_CHIPS } from '@/utils/theme'
+import { useReveal } from '@/composables/useReveal'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CategoryCard from '@/components/blog/CategoryCard.vue'
 
@@ -360,12 +343,29 @@ const router = useRouter()
 const store = useBlogStore()
 const { filteredArticles } = storeToRefs(store)
 
+useReveal()
+
 const searchQuery = ref('')
 const email = ref('')
 const submitted = ref(false)
 
 const quickCategories = computed(() => store.categories.slice(0, 3))
+const featured = computed(() => store.articles[0])
+const featuredTheme = computed(() =>
+  getCategoryTheme(featured.value?.categories[0] ?? 'acompanamiento-terapeutico')
+)
+const featuredCategoryName = computed(
+  () => CATEGORIES.find((c) => c.slug === featured.value?.categories[0])?.name ?? ''
+)
 const displayedArticles = computed(() => filteredArticles.value.slice(0, 6))
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
 
 function goToSearch() {
   const q = searchQuery.value.trim()
@@ -381,722 +381,707 @@ function subscribe() {
 </script>
 
 <style scoped>
-/* ── Sección base ── */
-.sec {
-  padding: 80px 0;
+/* ── Grillas compartidas ── */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
 }
 
-.section-title {
-  font-family: var(--font-serif);
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-}
-.section-title--center {
-  font-size: 34px;
-  text-align: center;
-  margin-bottom: 12px;
+.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
 }
 
-.section-link {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-primary);
+.sec-head {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  text-decoration: none;
-  transition: color 0.15s;
-}
-.section-link:hover {
-  color: var(--color-primary-dark);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 40px;
 }
 
-/* ── Hero ── */
+.sec-head .eyebrow {
+  margin-bottom: 14px;
+}
+
+/* ═══ HERO ═══ */
 .hero {
-  background: linear-gradient(158deg, #192e58 0%, #2a4080 38%, #3e5aa8 72%, #4e6eb8 100%);
-  padding: 96px 0 80px;
   position: relative;
   overflow: hidden;
-  min-height: 58vh;
-  display: flex;
-  align-items: center;
+  padding: clamp(3.5rem, 8vw, 6.5rem) 0 clamp(4rem, 9vw, 7rem);
+  background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-canvas-alt) 100%);
 }
 
+/* Formas orgánicas difusas: dan atmósfera sin competir con el texto */
 .hero__orb {
   position: absolute;
   border-radius: 50%;
+  filter: blur(70px);
   pointer-events: none;
-}
-.hero__orb--tr {
-  top: -120px;
-  right: -80px;
-  width: 560px;
-  height: 560px;
-  background: rgba(255, 255, 255, 0.03);
-}
-.hero__orb--br {
-  bottom: -100px;
-  right: 12%;
-  width: 360px;
-  height: 360px;
-  background: rgba(100, 140, 210, 0.12);
-}
-.hero__orb--tl {
-  top: 10%;
-  left: -100px;
-  width: 300px;
-  height: 300px;
-  background: rgba(60, 90, 160, 0.15);
+  animation: nx-breathe 18s ease-in-out infinite;
 }
 
-.hero__fade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, transparent 60%, rgba(25, 46, 88, 0.4) 100%);
-  pointer-events: none;
+.hero__orb--sage {
+  top: -12%;
+  right: -6%;
+  width: 520px;
+  height: 520px;
+  background: rgba(122, 148, 113, 0.26);
+}
+
+.hero__orb--clay {
+  bottom: -22%;
+  left: -8%;
+  width: 420px;
+  height: 420px;
+  background: rgba(192, 117, 83, 0.16);
+  animation-delay: -6s;
+}
+
+.hero__orb--ochre {
+  top: 42%;
+  left: 46%;
+  width: 300px;
+  height: 300px;
+  background: rgba(201, 154, 63, 0.12);
+  animation-delay: -12s;
 }
 
 .hero__inner {
   position: relative;
   z-index: 1;
-}
-
-.hero__content {
-  max-width: 720px;
-  animation: fadeUp 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  display: grid;
+  grid-template-columns: 1.35fr 0.65fr;
+  gap: 56px;
+  align-items: center;
 }
 
 .hero__badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.17);
+  gap: 9px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-light);
   border-radius: var(--radius-full);
-  padding: 6px 16px;
-  margin-bottom: 28px;
-  font-size: 11px;
+  padding: 7px 16px 7px 12px;
+  margin-bottom: 26px;
+  font-size: 0.74rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.78);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  color: var(--color-ink-secondary);
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-sm);
 }
 
 .hero__badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #e07b68;
+  background: var(--color-primary);
   flex-shrink: 0;
 }
 
 .hero__title {
-  font-family: var(--font-serif);
-  font-size: clamp(34px, 4.8vw, 60px);
-  font-weight: 700;
-  color: #fff;
-  line-height: 1.12;
-  letter-spacing: -0.025em;
-  margin-bottom: 20px;
+  font-size: clamp(2.6rem, 6.2vw, 4.6rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  margin-bottom: 24px;
 }
 
-.hero__sub {
-  font-size: 18px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.7;
-  margin-bottom: 40px;
-  max-width: 560px;
+.hero__title em {
+  font-style: italic;
+  color: var(--color-primary-dark);
+  font-variation-settings:
+    'SOFT' 90,
+    'WONK' 1;
 }
 
-.hero__search-wrap {
+.hero__lead {
+  font-size: 1.1rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.76;
+  margin-bottom: 34px;
+  max-width: 54ch;
+}
+
+/* Buscador */
+.hero__search {
   display: flex;
   align-items: center;
-  background: #fff;
+  gap: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-full);
-  max-width: 600px;
-  margin-bottom: 28px;
-  box-shadow: var(--shadow-hero);
-  overflow: hidden;
+  padding: 5px 5px 5px 20px;
+  max-width: 520px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-md);
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.3s ease;
+}
+
+.hero__search:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
 }
 
 .hero__search-icon {
-  margin-left: 22px;
+  color: var(--color-ink-faint);
   flex-shrink: 0;
 }
 
-.hero__search-input {
+.hero__input {
   flex: 1;
   border: none;
-  padding: 17px 16px;
-  font-size: 15px;
-  color: var(--color-text);
   background: none;
+  padding: 14px 12px;
+  font-size: 0.98rem;
   min-width: 0;
   outline: none;
 }
 
-.hero__search-btn {
+.hero__input::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.hero__go {
   background: var(--color-primary);
-  color: #fff;
-  font-size: 14px;
+  color: #fffdfa;
+  font-size: 0.88rem;
   font-weight: 700;
-  padding: 14px 26px;
-  margin: 4px;
+  padding: 12px 24px;
   border-radius: var(--radius-full);
   white-space: nowrap;
-  transition: background 0.15s;
+  transition: background 0.2s ease;
 }
-.hero__search-btn:hover {
+
+.dark .hero__go {
+  color: #191512;
+}
+
+.hero__go:hover {
   background: var(--color-primary-dark);
 }
 
-.hero__chips {
+/* Accesos rápidos */
+.hero__quick {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.hero__chips-label {
-  font-size: 11px;
+.hero__quick-label {
+  font-size: 0.72rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--color-ink-faint);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.13em;
   margin-right: 2px;
 }
 
 .hero__chip {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-light);
+  color: var(--color-ink-secondary);
+  font-size: 0.82rem;
   font-weight: 600;
-  padding: 6px 14px;
+  padding: 7px 15px;
   border-radius: var(--radius-full);
-  text-decoration: none;
-  transition: background 0.15s;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.3s var(--ease-out-soft);
 }
+
 .hero__chip:hover {
-  background: rgba(255, 255, 255, 0.18);
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+  transform: translateY(-2px);
 }
 
-/* ── Featured ── */
-.featured-sec {
-  background: var(--color-bg);
-}
-
-.featured-sec__header {
+/* Arco decorativo */
+.hero__arch {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
+  gap: 20px;
 }
 
-.featured-sec__badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: #a8a298;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.featured-card {
-  background: var(--color-white);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border);
-  display: flex;
-}
-
-.featured-card__img {
-  width: 44%;
-  min-height: 380px;
-  flex-shrink: 0;
-  background: linear-gradient(138deg, #7fa3d1 0%, #4568a0 52%, #2a3e80 100%);
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  padding: 24px;
-}
-
-.featured-card__img-watermark {
-  position: absolute;
-  inset: 0;
+.hero__arch-inner {
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 3 / 4;
+  border-radius: 999px 999px var(--radius-lg) var(--radius-lg) / 55% 55% var(--radius-lg)
+    var(--radius-lg);
+  background: var(--cat-at-grad);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-serif);
-  font-size: 140px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.05);
-  line-height: 1;
-  user-select: none;
-  letter-spacing: -0.04em;
-}
-
-.featured-card__img-label {
+  box-shadow: var(--shadow-bloom);
   position: relative;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  letter-spacing: 0.03em;
+  overflow: hidden;
 }
 
-.featured-card__body {
-  padding: 44px 52px;
-  flex: 1;
+.hero__arch-mark {
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 70,
+    'WONK' 1;
+  font-size: 4.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.22);
+  letter-spacing: -0.05em;
+}
+
+.hero__arch-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1px;
+}
+
+.hero__arch-note strong {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60;
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1;
+}
+
+.hero__arch-note span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--color-ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ═══ DESTACADO ═══ */
+.feat-sec {
+  background: var(--color-canvas-alt);
+}
+
+.feat {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-light);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  color: inherit;
+  transition:
+    transform 0.45s var(--ease-out-soft),
+    box-shadow 0.45s var(--ease-out-soft);
+}
+
+.feat:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-bloom);
+}
+
+.feat__cover {
+  position: relative;
+  min-height: 380px;
+  margin: 12px 0 12px 12px;
+  border-radius: 999px 999px var(--radius-lg) var(--radius-lg) / 180px 180px var(--radius-lg)
+    var(--radius-lg);
+  background: var(--feat-grad);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.feat__mark {
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 70,
+    'WONK' 1;
+  font-size: 6rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: -0.05em;
+  transition: transform 0.6s var(--ease-out-soft);
+}
+
+.feat:hover .feat__mark {
+  transform: scale(1.08);
+}
+
+.feat__body {
+  padding: 48px 52px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 16px;
 }
 
-.featured-card__chip {
-  display: inline-block;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 5px 12px;
-  border-radius: var(--radius-full);
-  letter-spacing: 0.04em;
-  margin-bottom: 16px;
+.feat__cat {
+  align-self: flex-start;
 }
 
-.featured-card__title {
-  font-family: var(--font-serif);
-  font-size: clamp(21px, 2.2vw, 30px);
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.28;
-  letter-spacing: -0.02em;
-  margin-bottom: 16px;
+.feat__title {
+  font-size: clamp(1.5rem, 2.6vw, 2.15rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 
-.featured-card__excerpt {
-  font-size: 16px;
-  color: var(--color-text-secondary);
-  line-height: 1.74;
-  margin-bottom: 24px;
-  max-width: 540px;
+.feat__excerpt {
+  font-size: 1rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.75;
+  max-width: 54ch;
 }
 
-.featured-card__meta {
+.feat__meta {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 32px;
+  font-size: 0.8rem;
+  color: var(--color-ink-faint);
+  font-weight: 600;
 }
 
-.featured-card__date {
-  font-size: 13px;
-  color: var(--color-text-faint);
-  font-weight: 500;
-}
-
-.meta-dot {
+.feat__dot {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: var(--color-line);
-  flex-shrink: 0;
+  background: var(--color-ink-faint);
 }
 
-.chip-basico {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  background: var(--color-level-basico-bg);
-  color: var(--color-level-basico-text);
-}
-.chip-cuidadores {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  background: var(--color-aud-cuidadores-bg);
-  color: var(--color-aud-cuidadores-text);
+.feat__cta {
+  margin-top: 6px;
 }
 
-.featured-card__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 13px 26px;
-  border-radius: var(--radius-full);
-  letter-spacing: 0.02em;
-  text-decoration: none;
-  align-self: flex-start;
-  transition: background 0.15s;
-}
-.featured-card__cta:hover {
-  background: var(--color-primary-dark);
-}
-
-/* ── Recent ── */
+/* ═══ RECIENTES ═══ */
 .recent-sec {
-  background: var(--color-white);
+  background: var(--color-canvas);
 }
 
-.recent-sec__header {
+/* ═══ TEMAS ═══ */
+.topics-sec {
+  background: var(--color-canvas-alt);
+}
+
+.topics-sec__head {
+  text-align: center;
+  max-width: 620px;
+  margin: 0 auto 48px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 36px;
-}
-
-.articles-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.recent-sec__more {
-  text-align: center;
-  margin-top: 48px;
-}
-
-.btn-outline {
-  background: var(--color-white);
-  border: 2px solid var(--color-primary);
-  color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 700;
-  padding: 13px 32px;
-  border-radius: var(--radius-full);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.15s;
-  font-family: var(--font-sans);
-}
-.btn-outline:hover {
-  background: var(--color-primary-soft);
-}
-
-/* ── Categorías ── */
-.cat-sec {
-  background: var(--color-bg-alt);
-}
-
-.cat-sec__header {
-  text-align: center;
-  margin-bottom: 48px;
-}
-
-.cat-sec__sub {
-  font-size: 16px;
-  color: var(--color-text-muted);
-  line-height: 1.65;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.cat-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
   gap: 14px;
 }
 
-/* ── Audiencias ── */
-.audience-sec {
-  background: var(--color-audience-bg);
-  padding: 80px 0;
+.topics-sec__lead {
+  text-align: center;
 }
 
-.audience-sec__header {
+/* ═══ AUDIENCIAS ═══ */
+.aud-sec {
+  position: relative;
+  background: var(--color-deep);
+  padding: clamp(4rem, 9vw, 7rem) 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.aud-sec__glow {
+  position: absolute;
+  top: -30%;
+  left: 50%;
+  width: 800px;
+  height: 600px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(157, 186, 146, 0.14), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.aud-sec__inner {
+  position: relative;
+}
+
+.aud-sec__head {
   text-align: center;
   margin-bottom: 44px;
 }
 
-.audience-sec__title {
-  font-family: var(--font-serif);
-  font-size: 28px;
-  font-weight: 700;
-  color: #fff;
+.aud-sec__title {
+  font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+  font-weight: 600;
+  color: #f7f2e9;
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+
+.aud-sec__sub {
+  font-size: 1rem;
+  color: rgba(247, 242, 233, 0.55);
+  line-height: 1.7;
+  max-width: 52ch;
+  margin: 0 auto;
+}
+
+.aud-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.aud {
+  background: rgba(247, 242, 233, 0.045);
+  border: 1px solid rgba(247, 242, 233, 0.09);
+  border-radius: var(--radius-2xl);
+  padding: 44px 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  transition:
+    background 0.35s ease,
+    transform 0.45s var(--ease-out-soft);
+}
+
+.aud:hover {
+  background: rgba(247, 242, 233, 0.075);
+  transform: translateY(-4px);
+}
+
+.aud__glyph {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px 999px 15px 15px / 28px 28px 15px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.aud__glyph--fam {
+  background: rgba(221, 150, 112, 0.18);
+  color: #e2a582;
+}
+
+.aud__glyph--pro {
+  background: rgba(157, 186, 146, 0.18);
+  color: #a7c79b;
+}
+
+.aud__title {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #f7f2e9;
   letter-spacing: -0.02em;
 }
 
-.audience-sec__sub {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.45);
-  margin-top: 10px;
-  line-height: 1.6;
+.aud__desc {
+  font-size: 0.95rem;
+  color: rgba(247, 242, 233, 0.58);
+  line-height: 1.78;
+  margin-bottom: 10px;
+  max-width: 42ch;
 }
 
-.audience-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-radius: var(--radius-xl);
-  overflow: hidden;
+/* ═══ NEWSLETTER ═══ */
+.news-sec {
+  background: var(--color-canvas);
 }
 
-.audience-col {
-  padding: 52px;
-  position: relative;
-  overflow: hidden;
-}
-.audience-col--families {
-  background: rgba(224, 123, 104, 0.11);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-}
-.audience-col--pros {
-  background: rgba(69, 104, 160, 0.14);
-}
-
-.audience-col__orb {
-  position: absolute;
-  bottom: -80px;
-  right: -60px;
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  background: rgba(224, 123, 104, 0.06);
-  pointer-events: none;
-}
-.audience-col__orb--pros {
-  bottom: -80px;
-  left: -60px;
-  right: auto;
-  background: rgba(69, 104, 160, 0.07);
-}
-
-.audience-col__content {
-  position: relative;
-  z-index: 1;
-}
-
-.audience-col__icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 22px;
-}
-.audience-col__icon--families {
-  background: rgba(224, 123, 104, 0.18);
-}
-.audience-col__icon--pros {
-  background: rgba(69, 104, 160, 0.2);
-}
-
-.audience-col__title {
-  font-family: var(--font-serif);
-  font-size: 26px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 14px;
-  letter-spacing: -0.015em;
-  line-height: 1.25;
-}
-
-.audience-col__desc {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.58);
-  line-height: 1.74;
-  margin-bottom: 32px;
-  max-width: 380px;
-}
-
-.audience-col__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 13px 24px;
-  border-radius: var(--radius-full);
-  text-decoration: none;
-  color: #fff;
-  transition: background 0.15s;
-}
-.audience-col__btn--families {
-  background: #e07b68;
-}
-.audience-col__btn--families:hover {
-  background: #c86050;
-}
-.audience-col__btn--pros {
-  background: var(--color-primary);
-}
-.audience-col__btn--pros:hover {
-  background: var(--color-primary-dark);
-}
-
-/* ── Newsletter ── */
-.newsletter-sec {
-  background: var(--color-primary);
-  padding: 96px 0;
-}
-
-.newsletter-sec__inner {
-  max-width: 560px;
-  margin: 0 auto;
+.news {
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-line-light);
+  border-radius: var(--radius-2xl);
+  padding: clamp(3rem, 6vw, 4.5rem) 32px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
 }
 
-.newsletter-sec__icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.14);
+.news__arch {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px 999px 15px 15px / 28px 28px 15px 15px;
+  background: var(--color-primary);
+  color: #fffdfa;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 24px;
+  margin-bottom: 8px;
 }
 
-.newsletter-sec__title {
-  font-family: var(--font-serif);
-  font-size: clamp(26px, 3vw, 34px);
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.025em;
-  margin-bottom: 14px;
-  line-height: 1.2;
+.dark .news__arch {
+  color: #191512;
 }
 
-.newsletter-sec__desc {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.7;
-  margin-bottom: 36px;
+.news__title {
+  font-size: clamp(1.8rem, 3.4vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
-.newsletter-sec__form {
+.news__desc {
+  font-size: 1rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.72;
+  max-width: 46ch;
+  margin-bottom: 12px;
+}
+
+.news__form {
   display: flex;
   gap: 8px;
-  max-width: 480px;
-  margin: 0 auto 14px;
+  width: 100%;
+  max-width: 460px;
 }
 
-.newsletter-sec__input {
+.news__input {
   flex: 1;
-  border: none;
-  padding: 15px 20px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 14px 20px;
   border-radius: var(--radius-full);
-  font-size: 15px;
-  color: var(--color-text);
-  background: #fff;
+  font-size: 0.95rem;
   min-width: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-}
-.newsletter-sec__input:focus {
   outline: none;
+  transition: border-color 0.25s ease;
 }
 
-.newsletter-sec__btn {
-  background: var(--color-audience-bg);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 15px 22px;
-  border-radius: var(--radius-full);
-  white-space: nowrap;
+.news__input:focus {
+  border-color: var(--color-primary);
+}
+
+.news__btn {
   flex-shrink: 0;
-  transition: background 0.15s;
-  font-family: var(--font-sans);
-}
-.newsletter-sec__btn:hover {
-  background: var(--color-footer-bg);
 }
 
-.newsletter-sec__disclaimer {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.42);
+.news__fine {
+  font-size: 0.78rem;
+  color: var(--color-ink-faint);
 }
 
-.newsletter-sec__success {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 12px;
-  padding: 20px 32px;
+.news__ok {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
+  gap: 11px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary-light);
+  border-radius: var(--radius-full);
+  padding: 15px 28px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
 }
 
-/* ── Responsive ── */
+/* ═══ RESPONSIVE ═══ */
 @media (max-width: 1024px) {
-  .articles-grid {
+  .hero__inner {
+    grid-template-columns: 1fr;
+    gap: 44px;
+  }
+
+  .hero__arch {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .hero__arch-inner {
+    max-width: 150px;
+  }
+
+  .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
-  .cat-grid {
+
+  .grid-5 {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .feat {
+    grid-template-columns: 1fr;
+  }
+
+  .feat__cover {
+    min-height: 240px;
+    margin: 12px 12px 0;
+    border-radius: 999px 999px var(--radius-lg) var(--radius-lg) / 110px 110px var(--radius-lg)
+      var(--radius-lg);
+  }
+
+  .feat__body {
+    padding: 32px 32px 38px;
   }
 }
 
 @media (max-width: 768px) {
-  .featured-card {
-    flex-direction: column;
-  }
-  .featured-card__img {
-    width: 100% !important;
-    min-height: 220px !important;
-  }
-  .featured-card__body {
-    padding: 28px 28px 32px;
-  }
-  .audience-cols {
+  .aud-cols {
     grid-template-columns: 1fr;
-    border-radius: 12px;
   }
-  .audience-col {
-    padding: 40px 28px;
+
+  .aud {
+    padding: 34px 28px;
   }
-  .newsletter-sec__form {
+
+  .news__form {
     flex-direction: column;
+  }
+
+  .news__btn {
+    width: 100%;
   }
 }
 
 @media (max-width: 640px) {
-  .hero {
-    padding: 56px 0 48px;
-    min-height: auto;
-  }
   .hero__title {
-    font-size: 32px;
+    font-size: 2.5rem;
   }
-  .hero__sub {
-    font-size: 15px;
+
+  .hero__search {
+    flex-wrap: wrap;
+    border-radius: var(--radius-lg);
+    padding: 12px;
   }
-  .sec {
-    padding: 56px 0;
+
+  .hero__input {
+    width: 100%;
+    padding: 8px;
   }
-  .articles-grid {
+
+  .hero__go {
+    width: 100%;
+  }
+
+  .hero__arch {
+    display: none;
+  }
+
+  .grid-3,
+  .grid-5 {
     grid-template-columns: 1fr;
   }
-  .cat-grid {
+
+  .sec-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .grid-5 {
     grid-template-columns: repeat(2, 1fr);
   }
 }

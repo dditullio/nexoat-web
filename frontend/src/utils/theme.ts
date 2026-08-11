@@ -1,91 +1,125 @@
 import type { CategorySlug, Level, Audience } from '@/types'
 
+/**
+ * Paleta por categoría.
+ *
+ * Los valores son referencias a variables CSS, no hex literales: así los
+ * colores de categoría siguen al tema claro/oscuro igual que el resto de
+ * la UI. Los hex viven en `assets/styles/main.css`, en `:root` y `.dark`.
+ *
+ * Toda la familia se mantiene dentro del rango tierra/vegetal para que
+ * conviva con la base arena sin competir con ella.
+ */
 export const CATEGORY_THEMES: Record<
   CategorySlug,
   { bg: string; accent: string; gradient: string; cardColor: string; icon: string }
 > = {
   'acompanamiento-terapeutico': {
-    bg: '#EEF2FA',
-    accent: '#4568A0',
-    cardColor: '#EEF2FA',
-    gradient: 'linear-gradient(138deg,#7FA3D1 0%,#4568A0 55%,#2A3E80 100%)',
+    bg: 'var(--cat-at-bg)',
+    accent: 'var(--cat-at-ink)',
+    cardColor: 'var(--cat-at-bg)',
+    gradient: 'var(--cat-at-grad)',
     icon: 'AT',
   },
   'guia-cuidador': {
-    bg: '#E8F5F4',
-    accent: '#2A8A82',
-    cardColor: '#E8F5F4',
-    gradient: 'linear-gradient(138deg,#68B0A8 0%,#2A8A82 55%,#1A6A62 100%)',
+    bg: 'var(--cat-gc-bg)',
+    accent: 'var(--cat-gc-ink)',
+    cardColor: 'var(--cat-gc-bg)',
+    gradient: 'var(--cat-gc-grad)',
     icon: 'GC',
   },
   'cuidar-al-cuidador': {
-    bg: '#FCEAE6',
-    accent: '#C05E4A',
-    cardColor: '#FCEAE6',
-    gradient: 'linear-gradient(138deg,#E8A090 0%,#D06850 55%,#B04030 100%)',
+    bg: 'var(--cat-cc-bg)',
+    accent: 'var(--cat-cc-ink)',
+    cardColor: 'var(--cat-cc-bg)',
+    gradient: 'var(--cat-cc-grad)',
     icon: 'CC',
   },
   'neurodiversidad-y-discapacidad': {
-    bg: '#F2EEFA',
-    accent: '#6B4FA5',
-    cardColor: '#F2EEFA',
-    gradient: 'linear-gradient(138deg,#A080C8 0%,#7055A8 55%,#5040A0 100%)',
+    bg: 'var(--cat-nd-bg)',
+    accent: 'var(--cat-nd-ink)',
+    cardColor: 'var(--cat-nd-bg)',
+    gradient: 'var(--cat-nd-grad)',
     icon: 'ND',
   },
   'familia-y-vinculos': {
-    bg: '#FEF3EE',
-    accent: '#C4733A',
-    cardColor: '#FEF3EE',
-    gradient: 'linear-gradient(138deg,#E8A870 0%,#C87840 55%,#A85820 100%)',
+    bg: 'var(--cat-fv-bg)',
+    accent: 'var(--cat-fv-ink)',
+    cardColor: 'var(--cat-fv-bg)',
+    gradient: 'var(--cat-fv-grad)',
     icon: 'FV',
   },
   'salud-mental': {
-    bg: '#EEEEF8',
-    accent: '#5560A8',
-    cardColor: '#EEEEF8',
-    gradient: 'linear-gradient(138deg,#8090C8 0%,#5568B0 55%,#3548A0 100%)',
+    bg: 'var(--cat-sm-bg)',
+    accent: 'var(--cat-sm-ink)',
+    cardColor: 'var(--cat-sm-bg)',
+    gradient: 'var(--cat-sm-grad)',
     icon: 'SM',
   },
   'patologias-en-la-vejez': {
-    bg: '#EDF4E8',
-    accent: '#4A7A2A',
-    cardColor: '#EDF4E8',
-    gradient: 'linear-gradient(138deg,#80B068 0%,#5A8A48 55%,#3A6A28 100%)',
+    bg: 'var(--cat-vs-bg)',
+    accent: 'var(--cat-vs-ink)',
+    cardColor: 'var(--cat-vs-bg)',
+    gradient: 'var(--cat-vs-grad)',
     icon: 'VS',
   },
   'sistema-de-salud-y-recursos': {
-    bg: '#E8F3F6',
-    accent: '#2A6A8A',
-    cardColor: '#E8F3F6',
-    gradient: 'linear-gradient(138deg,#68A8C8 0%,#2A7A9A 55%,#1A5A7A 100%)',
+    bg: 'var(--cat-ss-bg)',
+    accent: 'var(--cat-ss-ink)',
+    cardColor: 'var(--cat-ss-bg)',
+    gradient: 'var(--cat-ss-grad)',
     icon: 'SS',
   },
   'herramientas-practicas': {
-    bg: '#FEF5E6',
-    accent: '#C48528',
-    cardColor: '#FEF5E6',
-    gradient: 'linear-gradient(138deg,#E8C068 0%,#C89038 55%,#A87020 100%)',
+    bg: 'var(--cat-hp-bg)',
+    accent: 'var(--cat-hp-ink)',
+    cardColor: 'var(--cat-hp-bg)',
+    gradient: 'var(--cat-hp-grad)',
     icon: 'HP',
   },
   'evidencia-en-foco': {
-    bg: '#EEEAFA',
-    accent: '#5548A0',
-    cardColor: '#EEEAFA',
-    gradient: 'linear-gradient(138deg,#8078C8 0%,#5850B0 55%,#3838A0 100%)',
+    bg: 'var(--cat-ef-bg)',
+    accent: 'var(--cat-ef-ink)',
+    cardColor: 'var(--cat-ef-bg)',
+    gradient: 'var(--cat-ef-grad)',
     icon: 'EF',
   },
 }
 
 export const LEVEL_CHIPS: Record<Level, { bg: string; text: string; label: string }> = {
-  basico: { bg: '#EDF7ED', text: '#2E7A2E', label: 'Básico' },
-  intermedio: { bg: '#EEF2FA', text: '#4568A0', label: 'Intermedio' },
-  avanzado: { bg: '#F2EEFA', text: '#6B4FA5', label: 'Avanzado' },
+  basico: {
+    bg: 'var(--color-level-basico-bg)',
+    text: 'var(--color-level-basico-text)',
+    label: 'Básico',
+  },
+  intermedio: {
+    bg: 'var(--color-level-intermedio-bg)',
+    text: 'var(--color-level-intermedio-text)',
+    label: 'Intermedio',
+  },
+  avanzado: {
+    bg: 'var(--color-level-avanzado-bg)',
+    text: 'var(--color-level-avanzado-text)',
+    label: 'Avanzado',
+  },
 }
 
 export const AUDIENCE_CHIPS: Record<Audience, { bg: string; text: string; label: string }> = {
-  'cuidadores-familiares': { bg: '#FEF5E6', text: '#9A6A22', label: 'Cuidadores' },
-  profesionales: { bg: '#EEEAFA', text: '#5548A0', label: 'Profesionales' },
-  mixto: { bg: '#F0EEE8', text: '#5A6178', label: 'Mixto' },
+  'cuidadores-familiares': {
+    bg: 'var(--color-aud-cuidadores-bg)',
+    text: 'var(--color-aud-cuidadores-text)',
+    label: 'Familias',
+  },
+  profesionales: {
+    bg: 'var(--color-aud-profesionales-bg)',
+    text: 'var(--color-aud-profesionales-text)',
+    label: 'Profesionales',
+  },
+  mixto: {
+    bg: 'var(--color-aud-mixto-bg)',
+    text: 'var(--color-aud-mixto-text)',
+    label: 'Mixto',
+  },
 }
 
 export function getCategoryTheme(slug: CategorySlug) {

@@ -1,112 +1,161 @@
 <template>
-  <div class="article-page">
-    <div v-if="article" class="container article-page__layout">
-      <!-- Columna principal -->
-      <article class="article">
-        <nav class="breadcrumb" aria-label="Ruta de navegación">
+  <div v-if="article" class="art-page">
+    <!-- Cabecera a ancho completo -->
+    <header class="art-head">
+      <div class="art-head__wash" :style="{ background: theme.gradient }" aria-hidden="true"></div>
+
+      <div class="container art-head__inner">
+        <nav class="crumb" aria-label="Ruta de navegación">
           <RouterLink to="/">Inicio</RouterLink>
-          <span>›</span>
+          <span aria-hidden="true">/</span>
           <RouterLink v-if="primaryCategory" :to="`/categoria/${article.categories[0]}`">
             {{ primaryCategory.name }}
           </RouterLink>
-          <span>›</span>
-          <span>{{ article.title }}</span>
         </nav>
 
-        <header class="article__header">
-          <div class="article__chips">
-            <AppChip variant="category">{{ primaryCategory?.name }}</AppChip>
-            <AppChip :variant="`level-${article.level}`">{{ levelLabel }}</AppChip>
-            <AppChip
-              v-for="aud in article.audience"
-              :key="aud"
-              :variant="`audience-${aud === 'cuidadores-familiares' ? 'cuidadores' : 'profesionales'}`"
-              >{{
-                aud === 'cuidadores-familiares' ? 'Para familias' : 'Para profesionales'
-              }}</AppChip
-            >
-          </div>
+        <div class="art-head__chips">
+          <AppChip variant="category">{{ primaryCategory?.name }}</AppChip>
+          <AppChip :variant="`level-${article.level}`">{{ levelLabel }}</AppChip>
+          <AppChip
+            v-for="aud in article.audience"
+            :key="aud"
+            :variant="`audience-${aud === 'cuidadores-familiares' ? 'cuidadores' : 'profesionales'}`"
+          >
+            {{ aud === 'cuidadores-familiares' ? 'Para familias' : 'Para profesionales' }}
+          </AppChip>
+        </div>
 
-          <h1 class="article__title">{{ article.title }}</h1>
-          <p class="article__subtitle">{{ article.subtitle }}</p>
+        <h1 class="art-head__title">{{ article.title }}</h1>
+        <p class="art-head__sub">{{ article.subtitle }}</p>
 
-          <div class="article__meta">
-            <span>{{ formattedDate }}</span>
-            <span v-if="article.readingTimeMinutes"
-              >· {{ article.readingTimeMinutes }} min de lectura</span
-            >
-          </div>
+        <div class="art-head__meta">
+          <span>{{ formattedDate }}</span>
+          <span v-if="article.readingTimeMinutes" class="art-head__dot" aria-hidden="true"></span>
+          <span v-if="article.readingTimeMinutes">
+            {{ article.readingTimeMinutes }} min de lectura
+          </span>
+        </div>
+      </div>
+    </header>
 
-          <div v-if="article.coverImage" class="article__cover">
-            <img :src="article.coverImage" :alt="article.title" />
-          </div>
-        </header>
+    <div class="container art-layout">
+      <article class="art">
+        <figure v-if="article.coverImage" class="art__cover">
+          <img :src="article.coverImage" :alt="article.title" />
+        </figure>
 
-        <div class="article__body">
-          <!-- Placeholder: el contenido markdown se renderizará aquí -->
-          <p class="article__placeholder">
-            <em
-              >El contenido del artículo se cargará aquí una vez implementada la integración con el
-              backend o el parser de Markdown.</em
-            >
+        <div class="prose art__body">
+          <p class="art__note">
+            El contenido del artículo se cargará acá una vez integrado el backend o el parser de
+            Markdown.
           </p>
         </div>
 
-        <footer class="article__footer">
-          <p class="article__disclaimer">
+        <footer class="art__foot">
+          <aside class="art__disclaimer">
+            <strong>Nota</strong>
             Este artículo tiene fines informativos y no reemplaza la consulta con un profesional de
             salud.
-          </p>
-          <div class="article__share">
-            <span class="article__share-label">Compartir:</span>
-            <button class="article__share-btn" @click="copyLink">📋 Copiar enlace</button>
+          </aside>
+
+          <div class="art__share">
+            <span class="art__share-label">Compartir</span>
+            <button class="art__share-btn" @click="copyLink">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="5.5" y="5.5" width="8" height="8" rx="2" />
+                <path d="M10.5 5.5v-1a2 2 0 00-2-2h-4a2 2 0 00-2 2v4a2 2 0 002 2h1" />
+              </svg>
+              {{ copied ? '¡Copiado!' : 'Copiar enlace' }}
+            </button>
           </div>
-          <div class="article__tags">
-            <span v-for="kw in article.keywords" :key="kw" class="article__tag">{{ kw }}</span>
+
+          <div v-if="article.keywords.length" class="art__tags">
+            <span v-for="kw in article.keywords" :key="kw" class="art__tag">{{ kw }}</span>
           </div>
         </footer>
       </article>
 
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="sidebar__block">
-          <h3 class="sidebar__title">Categorías</h3>
-          <nav class="sidebar__cats">
+      <aside class="side">
+        <div class="side__sticky">
+          <div class="side__block">
+            <h2 class="eyebrow side__title">Seguir leyendo</h2>
             <RouterLink
-              v-for="cat in store.categories"
-              :key="cat.slug"
-              :to="`/categoria/${cat.slug}`"
-              class="sidebar__cat-link"
+              v-for="rel in related"
+              :key="rel.slug"
+              :to="`/articulo/${rel.slug}`"
+              class="side__rel"
             >
-              {{ cat.name }}
-              <span class="sidebar__cat-count">{{ cat.articleCount }}</span>
+              <span class="side__rel-title">{{ rel.title }}</span>
+              <span class="side__rel-meta">{{ rel.readingTimeMinutes }} min</span>
             </RouterLink>
-          </nav>
+            <p v-if="!related.length" class="side__empty">Pronto habrá más en esta categoría.</p>
+          </div>
+
+          <div class="side__block">
+            <h2 class="eyebrow side__title">Todos los temas</h2>
+            <nav class="side__cats">
+              <RouterLink
+                v-for="cat in store.categories"
+                :key="cat.slug"
+                :to="`/categoria/${cat.slug}`"
+                class="side__cat"
+              >
+                <span class="side__cat-dot" :style="{ background: cat.accent }"></span>
+                <span class="side__cat-name">{{ cat.name }}</span>
+                <span class="side__cat-count">{{ cat.articleCount }}</span>
+              </RouterLink>
+            </nav>
+          </div>
         </div>
       </aside>
     </div>
+  </div>
 
-    <div v-else class="container">
-      <p>Artículo no encontrado.</p>
-      <RouterLink to="/">Volver al inicio</RouterLink>
-    </div>
+  <div v-else class="container art-missing">
+    <h1 class="section-title">No encontramos ese artículo</h1>
+    <p class="section-lead">Puede que haya cambiado de dirección o que ya no esté publicado.</p>
+    <RouterLink to="/" class="btn btn--primary">Volver al inicio</RouterLink>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore, CATEGORIES } from '@/stores/blog'
+import { getCategoryTheme } from '@/utils/theme'
 import AppChip from '@/components/ui/AppChip.vue'
 
 const route = useRoute()
 const store = useBlogStore()
+const copied = ref(false)
 
 const article = computed(() => store.articles.find((a) => a.slug === route.params.slug))
 
 const primaryCategory = computed(() =>
   article.value ? CATEGORIES.find((c) => c.slug === article.value!.categories[0]) : undefined
 )
+
+const theme = computed(() =>
+  getCategoryTheme(article.value?.categories[0] ?? 'acompanamiento-terapeutico')
+)
+
+const related = computed(() => {
+  if (!article.value) return []
+  const slug = article.value.categories[0]
+  return store.articles
+    .filter((a) => a.slug !== article.value!.slug && a.categories.includes(slug))
+    .slice(0, 3)
+})
 
 const formattedDate = computed(() =>
   article.value
@@ -120,217 +169,349 @@ const formattedDate = computed(() =>
 
 const levelLabel = computed(
   () =>
-    ({
-      basico: 'Básico',
-      intermedio: 'Intermedio',
-      avanzado: 'Avanzado',
-    })[article.value?.level ?? 'basico']
+    ({ basico: 'Básico', intermedio: 'Intermedio', avanzado: 'Avanzado' })[
+      article.value?.level ?? 'basico'
+    ]
 )
 
-function copyLink() {
-  navigator.clipboard.writeText(window.location.href)
-  alert('¡Enlace copiado!')
+async function copyLink() {
+  await navigator.clipboard.writeText(window.location.href)
+  copied.value = true
+  setTimeout(() => (copied.value = false), 2000)
 }
 </script>
 
 <style scoped>
-.article-page__layout {
+/* ── Cabecera ── */
+.art-head {
+  position: relative;
+  padding: 48px 0 44px;
+  overflow: hidden;
+  background: var(--color-canvas-alt);
+  border-bottom: 1px solid var(--color-line-light);
+}
+
+/* Lavado de color de la categoría, muy tenue */
+.art-head__wash {
+  position: absolute;
+  top: -60%;
+  left: 50%;
+  width: 900px;
+  height: 500px;
+  transform: translateX(-50%);
+  filter: blur(90px);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.art-head__inner {
+  position: relative;
+  max-width: 860px;
+}
+
+.crumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-ink-faint);
+  margin-bottom: 26px;
+}
+
+.crumb a {
+  color: var(--color-ink-muted);
+  transition: color 0.2s ease;
+}
+
+.crumb a:hover {
+  color: var(--color-primary-dark);
+}
+
+.art-head__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+.art-head__title {
+  font-size: clamp(2rem, 4.6vw, 3.3rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  margin-bottom: 16px;
+}
+
+.art-head__sub {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 70;
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+  font-style: italic;
+  color: var(--color-ink-secondary);
+  line-height: 1.6;
+  margin-bottom: 22px;
+  max-width: 58ch;
+}
+
+.art-head__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-ink-faint);
+}
+
+.art-head__dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-ink-faint);
+}
+
+/* ── Layout ── */
+.art-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: var(--spacing-3xl);
-  padding-block: var(--spacing-2xl);
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 64px;
+  padding-block: 56px 96px;
   align-items: start;
 }
 
-.breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-xl);
-}
-
-.breadcrumb a {
-  color: var(--color-primary);
-}
-
-/* Header del artículo */
-.article__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-lg);
-}
-
-.article__title {
-  font-size: clamp(1.5rem, 3vw, 2.2rem);
-  font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: var(--spacing-md);
-}
-
-.article__subtitle {
-  font-size: 1.1rem;
-  color: var(--color-text-muted);
-  line-height: 1.6;
-  font-style: italic;
-  margin-bottom: var(--spacing-lg);
-}
-
-.article__meta {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-xl);
-}
-
-.article__cover {
-  border-radius: var(--radius-lg);
+.art__cover {
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: 40px;
 }
 
-.article__cover img {
+.art__cover img {
   width: 100%;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
 }
 
-/* Cuerpo del artículo */
-.article__body {
-  font-size: 1.05rem;
-  line-height: 1.75;
-  color: var(--color-text);
-  max-width: var(--container-article);
-}
-
-.article__placeholder {
-  padding: var(--spacing-2xl);
-  background: var(--color-bg-section);
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
+.art__note {
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-lg);
+  padding: 40px 32px;
   text-align: center;
+  font-style: italic;
+  color: var(--color-ink-muted);
+  font-size: 0.98rem;
 }
 
-/* Footer del artículo */
-.article__footer {
-  margin-top: var(--spacing-3xl);
-  padding-top: var(--spacing-xl);
-  border-top: 1px solid var(--color-border);
+/* ── Pie del artículo ── */
+.art__foot {
+  margin-top: 64px;
+  padding-top: 36px;
+  border-top: 1px solid var(--color-line-light);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: 28px;
+  max-width: var(--container-prose);
 }
 
-.article__disclaimer {
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  font-style: italic;
-  background: var(--color-bg-section);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--color-secondary);
+.art__disclaimer {
+  display: block;
+  background: var(--color-ochre-soft);
+  border-left: 3px solid var(--color-ochre);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 18px 22px;
+  font-size: 0.88rem;
+  line-height: 1.68;
+  color: var(--color-ink-secondary);
 }
 
-.article__share {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.article__share-label {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.article__share-btn {
-  background: var(--color-bg-section);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  padding: 0.3rem 0.9rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-
-.article__share-btn:hover {
-  background: var(--color-border);
-}
-
-.article__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-}
-
-.article__tag {
-  background: var(--color-bg-section);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  padding: 0.2rem 0.7rem;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-/* Sidebar */
-.sidebar {
-  position: sticky;
-  top: 80px;
-}
-
-.sidebar__block {
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-}
-
-.sidebar__title {
-  font-size: 0.85rem;
+.art__disclaimer strong {
+  display: block;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-md);
+  letter-spacing: 0.14em;
+  color: var(--color-ink-muted);
+  margin-bottom: 5px;
 }
 
-.sidebar__cats {
+.art__share {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.art__share-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-ink-muted);
+}
+
+.art__share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.art__share-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.art__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.art__tag {
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-full);
+  padding: 5px 13px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+
+.art__tag::before {
+  content: '#';
+  opacity: 0.5;
+  margin-right: 1px;
+}
+
+/* ── Sidebar ── */
+.side__sticky {
+  position: sticky;
+  top: 96px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 16px;
 }
 
-.sidebar__cat-link {
+.side__block {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-light);
+  border-radius: var(--radius-xl);
+  padding: 22px;
+}
+
+.side__title {
+  margin-bottom: 16px;
+}
+
+.side__rel {
+  display: block;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-line-faint);
+  transition: color 0.2s ease;
+}
+
+.side__rel:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.side__rel:hover .side__rel-title {
+  color: var(--color-primary-dark);
+}
+
+.side__rel-title {
+  display: block;
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 60,
+    'WONK' 1;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+  transition: color 0.2s ease;
+}
+
+.side__rel-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-ink-faint);
+}
+
+.side__empty {
+  font-size: 0.85rem;
+  color: var(--color-ink-faint);
+  font-style: italic;
+}
+
+.side__cats {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.side__cat {
+  display: flex;
   align-items: center;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  gap: 9px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
-  text-decoration: none;
-  color: var(--color-text);
-  font-size: 0.875rem;
-  transition: background 0.1s;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 }
 
-.sidebar__cat-link:hover {
-  background: var(--color-bg-section);
-  text-decoration: none;
+.side__cat:hover {
+  background: var(--color-canvas-alt);
+  color: var(--color-ink);
 }
 
-.sidebar__cat-count {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
+.side__cat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
+.side__cat-name {
+  flex: 1;
+  line-height: 1.3;
+}
+
+.side__cat-count {
+  font-size: 0.72rem;
+  color: var(--color-ink-faint);
+}
+
+/* ── Sin artículo ── */
+.art-missing {
+  padding-block: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+/* ── Responsive ── */
 @media (max-width: 1024px) {
-  .article-page__layout {
+  .art-layout {
     grid-template-columns: 1fr;
+    gap: 48px;
   }
 
-  .sidebar {
-    display: none;
+  .side__sticky {
+    position: static;
   }
 }
 </style>

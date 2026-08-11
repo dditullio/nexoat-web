@@ -1,5 +1,5 @@
 <template>
-  <span class="chip" :class="[`chip--${variant}`, `chip--${size}`]">
+  <span class="chip" :class="[`chip--${variant ?? 'neutral'}`, `chip--${size ?? 'md'}`]">
     <slot />
   </span>
 </template>
@@ -23,52 +23,54 @@ defineProps<{
   display: inline-flex;
   align-items: center;
   border-radius: var(--radius-full);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.015em;
   white-space: nowrap;
+  line-height: 1.4;
 }
 
 .chip--md {
   font-size: 0.75rem;
-  padding: 0.2rem 0.7rem;
+  padding: 0.32rem 0.85rem;
 }
 
 .chip--sm {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.6rem;
 }
 
 .chip--neutral {
-  background: var(--color-bg-section);
-  color: var(--color-text-muted);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-muted);
 }
 
 .chip--category {
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-dark);
 }
 
 .chip--level-basico {
-  background: var(--color-level-basico);
+  background: var(--color-level-basico-bg);
   color: var(--color-level-basico-text);
 }
 
 .chip--level-intermedio {
-  background: var(--color-level-intermedio);
+  background: var(--color-level-intermedio-bg);
   color: var(--color-level-intermedio-text);
 }
 
 .chip--level-avanzado {
-  background: var(--color-level-avanzado);
+  background: var(--color-level-avanzado-bg);
   color: var(--color-level-avanzado-text);
 }
 
 .chip--audience-cuidadores {
-  background: var(--color-audience-cuidadores);
-  color: var(--color-audience-cuidadores-text);
+  background: var(--color-aud-cuidadores-bg);
+  color: var(--color-aud-cuidadores-text);
 }
 
 .chip--audience-profesionales {
-  background: var(--color-audience-profesionales);
-  color: var(--color-audience-profesionales-text);
+  background: var(--color-aud-profesionales-bg);
+  color: var(--color-aud-profesionales-text);
 }
 </style>
