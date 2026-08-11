@@ -10,6 +10,32 @@
 
     <form v-else class="form-page__grid" @submit.prevent="onSubmit">
       <div class="form-page__main">
+        <div
+          v-if="!isEditing"
+          class="import-drop"
+          :class="{ 'is-dragging': isDraggingImport }"
+          @dragover.prevent="isDraggingImport = true"
+          @dragleave.prevent="isDraggingImport = false"
+          @drop.prevent="onDropImport"
+          @click="importFileInput?.click()"
+        >
+          <p class="import-drop__text">
+            Soltá acá el <strong>.md</strong> del artículo para autocompletar el formulario, o hacé
+            clic para elegirlo
+          </p>
+          <input
+            ref="importFileInput"
+            type="file"
+            accept=".md"
+            class="import-drop__input"
+            @change="onPickImportFile"
+            @click.stop
+          />
+        </div>
+        <ul v-if="importWarnings.length" class="import-warnings">
+          <li v-for="warning in importWarnings" :key="warning">{{ warning }}</li>
+        </ul>
+
         <label class="field">
           <span class="field__label">Título *</span>
           <input v-model="form.title" type="text" required class="field__input" />
@@ -161,6 +187,7 @@ import {
 } from '@/services/admin/articles.api'
 import { deleteMedia, uploadMedia } from '@/services/admin/media.api'
 import { renderMarkdown } from '@/utils/markdown'
+import { parseArticleMarkdown } from '@/utils/articleMarkdownImport'
 import { ApiError } from '@/services/http'
 import type { ArticleFormPayload, ArticleStatus } from '@/types/admin'
 import type { Audience, Level } from '@/types'
@@ -179,6 +206,9 @@ const showPreview = ref(false)
 const tagsInput = ref('')
 const isUploadingCover = ref(false)
 const coverError = ref('')
+const isDraggingImport = ref(false)
+const importWarnings = ref<string[]>([])
+const importFileInput = ref<HTMLInputElement | null>(null)
 
 const form = ref<ArticleFormPayload>({
   title: '',
@@ -269,6 +299,36 @@ async function onRemoveCover() {
       coverError.value = 'La imagen se quitó del artículo, pero no pudimos borrarla de Cloudinary.'
     })
   }
+}
+
+function onDropImport(event: DragEvent) {
+  isDraggingImport.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file) importArticleFile(file)
+}
+
+function onPickImportFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // permite volver a elegir el mismo archivo más adelante si hace falta
+  if (file) importArticleFile(file)
+}
+
+async function importArticleFile(file: File) {
+  if (!file.name.toLowerCase().endsWith('.md')) {
+    importWarnings.value = ['Solo se aceptan archivos .md.']
+    return
+  }
+
+  const raw = await file.text()
+  const knownCategorySlugs = categoryOptions.value.map((c) => c.slug)
+  const { data, warnings } = parseArticleMarkdown(raw, knownCategorySlugs, file.name)
+  const { tagsInput: parsedTagsInput, ...formData } = data
+
+  form.value = { ...form.value, ...formData }
+  if (parsedTagsInput) tagsInput.value = parsedTagsInput
+
+  importWarnings.value = warnings
 }
 
 async function loadArticle(id: string) {
@@ -486,6 +546,49 @@ async function onSubmit() {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-accent-dark);
+}
+
+.import-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1.5px dashed var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 22px 18px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.import-drop:hover,
+.import-drop.is-dragging {
+  border-color: var(--color-primary);
+  background: var(--color-surface-sunken);
+}
+
+.import-drop__text {
+  font-size: 0.86rem;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+
+.import-drop__input {
+  display: none;
+}
+
+.import-warnings {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--color-ochre-soft);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
 }
 
 .field {
