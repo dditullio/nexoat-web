@@ -1,3 +1,11 @@
+// Debe ser lo primero que corre (antes de cualquier otro import): carga
+// `.env` en process.env de forma síncrona para que los @Module
+// condicionales (ej. OAuth en AuthModule) puedan leer esas variables al
+// evaluarse, antes de que ConfigModule.forRoot() exista.
+import { loadEnv } from './common/load-env'
+loadEnv()
+
+import fastifyCookie from '@fastify/cookie'
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { ValidationPipe, VersioningType } from '@nestjs/common'
@@ -7,7 +15,15 @@ import { AppModule } from './app.module'
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())
 
-  app.enableCors({ origin: process.env.FRONTEND_URL ?? 'http://localhost:3000' })
+  await app.register(fastifyCookie)
+
+  app.enableCors({
+    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    // El refresh token viaja como cookie httpOnly: el cliente necesita
+    // 'credentials: include' y el servidor necesita reflejar el origin
+    // (no '*') más esta flag para que el navegador la acepte.
+    credentials: true,
+  })
 
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
@@ -19,6 +35,7 @@ async function bootstrap() {
     .setTitle('NexoAT API')
     .setDescription('API del blog NexoAT — Acompañamiento Terapéutico')
     .setVersion('1.0')
+    .addBearerAuth()
     .build()
   const document = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('api/docs', app, document)

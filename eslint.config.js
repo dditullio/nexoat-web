@@ -74,11 +74,27 @@ export default tseslint.config(
     },
   },
 
-  // Permitir console.log en el entrypoint del servidor
+  // Permitir console.log en el entrypoint del servidor y en el seed (scripts
+  // informativos de CLI, no código de aplicación).
   {
-    files: ['backend/src/main.ts'],
+    files: ['backend/src/main.ts', 'backend/prisma/seed.ts'],
     rules: {
       'no-console': 'off',
+    },
+  },
+
+  // NestJS usa reflect-metadata (emitDecoratorMetadata) para resolver DI en
+  // constructores y para que ValidationPipe reconozca los DTOs de
+  // @Body()/@Query()/@Param(). `import type` elimina esa referencia del JS
+  // compilado: el tipo pasa a `Object` en runtime y Nest no puede
+  // resolverlo ("Nest can't resolve dependencies..."). La regla no puede
+  // distinguir esos casos de un tipo genuinamente solo-de-tipo, así que va
+  // apagada acá — a mano hay que preferir `import type` igual donde no
+  // haga falta el valor en runtime.
+  {
+    files: ['backend/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
 

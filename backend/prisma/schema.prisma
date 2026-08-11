@@ -15,10 +15,16 @@ enum Level {
   avanzado
 }
 
+// El identificador Prisma no puede llevar guiones (`@map` solo cambia el
+// valor guardado en DB, no el valor que ve el Prisma Client en runtime —
+// `Audience.cuidadores_familiares` sigue siendo el string
+// "cuidadores_familiares" en JS pase lo que pase). La traducción a los
+// strings con guion que espera el frontend (frontend/src/types/index.ts)
+// vive en articles/audience.util.ts, en el borde de ArticlesModule.
 enum Audience {
   cuidadores_familiares
   profesionales
-  ambos
+  mixto
 }
 
 enum ArticleStatus {
@@ -27,17 +33,30 @@ enum ArticleStatus {
   archivado
 }
 
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  USER
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  FACEBOOK
+}
+
 // ─── Modelos ────────────────────────────────────────────────────────────────
 
 model Category {
-  id          String    @id @default(cuid())
-  slug        String    @unique
+  id          String            @id @default(cuid())
+  slug        String            @unique
   name        String
   description String?
   icon        String?
-  articles    Article[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  articles    ArticleCategory[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@map("categories")
 }
@@ -52,26 +71,41 @@ model Tag {
 }
 
 model Article {
-  id          String        @id @default(cuid())
-  slug        String        @unique
+  id          String            @id @default(cuid())
+  slug        String            @unique
   title       String
+  subtitle    String?
   excerpt     String?
   content     String
   coverImage  String?
-  level       Level         @default(basico)
-  audience    Audience      @default(ambos)
-  status      ArticleStatus @default(borrador)
+  level       Level             @default(basico)
+  // Array, no un enum singular: un artículo puede estar dirigido a más de
+  // una audiencia a la vez (ver frontend/src/data/mockArticles.ts).
+  audience    Audience[]
+  status      ArticleStatus     @default(borrador)
   publishedAt DateTime?
-  readingTime Int?          // minutos estimados
-  categoryId  String
-  category    Category      @relation(fields: [categoryId], references: [id])
+  readingTime Int? // minutos estimados
+  categories  ArticleCategory[]
   tags        ArticleTag[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  authorId    String?
+  author      User?             @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
-  @@index([categoryId])
   @@index([status, publishedAt])
   @@map("articles")
+}
+
+// Muchos-a-muchos: un artículo puede pertenecer a más de una categoría
+// (ej. un artículo de AT en contexto de neurodiversidad cae en ambas).
+model ArticleCategory {
+  articleId  String
+  categoryId String
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, categoryId])
+  @@map("article_categories")
 }
 
 model ArticleTag {
@@ -82,4 +116,79 @@ model ArticleTag {
 
   @@id([articleId, tagId])
   @@map("article_tags")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  emailVerified DateTime?
+  name          String?
+  avatarUrl     String?
+  passwordHash  String? // null si es cuenta 100% OAuth
+  role          Role           @default(USER)
+  isActive      Boolean        @default(true)
+  accounts      OAuthAccount[]
+  refreshTokens RefreshToken[]
+  articles      Article[]      @relation("ArticleAuthor")
+  auditLogs     AuditLog[]     @relation("AuditActor")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("users")
+}
+
+model OAuthAccount {
+  id             String       @id @default(cuid())
+  provider       AuthProvider
+  providerUserId String
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action     String // ej: "article.publish", "user.role_change"
+  entityType String? // ej: "Article", "User"
+  entityId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  isActive       Boolean   @default(true)
+  source         String? // ej: "homepage-hero", "footer"
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@map("newsletter_subscribers")
 }

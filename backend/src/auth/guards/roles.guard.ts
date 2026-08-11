@@ -1,0 +1,25 @@
+import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
+import type { Role, User } from '@prisma/client'
+import { ROLES_KEY } from '../decorators/roles.decorator'
+
+/**
+ * Se aplica siempre después de `JwtAuthGuard` (o junto a él): asume que
+ * `req.user` ya está resuelto. Sin `@Roles(...)` en el handler, no
+ * restringe nada — permite rutas autenticadas sin rol mínimo.
+ */
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private readonly reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+    if (!requiredRoles || requiredRoles.length === 0) return true
+
+    const { user } = context.switchToHttp().getRequest<{ user?: User }>()
+    return !!user && requiredRoles.includes(user.role)
+  }
+}
