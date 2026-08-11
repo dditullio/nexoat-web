@@ -41,7 +41,9 @@ model Article {
 | `POST /admin/media`                | `multipart/form-data`, campo `file`. `@Roles(EDITOR, ADMIN, SUPER_ADMIN)`. Valida MIME (`image/jpeg`, `image/png`, `image/webp`, `image/gif`) y tamaño (máx. 5MB) antes de subir. Sube a Cloudinary en la carpeta `nexoat/articles`, devuelve `{ url, publicId }`. |
 | `DELETE /admin/media?publicId=...` | `@Roles(EDITOR, ADMIN, SUPER_ADMIN)`. Borra el asset de Cloudinary. `publicId` va en el querystring (no en el path) porque los public IDs de Cloudinary incluyen `/` por la carpeta (`nexoat/articles/xyz`), lo que rompería un param de ruta simple.              |
 
-`MediaService` envuelve el SDK `cloudinary` (`v2.uploader.upload_stream` / `v2.uploader.destroy`). Config leída de `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` (ya en `.env` local, agregadas a `.env.example`).
+`MediaService` envuelve el SDK `cloudinary` (`v2.uploader.upload` con un data URI en base64 / `v2.uploader.destroy`). Config leída de `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` (ya en `.env` local, agregadas a `.env.example`).
+
+**Por qué data URI y no `upload_stream`:** la primera implementación usaba `v2.uploader.upload_stream` (variante streaming del SDK). En este entorno de desarrollo esa variante se cuelga hasta hacer timeout del lado del SDK, incluso con credenciales correctas — se confirmó a mano probando ambos métodos contra la API real de Cloudinary desde un script standalone y desde el proceso del backend. El archivo ya está entero en memoria de todos modos (tope de 5MB), así que no hay ninguna ventaja real en streamearlo — se cambió a `v2.uploader.upload(dataUri, ...)`, que sube el buffer completo en un solo request.
 
 `@fastify/multipart` se registra en `main.ts` para poder recibir el archivo.
 
