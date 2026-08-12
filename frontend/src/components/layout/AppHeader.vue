@@ -83,6 +83,13 @@
             <path d="M11.5 11.5L16 16" />
           </svg>
         </RouterLink>
+
+        <div v-if="authStore.isAuthenticated" class="hdr__session">
+          <span class="hdr__session-name">{{ authStore.user?.name || authStore.user?.email }}</span>
+          <button class="hdr__session-logout" @click="onLogout">Salir</button>
+        </div>
+        <RouterLink v-else to="/ingresar" class="hdr__link hdr__login">Ingresar</RouterLink>
+
         <a href="#newsletter" class="btn btn--primary hdr__cta">Suscribirme</a>
       </div>
 
@@ -150,6 +157,20 @@
         </nav>
 
         <div class="drawer__foot">
+          <div v-if="authStore.isAuthenticated" class="drawer__session">
+            <span class="drawer__session-name">{{
+              authStore.user?.name || authStore.user?.email
+            }}</span>
+            <button class="drawer__session-logout" @click="onLogout">Salir</button>
+          </div>
+          <RouterLink
+            v-else
+            to="/ingresar"
+            class="btn btn--ghost drawer__login"
+            @click="menuOpen = false"
+          >
+            Ingresar
+          </RouterLink>
           <a href="#newsletter" class="btn btn--primary drawer__cta" @click="menuOpen = false">
             Suscribirme
           </a>
@@ -162,12 +183,18 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
+import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 
 const store = useBlogStore()
+const authStore = useAuthStore()
 const showCats = ref(false)
 const menuOpen = ref(false)
 const scrolled = ref(false)
+
+function onLogout() {
+  authStore.logout()
+}
 
 function onScroll() {
   scrolled.value = window.scrollY > 12
@@ -381,6 +408,43 @@ onBeforeUnmount(() => {
   margin-left: 4px;
 }
 
+.hdr__login {
+  white-space: nowrap;
+}
+
+.hdr__session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+}
+
+.hdr__session-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hdr__session-logout {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-ink-faint);
+  padding: 6px 10px;
+  border-radius: var(--radius-full);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.hdr__session-logout:hover {
+  background: var(--color-hover-bg);
+  color: var(--color-ink);
+}
+
 /* Hamburguesa */
 .hdr__burger {
   display: none;
@@ -496,6 +560,38 @@ onBeforeUnmount(() => {
 
 .drawer__cta {
   width: 100%;
+}
+
+.drawer__login {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.drawer__session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.drawer__session-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer__session-logout {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-ink-faint);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-line-light);
+  flex-shrink: 0;
 }
 
 /* Transiciones */

@@ -61,6 +61,29 @@
           <p class="art__note">No se pudo cargar el contenido de este artículo.</p>
         </div>
 
+        <aside v-if="article.isTruncated" class="art__paywall">
+          <p class="art__paywall-eyebrow eyebrow">Contenido para {{ scopeLabel }}</p>
+          <template v-if="article.requiredScope === 'suscriptores_nivel_1'">
+            <h2 class="art__paywall-title">Seguí leyendo gratis</h2>
+            <p class="art__paywall-text">
+              Registrate sin costo para acceder al resto de este artículo.
+            </p>
+            <RouterLink
+              :to="{ name: 'register', query: { redirect: route.fullPath } }"
+              class="btn btn--primary"
+            >
+              Registrate gratis
+            </RouterLink>
+          </template>
+          <template v-else>
+            <h2 class="art__paywall-title">Próximamente</h2>
+            <p class="art__paywall-text">
+              Este contenido es para suscriptores de nivel superior. Todavía no tenemos abierto el
+              sistema de suscripciones pagas.
+            </p>
+          </template>
+        </aside>
+
         <section v-if="article.sources.length" class="art__sources">
           <h2 class="eyebrow art__sources-title">Fuentes</h2>
           <ol class="art__sources-list">
@@ -345,6 +368,33 @@ const scopeLabel = computed(() => article.value && SCOPE_CHIPS[article.value.sco
   font-style: italic;
   color: var(--color-ink-muted);
   font-size: 0.98rem;
+}
+
+/* ── Paywall (contenido recortado) ── */
+.art__paywall {
+  margin-top: 40px;
+  background: var(--color-ochre-soft);
+  border: 1px solid var(--color-ochre);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  max-width: var(--container-prose);
+}
+
+.art__paywall-eyebrow {
+  margin-bottom: 10px;
+}
+
+.art__paywall-title {
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
+.art__paywall-text {
+  font-size: 0.94rem;
+  line-height: 1.65;
+  color: var(--color-ink-secondary);
+  margin-bottom: 18px;
+  max-width: 52ch;
 }
 
 /* ── Fuentes ── */

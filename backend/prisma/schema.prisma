@@ -59,6 +59,18 @@ enum AuthProvider {
   FACEBOOK
 }
 
+// Nivel de suscripción de un lector — no confundir con Role (permisos de
+// administración). Toda cuenta nueva (registro por email u OAuth) nace en
+// "gratuito", que ya da acceso a suscriptores_nivel_1. nivel_2/nivel_3 no
+// tienen forma de asignarse todavía (no hay cobro real, ver
+// docs/features/reader-accounts-and-paywall.md) — el campo existe para que
+// la comparación de niveles ya esté escrita cuando llegue esa fase.
+enum SubscriptionTier {
+  gratuito
+  nivel_2
+  nivel_3
+}
+
 // ─── Modelos ────────────────────────────────────────────────────────────────
 
 model Category {
@@ -146,20 +158,21 @@ model ArticleTag {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  emailVerified DateTime?
-  name          String?
-  avatarUrl     String?
-  passwordHash  String? // null si es cuenta 100% OAuth
-  role          Role           @default(USER)
-  isActive      Boolean        @default(true)
-  accounts      OAuthAccount[]
-  refreshTokens RefreshToken[]
-  articles      Article[]      @relation("ArticleAuthor")
-  auditLogs     AuditLog[]     @relation("AuditActor")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id               String           @id @default(cuid())
+  email            String           @unique
+  emailVerified    DateTime?
+  name             String?
+  avatarUrl        String?
+  passwordHash     String? // null si es cuenta 100% OAuth
+  role             Role             @default(USER)
+  subscriptionTier SubscriptionTier @default(gratuito)
+  isActive         Boolean          @default(true)
+  accounts         OAuthAccount[]
+  refreshTokens    RefreshToken[]
+  articles         Article[]        @relation("ArticleAuthor")
+  auditLogs        AuditLog[]       @relation("AuditActor")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@map("users")
 }

@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing'
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
-import { ArticleScope, ArticleStatus, Level, type User } from '@prisma/client'
+import { ArticleScope, ArticleStatus, Level, Role, type User } from '@prisma/client'
 import { ArticlesService } from './articles.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
@@ -215,6 +215,58 @@ describe('ArticlesService', () => {
       expect(audit.record).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'article.publish' })
       )
+    })
+  })
+
+  describe('findPublishedBySlug', () => {
+    const restrictedArticle = {
+      id: 'art-1',
+      slug: 'un-articulo-restringido',
+      status: ArticleStatus.publicado,
+      scope: ArticleScope.suscriptores_nivel_1,
+      content: 'Primer párrafo visible.\n\n<!--corte-->\n\nContenido solo para registrados.',
+      publishedAt: new Date('2026-06-01'),
+      createdAt: new Date('2026-06-01'),
+      categories: [],
+      tags: [],
+      audience: [],
+      sources: null,
+    }
+
+    it('devuelve el contenido recortado y sin el texto posterior al marcador para un visitante anónimo', async () => {
+      prisma.article.findFirst.mockResolvedValue(restrictedArticle)
+
+      const result = await service.findPublishedBySlug('un-articulo-restringido')
+
+      expect(result.isTruncated).toBe(true)
+      expect((result as { requiredScope?: string }).requiredScope).toBe('suscriptores_nivel_1')
+      expect(result.content).not.toContain('Contenido solo para registrados')
+      expect(result.content).toContain('Primer párrafo visible')
+    })
+
+    it('devuelve el contenido completo para un usuario registrado (nivel gratuito)', async () => {
+      prisma.article.findFirst.mockResolvedValue(restrictedArticle)
+      const viewer = { role: Role.USER, subscriptionTier: 'gratuito' } as User
+
+      const result = await service.findPublishedBySlug('un-articulo-restringido', viewer)
+
+      expect(result.isTruncated).toBe(false)
+      expect(result.content).toContain('Contenido solo para registrados')
+    })
+
+    it('devuelve el contenido completo para un EDITOR sin importar el scope', async () => {
+      prisma.article.findFirst.mockResolvedValue(restrictedArticle)
+      const viewer = { role: Role.EDITOR, subscriptionTier: 'gratuito' } as User
+
+      const result = await service.findPublishedBySlug('un-articulo-restringido', viewer)
+
+      expect(result.isTruncated).toBe(false)
+      expect(result.content).toContain('Contenido solo para registrados')
+    })
+
+    it('lanza NotFoundException si el artículo no existe o no está publicado', async () => {
+      prisma.article.findFirst.mockResolvedValue(null)
+      await expect(service.findPublishedBySlug('inexistente')).rejects.toThrow(NotFoundException)
     })
   })
 

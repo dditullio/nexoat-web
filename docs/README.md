@@ -16,7 +16,7 @@
 - [`features/database-backups.md`](features/database-backups.md) — Copias de seguridad manuales de la DB (zip con JSONL + metadata), listado/descarga/restauración en `/nexoat-admin/respaldos`, solo SUPER_ADMIN. **Estado: implementado.**
 - [`features/article-sources-and-published-date.md`](features/article-sources-and-published-date.md) — La `fecha` del `.md` importado pasa a ser `publishedAt` real, y las `fuentes` del `.md` (o cargadas a mano) se muestran en el artículo público. **Estado: implementado.**
 - [`features/article-scope-filters.md`](features/article-scope-filters.md) — Campo `alcance`/`scope` en artículos (público / suscriptores nivel 1-3): clasificación editorial + filtros en listados públicos y admin. **Estado: fase 1 (clasificación/filtros) implementada.**
-- [`features/reader-accounts-and-paywall.md`](features/reader-accounts-and-paywall.md) — Fase 2 del `alcance`: registro/login público de lectores + recorte real de contenido (marcador `<!--corte-->`) en el backend. **Estado: planificado, no implementado.**
+- [`features/reader-accounts-and-paywall.md`](features/reader-accounts-and-paywall.md) — Fase 2 del `alcance`: registro/login público de lectores (solo email) + recorte real de contenido (marcador `<!--corte-->`) en el backend. **Estado: implementado.**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

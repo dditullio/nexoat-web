@@ -61,6 +61,12 @@ export interface ArticleSource {
 export interface ArticleFull extends Article {
   content: string
   sources: ArticleSource[]
+  // `true` cuando el viewer no tiene acceso al `scope` del artículo: el
+  // backend ya devolvió `content` recortado, no el completo (ver
+  // docs/features/reader-accounts-and-paywall.md). `requiredScope` solo
+  // viene presente en ese caso.
+  isTruncated: boolean
+  requiredScope?: ArticleScope
 }
 
 export interface FilterState {

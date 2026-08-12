@@ -54,6 +54,18 @@ const router = createRouter({
       meta: { title: 'Acerca de' },
     },
     {
+      path: '/ingresar',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      meta: { title: 'Ingresar' },
+    },
+    {
+      path: '/registrarme',
+      name: 'register',
+      component: () => import('@/views/RegisterView.vue'),
+      meta: { title: 'Registrarme' },
+    },
+    {
       path: '/nexoat-admin',
       meta: { layout: 'admin' },
       children: [

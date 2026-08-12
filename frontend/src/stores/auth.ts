@@ -38,6 +38,16 @@ export const useAuthStore = defineStore('auth', () => {
     setSession(session)
   }
 
+  /** Alta pública por email — crea la cuenta (rol USER, nivel "gratuito") y abre sesión de una. */
+  async function register(email: string, password: string, name?: string) {
+    const session = await http<SessionResponse>('/auth/register', {
+      method: 'POST',
+      body: { email, password, name },
+      skipAuthRetry: true,
+    })
+    setSession(session)
+  }
+
   async function logout() {
     try {
       await http('/auth/logout', { method: 'POST', skipAuthRetry: true })
@@ -92,6 +102,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     hasRole,
     login,
+    register,
     logout,
     fetchMe,
     refresh,

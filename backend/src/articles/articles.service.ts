@@ -11,7 +11,7 @@ import { slugify } from '../common/slugify'
 import {
   ARTICLE_INCLUDE,
   toAdminArticle,
-  toPublicArticleFull,
+  toPublicArticleFullFor,
   toPublicArticleSummary,
 } from './articles.mapper'
 import { audienceFromApi } from './audience.util'
@@ -69,13 +69,13 @@ export class ArticlesService {
     return { items: items.map(toPublicArticleSummary), total, page, pageSize }
   }
 
-  async findPublishedBySlug(slug: string) {
+  async findPublishedBySlug(slug: string, viewer?: User) {
     const article = await this.prisma.article.findFirst({
       where: { slug, status: ArticleStatus.publicado },
       include: ARTICLE_INCLUDE,
     })
     if (!article) throw new NotFoundException('Artículo no encontrado')
-    return toPublicArticleFull(article)
+    return toPublicArticleFullFor(article, viewer)
   }
 
   // ─── Admin ──────────────────────────────────────────────────────────────

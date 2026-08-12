@@ -1,6 +1,6 @@
 # Cuentas de lector + recorte de contenido (fase 2 del "alcance")
 
-**Estado:** planificado, no implementado. Continúa [`article-scope-filters.md`](article-scope-filters.md) (fase 1: clasificación + filtros, ya implementada) — leer ese doc primero para el contexto y las decisiones ya tomadas (nombre del campo, valores, marcador de corte).
+**Estado:** implementado. Continúa [`article-scope-filters.md`](article-scope-filters.md) (fase 1: clasificación + filtros) — leer ese doc primero para el contexto y las decisiones ya tomadas (nombre del campo, valores, marcador de corte).
 
 ## Objetivo de esta fase
 
@@ -14,12 +14,12 @@ Se revisó el código de `backend/src/auth/` y `frontend/src/stores/auth.ts` / `
 - `useAuthStore` (Pinia) y `services/http.ts` **no son específicos del admin** — `login`, `register` (falta agregarlo al store, hoy solo tiene `login`), `logout`, `refresh`, `bootstrap()` sirven igual para un lector público. `http()` ya adjunta el `Authorization` header con el access token en memoria si existe, en **cualquier** request — incluida la de `ArticleView.vue`, que hoy pasa `skipAuthRetry: true` pero eso solo evita el retry automático tras un 401, no impide que el token viaje si ya está seteado.
 - Lo que **falta** es la superficie pública: pantallas de login/registro fuera de `/nexoat-admin`, algo en `AppHeader.vue` que muestre sesión/logout, y que el backend sepa leer ese token en el endpoint público de artículos (hoy no lo hace en absoluto, ver más abajo).
 
-## Decisiones a tomar (no resueltas todavía — confirmar antes de empezar a picar código)
+## Decisiones (confirmadas)
 
-1. **¿Se construye ya la pantalla pública de login/registro, o se sigue esperando?** Es un prerrequisito real: sin ella, nadie externo puede ser `suscriptores_nivel_1`, y "recortar contenido" sería una función que nunca se activa en la práctica.
-2. **Mensaje para `suscriptores_nivel_2`/`nivel_3` sin sistema de pagos.** Propuesta (no confirmada): el CTA que se muestra depende del `scope` requerido — si es `suscriptores_nivel_1`, botón real "Registrate gratis" que lleva al registro; si es `nivel_2`/`nivel_3`, mensaje "Próximamente" sin acción, para todos los visitantes (incluidos los ya registrados en nivel_1), porque comprar todavía no existe.
-3. **Redirect de OAuth hardcodeado al callback del admin.** `google-auth.controller.ts`/`facebook-auth.controller.ts` hoy redirigen siempre a `${FRONTEND_URL}/nexoat-admin/oauth-callback` — si el login público también ofrece "Continuar con Google", hace falta diferenciar el destino (ej. un parámetro `state` que viaje ida y vuelta por el proveedor OAuth, con el callback público como `views/PublicOAuthCallbackView.vue` separado del admin). Si por ahora el login público es solo email+contraseña (sin OAuth), este punto se puede posponer.
-4. **¿El corte se calcula en cada request o se guarda pre-calculado?** Recomendado: en cada request (buscar `<!--corte-->` en `article.content` y cortar ahí, sin persistir una copia recortada) — el contenido es texto plano corto, no vale la pena la complejidad de mantener dos copias sincronizadas.
+1. **Pantalla pública de login/registro:** se construye ya, en esta fase.
+2. **Mensaje para `suscriptores_nivel_2`/`nivel_3` sin sistema de pagos:** confirmada la propuesta — CTA depende del `scope` requerido; `suscriptores_nivel_1` → botón real "Registrate gratis" al registro; `nivel_2`/`nivel_3` → mensaje "Próximamente" sin acción, para todos los visitantes (incluidos los ya registrados en nivel_1).
+3. **OAuth:** se pospone. El login/registro público de esta fase es **solo email + contraseña**. El redirect hardcodeado a `/nexoat-admin/oauth-callback` en `google-auth.controller.ts`/`facebook-auth.controller.ts` queda sin tocar — se revisa cuando se agregue OAuth público más adelante.
+4. **Cálculo del corte:** confirmado, en cada request (buscar `<!--corte-->` en `article.content` al armar la respuesta, sin persistir copia recortada).
 
 ## Cambios de schema propuestos
 
@@ -56,7 +56,7 @@ Cualquier alta nueva (`register`, OAuth) ya nace en `gratuito` = acceso a `suscr
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `stores/auth.ts`                                         | Agregar `register(email, password, name?)` (falta hoy, solo hay `login`).                                                                                                                                                                                                 |
 | `router/index.ts`                                        | Rutas públicas nuevas, ej. `/ingresar`, `/registrarme` (fuera del árbol `/nexoat-admin`, sin `meta.layout: 'admin'`).                                                                                                                                                     |
-| `views/LoginView.vue`, `views/RegisterView.vue` (nuevos) | Formularios mínimos, mismo patrón visual que `AdminLoginView.vue` pero con el layout público (`AppHeader`/`AppFooter`), siguiendo el skill de diseño.                                                                                                                     |
+| `views/LoginView.vue`, `views/RegisterView.vue` (nuevos) | Formularios mínimos **solo email + contraseña** (sin botones de OAuth — pospuesto, ver decisión #3), mismo patrón visual que `AdminLoginView.vue` pero con el layout público (`AppHeader`/`AppFooter`), siguiendo el skill de diseño.                                     |
 | `components/layout/AppHeader.vue`                        | Mostrar "Ingresar" o el nombre de usuario + "Salir" según `authStore.isAuthenticated`.                                                                                                                                                                                    |
 | `App.vue`                                                | Llamar `authStore.bootstrap()` también en el layout público (hoy probablemente solo se dispara para rutas admin — confirmar al implementar).                                                                                                                              |
 | `types/index.ts`                                         | `ArticleFull` suma `isTruncated: boolean`, `requiredScope?: ArticleScope`.                                                                                                                                                                                                |
@@ -65,13 +65,16 @@ Cualquier alta nueva (`register`, OAuth) ya nace en `gratuito` = acceso a `suscr
 ## Fuera de alcance de esta fase
 
 - Cobro real (Stripe/Mercado Pago/etc.) y todo lo que dependa de saber si un pago está al día (renovaciones, vencimientos, webhooks).
+- Login/registro público con Google/Facebook (OAuth) — el login público arranca solo con email + contraseña, ver decisión #3.
 - Verificación de email obligatoria para el registro público (mismo criterio que ya aplica al admin — se posterga hasta tener proveedor de email, ver `auth-and-admin-dashboard.md`).
 - Panel de "mi cuenta" para que un lector vea/cambie su nivel — no tiene sentido hasta que haya algo pago que gestionar.
 
-## Plan de verificación (al implementar)
+## Plan de verificación
 
-1. Test de backend: pedir `GET /articles/:slug` de un artículo `suscriptores_nivel_1` sin token → el `content` de la respuesta **no contiene** el texto posterior al marcador (inspeccionar el body, no confiar en el frontend).
-2. Test de backend: mismo artículo, con token de un usuario `gratuito` → contenido completo.
-3. Test de backend: `EDITOR`/`ADMIN`/`SUPER_ADMIN` siempre ven completo, sin importar `scope` ni `subscriptionTier`.
-4. Manual: registrarse desde `/registrarme`, confirmar que la sesión persiste tras recargar (vía `refresh()`/cookie httpOnly) y que un artículo `suscriptores_nivel_1` que antes se veía recortado ahora se ve completo.
-5. Manual: artículo `suscriptores_nivel_2` — confirmar que muestra "Próximamente" (o lo que se decida en el punto pendiente #2) incluso estando registrado en nivel_1.
+1. Test de backend (`articles.service.spec.ts`): pedir `findPublishedBySlug` de un artículo `suscriptores_nivel_1` sin viewer → el `content` de la respuesta **no contiene** el texto posterior al marcador (se inspecciona el string devuelto, no el render). ✅
+2. Test de backend: mismo artículo, con un viewer `USER`/`gratuito` → contenido completo (`isTruncated: false`). ✅
+3. Test de backend: viewer `EDITOR` siempre ve completo, sin importar `scope` ni `subscriptionTier`. ✅
+4. Test de backend: slug inexistente o no publicado → `NotFoundException`. ✅
+5. Manual (navegador): artículo con `scope: suscriptores_nivel_1` visto sin sesión → chip "Registrados", contenido cortado en el marcador, bloque "Seguí leyendo gratis" con botón a `/registrarme`. ✅
+6. Manual: registro real desde `/registrarme` (email + contraseña) → sesión abierta de inmediato (`AppHeader` muestra el nombre + "Salir"), mismo artículo ahora se ve completo (fuentes incluidas). ✅
+7. Pendiente de probar manualmente cuando haya un artículo `nivel_2`/`nivel_3` en catálogo: confirmar que muestra el bloque "Próximamente" sin acción, incluso para un usuario ya registrado en `gratuito`. La lógica está cubierta por `hasAccess()` (mismo camino que `nivel_1`), pero no se verificó visualmente por falta de un artículo de esos niveles en los datos de desarrollo.

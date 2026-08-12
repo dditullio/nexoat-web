@@ -1,5 +1,6 @@
-import type { Prisma } from '@prisma/client'
+import type { Prisma, User } from '@prisma/client'
 import { audienceToApi } from './audience.util'
+import { hasAccess, truncateContent } from './scope.util'
 
 /** Include compartido: todo lo que necesitan tanto el mapper público como el admin. */
 export const ARTICLE_INCLUDE = {
@@ -34,6 +35,26 @@ export function toPublicArticleFull(article: ArticleWithRelations) {
     ...toPublicArticleSummary(article),
     content: article.content,
     sources: (article.sources as ArticleSourceShape[] | null) ?? [],
+  }
+}
+
+/**
+ * Forma pública completa para un `viewer` concreto (o `undefined` = anónimo).
+ * Si no tiene acceso al `scope` del artículo, devuelve el contenido
+ * recortado (`isTruncated: true`) en vez del completo — el contenido pleno
+ * no debe salir nunca en el body HTTP si no corresponde, ver
+ * docs/features/reader-accounts-and-paywall.md.
+ */
+export function toPublicArticleFullFor(article: ArticleWithRelations, viewer?: User) {
+  if (hasAccess(article.scope, viewer)) {
+    return { ...toPublicArticleFull(article), isTruncated: false as const }
+  }
+  return {
+    ...toPublicArticleSummary(article),
+    content: truncateContent(article.content),
+    sources: [],
+    isTruncated: true as const,
+    requiredScope: article.scope,
   }
 }
 

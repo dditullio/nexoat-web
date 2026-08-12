@@ -1,7 +1,10 @@
-import { Controller, Get, Param, Query } from '@nestjs/common'
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
+import type { User } from '@prisma/client'
 import { ArticlesService } from './articles.service'
 import { QueryPublicArticlesDto } from './dto/query-public-articles.dto'
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard'
+import { CurrentUser } from '../auth/decorators/current-user.decorator'
 
 @ApiTags('articles')
 @Controller('articles')
@@ -15,8 +18,12 @@ export class ArticlesController {
   }
 
   @Get(':slug')
-  @ApiOperation({ summary: 'Detalle público por slug — solo si está publicado' })
-  findOne(@Param('slug') slug: string) {
-    return this.articlesService.findPublishedBySlug(slug)
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary:
+      'Detalle público por slug — solo si está publicado. Si el viewer no tiene acceso al `scope` del artículo, devuelve el contenido recortado.',
+  })
+  findOne(@Param('slug') slug: string, @CurrentUser() user?: User) {
+    return this.articlesService.findPublishedBySlug(slug, user)
   }
 }
