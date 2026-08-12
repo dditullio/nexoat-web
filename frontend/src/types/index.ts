@@ -20,6 +20,11 @@ export type CategorySlug =
   | 'sistema-de-salud-y-recursos'
   | 'herramientas-practicas'
   | 'evidencia-en-foco'
+  | 'maltrato-y-abuso'
+  | 'aspectos-legales-y-derechos'
+  | 'historias-que-humanizan'
+  | 'autismo-y-tea'
+  | 'discapacidad-intelectual-y-psicosocial'
 
 export interface CategoryTheme {
   bg: string

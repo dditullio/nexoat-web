@@ -17,6 +17,7 @@
 - [`features/article-sources-and-published-date.md`](features/article-sources-and-published-date.md) — La `fecha` del `.md` importado pasa a ser `publishedAt` real, y las `fuentes` del `.md` (o cargadas a mano) se muestran en el artículo público. **Estado: implementado.**
 - [`features/article-scope-filters.md`](features/article-scope-filters.md) — Campo `alcance`/`scope` en artículos (público / suscriptores nivel 1-3): clasificación editorial + filtros en listados públicos y admin. **Estado: fase 1 (clasificación/filtros) implementada.**
 - [`features/reader-accounts-and-paywall.md`](features/reader-accounts-and-paywall.md) — Fase 2 del `alcance`: registro/login público de lectores (solo email) + recorte real de contenido (marcador `<!--corte-->`) en el backend. **Estado: implementado.**
+- [`features/new-categories-batch-1.md`](features/new-categories-batch-1.md) — 5 categorías nuevas (Maltrato y Abuso, Aspectos Legales y Derechos, Historias que Humanizan, Autismo y TEA, Discapacidad Intelectual y Psicosocial) que llevan el set de 10 a 15. **Estado: implementado (alta de categoría — reclasificación de artículos pendiente).**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

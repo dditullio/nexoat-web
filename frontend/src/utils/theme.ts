@@ -84,6 +84,41 @@ export const CATEGORY_THEMES: Record<
     gradient: 'var(--cat-ef-grad)',
     icon: 'EF',
   },
+  'maltrato-y-abuso': {
+    bg: 'var(--cat-ma-bg)',
+    accent: 'var(--cat-ma-ink)',
+    cardColor: 'var(--cat-ma-bg)',
+    gradient: 'var(--cat-ma-grad)',
+    icon: 'MA',
+  },
+  'aspectos-legales-y-derechos': {
+    bg: 'var(--cat-al-bg)',
+    accent: 'var(--cat-al-ink)',
+    cardColor: 'var(--cat-al-bg)',
+    gradient: 'var(--cat-al-grad)',
+    icon: 'AL',
+  },
+  'historias-que-humanizan': {
+    bg: 'var(--cat-hh-bg)',
+    accent: 'var(--cat-hh-ink)',
+    cardColor: 'var(--cat-hh-bg)',
+    gradient: 'var(--cat-hh-grad)',
+    icon: 'HH',
+  },
+  'autismo-y-tea': {
+    bg: 'var(--cat-tea-bg)',
+    accent: 'var(--cat-tea-ink)',
+    cardColor: 'var(--cat-tea-bg)',
+    gradient: 'var(--cat-tea-grad)',
+    icon: 'TEA',
+  },
+  'discapacidad-intelectual-y-psicosocial': {
+    bg: 'var(--cat-di-bg)',
+    accent: 'var(--cat-di-ink)',
+    cardColor: 'var(--cat-di-bg)',
+    gradient: 'var(--cat-di-grad)',
+    icon: 'DI',
+  },
 }
 
 export const LEVEL_CHIPS: Record<Level, { bg: string; text: string; label: string }> = {

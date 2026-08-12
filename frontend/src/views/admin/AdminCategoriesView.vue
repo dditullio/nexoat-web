@@ -1,7 +1,7 @@
 <template>
   <div class="cats">
     <p class="cats__lead">
-      Las 10 categorías son un set fijo — acá solo se sube o se cambia la imagen de portada de cada
+      Las 15 categorías son un set fijo — acá solo se sube o se cambia la imagen de portada de cada
       una. Se usa como fondo de su tarjeta en la home y en el encabezado de su página de listado.
     </p>
 

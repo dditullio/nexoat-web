@@ -186,6 +186,21 @@
   --cat-ef-bg: #e8eee4;
   --cat-ef-ink: #4a6340;
   --cat-ef-grad: linear-gradient(145deg, #9ab88d 0%, #4a6340 100%);
+  --cat-ma-bg: #f1e4e2;
+  --cat-ma-ink: #7a3f3f;
+  --cat-ma-grad: linear-gradient(145deg, #bd8484 0%, #7a3f3f 100%);
+  --cat-al-bg: #eae7e0;
+  --cat-al-ink: #5b5548;
+  --cat-al-grad: linear-gradient(145deg, #a39a87 0%, #5b5548 100%);
+  --cat-hh-bg: #f6e7ea;
+  --cat-hh-ink: #a15a72;
+  --cat-hh-grad: linear-gradient(145deg, #cf94a8 0%, #a15a72 100%);
+  --cat-tea-bg: #e7e6f0;
+  --cat-tea-ink: #5f5a86;
+  --cat-tea-grad: linear-gradient(145deg, #a79cc9 0%, #5f5a86 100%);
+  --cat-di-bg: #efe6de;
+  --cat-di-ink: #7a4a2e;
+  --cat-di-grad: linear-gradient(145deg, #c99566 0%, #7a4a2e 100%);
 
   /* ══ Tokens semánticos ══ */
 
@@ -359,6 +374,21 @@
   --cat-ef-bg: #232c1f;
   --cat-ef-ink: #a2bd95;
   --cat-ef-grad: linear-gradient(145deg, #4a6340 0%, #26301f 100%);
+  --cat-ma-bg: #2e2020;
+  --cat-ma-ink: #d19a9a;
+  --cat-ma-grad: linear-gradient(145deg, #7a3f3f 0%, #2e1f1f 100%);
+  --cat-al-bg: #29271f;
+  --cat-al-ink: #c2b8a4;
+  --cat-al-grad: linear-gradient(145deg, #5b5548 0%, #28251d 100%);
+  --cat-hh-bg: #33232a;
+  --cat-hh-ink: #dba3b6;
+  --cat-hh-grad: linear-gradient(145deg, #a15a72 0%, #35242b 100%);
+  --cat-tea-bg: #241f30;
+  --cat-tea-ink: #b8abd9;
+  --cat-tea-grad: linear-gradient(145deg, #5f5a86 0%, #241f30 100%);
+  --cat-di-bg: #2e2116;
+  --cat-di-ink: #d9a877;
+  --cat-di-grad: linear-gradient(145deg, #7a4a2e 0%, #2e2116 100%);
 }
 
 /* ══════════════════════════════════════════════════════════════════

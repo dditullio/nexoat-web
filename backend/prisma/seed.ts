@@ -71,6 +71,36 @@ const CATEGORIES = [
     description: 'Artículos basados en investigación, datos y estudios clínicos',
     icon: 'EF',
   },
+  {
+    slug: 'maltrato-y-abuso',
+    name: 'Maltrato y Abuso',
+    description: 'Detección, denuncia y abuso económico — cómo reconocerlo y actuar a tiempo',
+    icon: 'MA',
+  },
+  {
+    slug: 'aspectos-legales-y-derechos',
+    name: 'Aspectos Legales y Derechos',
+    description: 'Curatela, patrimonio y denuncias — el marco legal del cuidado y la vejez',
+    icon: 'AL',
+  },
+  {
+    slug: 'historias-que-humanizan',
+    name: 'Historias que Humanizan',
+    description: 'Relatos testimoniales que ponen rostro y voz a la experiencia del cuidado',
+    icon: 'HH',
+  },
+  {
+    slug: 'autismo-y-tea',
+    name: 'Autismo y TEA',
+    description: 'Abordaje, diagnóstico y acompañamiento específico del espectro autista',
+    icon: 'TEA',
+  },
+  {
+    slug: 'discapacidad-intelectual-y-psicosocial',
+    name: 'Discapacidad Intelectual y Psicosocial',
+    description: 'Capacidad jurídica, apoyos e inclusión más allá del diagnóstico clínico',
+    icon: 'DI',
+  },
 ]
 
 async function seedAdmin() {

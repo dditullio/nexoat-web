@@ -6,7 +6,7 @@
 
 Las tarjetas de categoría (home, grilla de 10 temas) y el encabezado de `CategoryView.vue` mostraban siempre el mismo patrón: un glifo con las iniciales sobre un degradado de color por categoría (`CATEGORY_THEMES`, en `frontend/src/utils/theme.ts`). Se pidió poder poner una foto real por categoría, con el mismo criterio ya usado para portadas de artículo: foto si existe, degradado como fallback si no.
 
-A diferencia de los artículos, las categorías **no tenían ninguna pantalla de administración** — son un set fijo de 10, cargadas una sola vez por `backend/prisma/seed.ts`, y el modelo `Category` no tenía campo de imagen. Se decidió el alcance completo (recomendado, confirmado por el usuario): agregar el campo, un endpoint admin para editarlo, y una pantalla nueva en `/nexoat-admin/categorias` — sin agregar alta/baja de categorías, que sigue sin existir y está fuera de alcance de este pedido.
+A diferencia de los artículos, las categorías **no tenían ninguna pantalla de administración** — son un set fijo (10 al momento de esta feature, 13 desde `new-categories-batch-1.md`), cargadas una sola vez por `backend/prisma/seed.ts`, y el modelo `Category` no tenía campo de imagen. Se decidió el alcance completo (recomendado, confirmado por el usuario): agregar el campo, un endpoint admin para editarlo, y una pantalla nueva en `/nexoat-admin/categorias` — sin agregar alta/baja de categorías, que sigue sin existir y está fuera de alcance de este pedido.
 
 ## Cambios de schema (`backend/prisma/schema.prisma`)
 
