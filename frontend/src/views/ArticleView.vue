@@ -47,6 +47,42 @@
             class="art-head__share"
           />
         </div>
+
+        <div v-if="article.isTruncated" class="art-head__notice">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            class="art-head__notice-icon"
+          >
+            <rect x="3.5" y="8" width="11" height="7.5" rx="2" />
+            <path d="M6 8V5.5a3 3 0 0 1 6 0V8" />
+          </svg>
+          <p class="art-head__notice-text">
+            <strong>Vista previa.</strong>
+            Este artículo es para
+            {{
+              article.requiredScope === 'suscriptores_nivel_1'
+                ? 'suscriptores registrados'
+                : 'suscriptores de nivel superior'
+            }}
+            — a continuación vas a poder leer solo una parte, no el contenido completo.
+          </p>
+          <RouterLink
+            v-if="article.requiredScope === 'suscriptores_nivel_1'"
+            :to="{ name: 'register', query: { redirect: route.fullPath } }"
+            class="btn btn--primary art-head__notice-cta"
+          >
+            Registrate gratis
+          </RouterLink>
+          <span v-else class="art-head__notice-badge">Próximamente</span>
+        </div>
       </div>
     </header>
 
@@ -337,6 +373,59 @@ const scopeLabel = computed(() => article.value && SCOPE_CHIPS[article.value.sco
    flex-wrap de .art-head__meta. */
 .art-head__share {
   margin-left: auto;
+}
+
+/* Aviso de vista previa (artículo recortado para el nivel del viewer) —
+   mismo par ochre-soft/ochre que ya usan el disclaimer y el bloque de
+   paywall, para que se lea como "misma familia de aviso editorial". Vive en
+   la cabecera, antes de que el lector empiece a leer, para que sepa de
+   antemano que no va a poder terminar el artículo (ver
+   docs/features/reader-accounts-and-paywall.md). */
+.art-head__notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+  background: var(--color-ochre-soft);
+  border: 1px solid var(--color-ochre);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+}
+
+.art-head__notice-icon {
+  flex-shrink: 0;
+  color: var(--color-ochre);
+}
+
+.art-head__notice-text {
+  flex: 1 1 320px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--color-ink-secondary);
+}
+
+.art-head__notice-text strong {
+  color: var(--color-ink);
+}
+
+.art-head__notice-cta {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  padding: 0.6rem 1.15rem;
+}
+
+.art-head__notice-badge {
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full);
+  padding: 7px 14px;
 }
 
 /* ── Layout ── */
