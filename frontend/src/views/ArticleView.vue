@@ -38,6 +38,13 @@
           <span v-if="article.readingTimeMinutes">
             {{ article.readingTimeMinutes }} min de lectura
           </span>
+          <ArticleShare
+            :title="article.title"
+            :excerpt="article.excerpt"
+            size="sm"
+            :bordered="false"
+            class="art-head__share"
+          />
         </div>
       </div>
     </header>
@@ -79,139 +86,7 @@
 
           <div class="art__share">
             <span class="art__share-label">Compartir</span>
-            <div class="art__share-row">
-              <a
-                v-for="target in shareLinks"
-                :key="target.id"
-                :href="target.href"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="art__share-icon"
-                :aria-label="`Compartir en ${target.label}`"
-                :title="target.label"
-              >
-                <svg
-                  v-if="target.id === 'whatsapp'"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M8 2a6 6 0 00-5.2 9l-.8 3 3.1-.8A6 6 0 108 2z" />
-                  <path
-                    d="M5.5 6.2c0-.4.3-.7.7-.7h.4c.3 0 .5.2.6.5l.3.9c.1.3 0 .6-.2.8l-.4.4c.4.9 1.1 1.6 2 2l.4-.4c.2-.2.5-.3.8-.2l.9.3c.3.1.5.3.5.6v.4c0 .4-.3.7-.7.7-2.9 0-5.3-2.4-5.3-5.3z"
-                  />
-                </svg>
-                <svg
-                  v-else-if="target.id === 'facebook'"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="8" cy="8" r="6.2" />
-                  <path d="M9.6 5.4H8.6c-.7 0-1.2.5-1.2 1.2v1h2.1l-.3 1.6H7.4V13" />
-                </svg>
-                <svg
-                  v-else-if="target.id === 'twitter'"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M3 3l10 10M13 3L3 13" />
-                </svg>
-                <svg
-                  v-else-if="target.id === 'telegram'"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M2.5 8.4l11-5.4-3.6 11-2.9-3.7-2.9 1.7v-2.6z" />
-                  <path d="M9.9 3l-5.4 5.4" />
-                </svg>
-                <svg
-                  v-else
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="2" y="3.5" width="12" height="9" rx="1.5" />
-                  <path d="M2.5 4.5l5.5 4.5 5.5-4.5" />
-                </svg>
-              </a>
-
-              <button
-                v-if="nativeShareSupported"
-                type="button"
-                class="art__share-icon"
-                aria-label="Más opciones para compartir"
-                title="Más opciones (Instagram, Mensajes…)"
-                @click="nativeShare"
-              >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12.5" cy="3.5" r="1.5" />
-                  <circle cx="3.5" cy="8" r="1.5" />
-                  <circle cx="12.5" cy="12.5" r="1.5" />
-                  <path d="M5 7l6-3M5 9l6 3" />
-                </svg>
-              </button>
-
-              <button class="art__share-btn" @click="copyLink">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="5.5" y="5.5" width="8" height="8" rx="2" />
-                  <path d="M10.5 5.5v-1a2 2 0 00-2-2h-4a2 2 0 00-2 2v4a2 2 0 002 2h1" />
-                </svg>
-                {{ copied ? '¡Copiado!' : 'Copiar enlace' }}
-              </button>
-            </div>
+            <ArticleShare :title="article.title" :excerpt="article.excerpt" />
           </div>
 
           <div v-if="article.keywords.length" class="art__tags">
@@ -222,6 +97,11 @@
 
       <aside class="side">
         <div class="side__sticky">
+          <div class="side__block">
+            <h2 class="eyebrow side__title">Compartir</h2>
+            <ArticleShare :title="article.title" :excerpt="article.excerpt" />
+          </div>
+
           <div class="side__block">
             <h2 class="eyebrow side__title">Seguir leyendo</h2>
             <RouterLink
@@ -270,13 +150,12 @@ import { useBlogStore } from '@/stores/blog'
 import { getCategoryTheme } from '@/utils/theme'
 import { http } from '@/services/http'
 import { renderMarkdown } from '@/utils/markdown'
-import { SHARE_TARGETS } from '@/utils/share'
 import AppChip from '@/components/ui/AppChip.vue'
+import ArticleShare from '@/components/blog/ArticleShare.vue'
 import type { ArticleFull } from '@/types'
 
 const route = useRoute()
 const store = useBlogStore()
-const copied = ref(false)
 
 // Se pide directo por slug (no se deriva de store.articles): trae el
 // contenido completo, que la lista pública no incluye, y no depende de que
@@ -331,43 +210,6 @@ const levelLabel = computed(
       article.value?.level ?? 'basico'
     ]
 )
-
-async function copyLink() {
-  await navigator.clipboard.writeText(window.location.href)
-  copied.value = true
-  setTimeout(() => (copied.value = false), 2000)
-}
-
-// Links directos por red — no requieren SDK ni credenciales (ver
-// utils/share.ts). Instagram no tiene un intent equivalente, se cubre con
-// la Web Share API nativa de abajo cuando el navegador la soporta.
-const shareLinks = computed(() => {
-  if (!article.value) return []
-  const opts = { url: window.location.href, title: article.value.title }
-  return SHARE_TARGETS.map((target) => ({
-    id: target.id,
-    label: target.label,
-    href: target.buildUrl(opts),
-  }))
-})
-
-// Solo navegadores mobile (Android Chrome, iOS Safari) soportan esto — ahí
-// abre la hoja nativa de compartir del sistema, que sí incluye Instagram,
-// Mensajes, Notas, etc. En desktop el botón directamente no se muestra.
-const nativeShareSupported = typeof navigator !== 'undefined' && !!navigator.share
-
-async function nativeShare() {
-  if (!article.value) return
-  try {
-    await navigator.share({
-      title: article.value.title,
-      text: article.value.excerpt,
-      url: window.location.href,
-    })
-  } catch {
-    // el usuario canceló el diálogo nativo — no es un error a mostrar
-  }
-}
 </script>
 
 <style scoped>
@@ -447,6 +289,7 @@ async function nativeShare() {
 .art-head__meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   font-size: 0.82rem;
   font-weight: 600;
@@ -458,6 +301,13 @@ async function nativeShare() {
   height: 3px;
   border-radius: 50%;
   background: var(--color-ink-faint);
+}
+
+/* Empuja el "compartir" al espacio libre a la derecha de la fecha, en la
+   misma línea — en mobile (sin lugar) pasa a la línea de abajo, por el
+   flex-wrap de .art-head__meta. */
+.art-head__share {
+  margin-left: auto;
 }
 
 /* ── Layout ── */
@@ -592,54 +442,6 @@ async function nativeShare() {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--color-ink-muted);
-}
-
-.art__share-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.art__share-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-full);
-  color: var(--color-ink-secondary);
-  transition:
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.art__share-icon:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary-dark);
-}
-
-.art__share-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-full);
-  padding: 8px 16px;
-  font-size: 0.83rem;
-  font-weight: 600;
-  color: var(--color-ink-secondary);
-  transition:
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.art__share-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary-dark);
 }
 
 .art__tags {
