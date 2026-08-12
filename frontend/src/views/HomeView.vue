@@ -294,60 +294,7 @@
     <section id="newsletter" class="section news-sec">
       <div class="container">
         <div class="news reveal">
-          <div class="news__arch" aria-hidden="true">
-            <svg
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <rect x="2" y="4" width="20" height="16" rx="3" />
-              <path d="M2.5 6.5L12 13l9.5-6.5" />
-            </svg>
-          </div>
-
-          <h2 class="news__title">Un artículo nuevo por semana</h2>
-          <p class="news__desc">
-            Sin ruido y sin spam. Solo el contenido nuevo, cuando sale, directo a tu correo.
-          </p>
-
-          <form v-if="!submitted" class="news__form" @submit.prevent="subscribe">
-            <input
-              v-model="email"
-              type="email"
-              placeholder="tu@correo.com"
-              class="news__input"
-              aria-label="Tu correo electrónico"
-              required
-              :disabled="subscribing"
-            />
-            <button type="submit" class="btn btn--primary news__btn" :disabled="subscribing">
-              {{ subscribing ? 'Enviando…' : 'Me sumo' }}
-            </button>
-          </form>
-          <p v-if="subscribeError" class="news__error" role="alert">{{ subscribeError }}</p>
-          <p v-else-if="!submitted" class="news__fine">Cancelás cuando quieras, en un clic.</p>
-
-          <div v-else class="news__ok" role="status">
-            <svg
-              width="19"
-              height="19"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M2.5 10.5l5 5L17.5 5" />
-            </svg>
-            <span>¡Listo! Te suscribiste correctamente.</span>
-          </div>
+          <NewsletterForm source="homepage-hero" />
         </div>
       </div>
     </section>
@@ -361,9 +308,9 @@ import { storeToRefs } from 'pinia'
 import { useBlogStore } from '@/stores/blog'
 import { getCategoryTheme, LEVEL_CHIPS } from '@/utils/theme'
 import { useReveal } from '@/composables/useReveal'
-import { http } from '@/services/http'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CategoryCard from '@/components/blog/CategoryCard.vue'
+import NewsletterForm from '@/components/blog/NewsletterForm.vue'
 
 const router = useRouter()
 const store = useBlogStore()
@@ -372,10 +319,6 @@ const { filteredArticles } = storeToRefs(store)
 useReveal()
 
 const searchQuery = ref('')
-const email = ref('')
-const submitted = ref(false)
-const subscribing = ref(false)
-const subscribeError = ref('')
 
 const quickCategories = computed(() => store.categories.slice(0, 3))
 const featured = computed(() => store.articles[0])
@@ -404,24 +347,6 @@ function goToSearch() {
   if (!q) return
   store.setFilter('query', q)
   router.push({ name: 'search', query: { q } })
-}
-
-async function subscribe() {
-  subscribing.value = true
-  subscribeError.value = ''
-  try {
-    await http('/newsletter/subscribe', {
-      method: 'POST',
-      body: { email: email.value, source: 'homepage-hero' },
-      skipAuthRetry: true,
-    })
-    submitted.value = true
-    email.value = ''
-  } catch {
-    subscribeError.value = 'No pudimos guardar tu suscripción. Probá de nuevo en un momento.'
-  } finally {
-    subscribing.value = false
-  }
 }
 </script>
 
@@ -1009,87 +934,6 @@ async function subscribe() {
   gap: 14px;
 }
 
-.news__arch {
-  width: 54px;
-  height: 54px;
-  border-radius: 999px 999px 15px 15px / 28px 28px 15px 15px;
-  background: var(--color-primary);
-  color: #fffdfa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-
-.dark .news__arch {
-  color: #191512;
-}
-
-.news__title {
-  font-size: clamp(1.8rem, 3.4vw, 2.5rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.news__desc {
-  font-size: 1rem;
-  color: var(--color-ink-secondary);
-  line-height: 1.72;
-  max-width: 46ch;
-  margin-bottom: 12px;
-}
-
-.news__form {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  max-width: 460px;
-}
-
-.news__input {
-  flex: 1;
-  border: 1px solid var(--color-line);
-  background: var(--color-surface);
-  padding: 14px 20px;
-  border-radius: var(--radius-full);
-  font-size: 0.95rem;
-  min-width: 0;
-  outline: none;
-  transition: border-color 0.25s ease;
-}
-
-.news__input:focus {
-  border-color: var(--color-primary);
-}
-
-.news__btn {
-  flex-shrink: 0;
-}
-
-.news__fine {
-  font-size: 0.78rem;
-  color: var(--color-ink-faint);
-}
-
-.news__error {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--color-accent-dark);
-}
-
-.news__ok {
-  display: inline-flex;
-  align-items: center;
-  gap: 11px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-primary-light);
-  border-radius: var(--radius-full);
-  padding: 15px 28px;
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-}
-
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 1024px) {
   .hero__inner {
@@ -1139,14 +983,6 @@ async function subscribe() {
 
   .aud {
     padding: 34px 28px;
-  }
-
-  .news__form {
-    flex-direction: column;
-  }
-
-  .news__btn {
-    width: 100%;
   }
 }
 

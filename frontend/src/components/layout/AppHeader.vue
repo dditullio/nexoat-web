@@ -90,7 +90,9 @@
         </div>
         <RouterLink v-else to="/ingresar" class="hdr__link hdr__login">Ingresar</RouterLink>
 
-        <a href="#newsletter" class="btn btn--primary hdr__cta">Suscribirme</a>
+        <button type="button" class="btn btn--primary hdr__cta" @click="showNewsletter = true">
+          Suscribirme
+        </button>
       </div>
 
       <button class="hdr__burger" aria-label="Abrir menú" @click="menuOpen = true">
@@ -171,13 +173,19 @@
           >
             Ingresar
           </RouterLink>
-          <a href="#newsletter" class="btn btn--primary drawer__cta" @click="menuOpen = false">
+          <button
+            type="button"
+            class="btn btn--primary drawer__cta"
+            @click="openNewsletterFromDrawer"
+          >
             Suscribirme
-          </a>
+          </button>
         </div>
       </aside>
     </Transition>
   </Teleport>
+
+  <NewsletterModal v-model:open="showNewsletter" />
 </template>
 
 <script setup lang="ts">
@@ -185,15 +193,22 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
+import NewsletterModal from '@/components/blog/NewsletterModal.vue'
 
 const store = useBlogStore()
 const authStore = useAuthStore()
 const showCats = ref(false)
 const menuOpen = ref(false)
 const scrolled = ref(false)
+const showNewsletter = ref(false)
 
 function onLogout() {
   authStore.logout()
+}
+
+function openNewsletterFromDrawer() {
+  menuOpen.value = false
+  showNewsletter.value = true
 }
 
 function onScroll() {
@@ -315,10 +330,10 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 2px;
   padding: 10px;
-  min-width: 440px;
+  min-width: 620px;
   z-index: 10;
 }
 

@@ -62,7 +62,7 @@
         </div>
 
         <aside v-if="article.isTruncated" class="art__paywall">
-          <p class="art__paywall-eyebrow eyebrow">Contenido para {{ scopeLabel }}</p>
+          <p class="art__paywall-eyebrow eyebrow">Contenido para suscriptores {{ scopeLabel }}</p>
           <template v-if="article.requiredScope === 'suscriptores_nivel_1'">
             <h2 class="art__paywall-title">Seguí leyendo gratis</h2>
             <p class="art__paywall-text">
