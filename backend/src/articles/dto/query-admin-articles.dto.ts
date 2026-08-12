@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator'
-import { ArticleStatus } from '@prisma/client'
+import { ArticleScope, ArticleStatus } from '@prisma/client'
 
 export class QueryAdminArticlesDto {
   @ApiPropertyOptional({ enum: ArticleStatus })
@@ -13,6 +13,11 @@ export class QueryAdminArticlesDto {
   @IsOptional()
   @IsString()
   category?: string
+
+  @ApiPropertyOptional({ enum: ArticleScope })
+  @IsOptional()
+  @IsEnum(ArticleScope)
+  scope?: ArticleScope
 
   @ApiPropertyOptional({ description: 'Búsqueda libre en título/extracto' })
   @IsOptional()

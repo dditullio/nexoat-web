@@ -29,6 +29,13 @@
           {{ article.readingTimeMinutes }} min
         </span>
         <span class="card__grow"></span>
+        <span
+          v-if="scopeChip"
+          class="pill"
+          :style="{ background: scopeChip.bg, color: scopeChip.text }"
+        >
+          {{ scopeChip.label }}
+        </span>
         <span class="pill" :style="{ background: level.bg, color: level.text }">
           {{ level.label }}
         </span>
@@ -47,7 +54,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { getCategoryTheme, LEVEL_CHIPS, AUDIENCE_CHIPS } from '@/utils/theme'
+import { getCategoryTheme, LEVEL_CHIPS, AUDIENCE_CHIPS, SCOPE_CHIPS } from '@/utils/theme'
 import { useBlogStore } from '@/stores/blog'
 import type { Article, Audience } from '@/types'
 
@@ -69,6 +76,7 @@ const formattedDate = computed(() =>
 )
 
 const level = computed(() => LEVEL_CHIPS[props.article.level])
+const scopeChip = computed(() => SCOPE_CHIPS[props.article.scope])
 
 function audienceChip(aud: Audience) {
   return AUDIENCE_CHIPS[aud] ?? AUDIENCE_CHIPS['mixto']

@@ -19,6 +19,7 @@ temas:
   - neurodiversidad-y-discapacidad
   - familia-y-vinculos
 nivel: intermedio
+alcance: suscriptores_nivel_1
 audiencia: cuidadores-familiares, profesionales
 palabras_clave:
   - crisis emocional en el aula
@@ -191,6 +192,28 @@ describe('parseArticleMarkdown', () => {
 
     expect(data.level).toBeUndefined()
     expect(warnings.some((w) => w.includes('experto'))).toBe(true)
+  })
+
+  it('mapea alcance a data.scope', () => {
+    const { data, warnings } = parseArticleMarkdown(
+      MD_WITH_SECTION_DIVIDERS,
+      KNOWN_CATEGORIES,
+      'x.md'
+    )
+
+    expect(data.scope).toBe('suscriptores_nivel_1')
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('avisa de un alcance no reconocido sin fijar data.scope', () => {
+    const md = MD_WITH_SECTION_DIVIDERS.replace(
+      'alcance: suscriptores_nivel_1',
+      'alcance: nivel_premium'
+    )
+    const { data, warnings } = parseArticleMarkdown(md, KNOWN_CATEGORIES, 'x.md')
+
+    expect(data.scope).toBeUndefined()
+    expect(warnings.some((w) => w.includes('nivel_premium'))).toBe(true)
   })
 
   it('no toca el formulario si el archivo no empieza con ---', () => {

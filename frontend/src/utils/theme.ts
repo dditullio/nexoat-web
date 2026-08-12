@@ -1,4 +1,4 @@
-import type { CategorySlug, Level, Audience } from '@/types'
+import type { CategorySlug, Level, Audience, ArticleScope } from '@/types'
 
 /**
  * Paleta por categoría.
@@ -119,6 +119,31 @@ export const AUDIENCE_CHIPS: Record<Audience, { bg: string; text: string; label:
     bg: 'var(--color-aud-mixto-bg)',
     text: 'var(--color-aud-mixto-text)',
     label: 'Mixto',
+  },
+}
+
+// "publico" no tiene chip — un artículo sin restricción no necesita
+// anunciarlo. Los tres niveles restringidos comparten la familia ocre
+// (mismo par bg/texto que ya usa el disclaimer editorial en ArticleView) en
+// vez de inventar un color por nivel: hoy es solo clasificación, no hay
+// paywall real todavía (ver docs/features/article-scope-filters.md).
+export const SCOPE_CHIPS: Partial<
+  Record<ArticleScope, { bg: string; text: string; label: string }>
+> = {
+  suscriptores_nivel_1: {
+    bg: 'var(--color-ochre-soft)',
+    text: 'var(--color-ink-secondary)',
+    label: 'Registrados',
+  },
+  suscriptores_nivel_2: {
+    bg: 'var(--color-ochre-soft)',
+    text: 'var(--color-ink-secondary)',
+    label: 'Nivel 2',
+  },
+  suscriptores_nivel_3: {
+    bg: 'var(--color-ochre-soft)',
+    text: 'var(--color-ink-secondary)',
+    label: 'Nivel 3',
   },
 }
 

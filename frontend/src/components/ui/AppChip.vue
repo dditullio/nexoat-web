@@ -13,6 +13,7 @@ defineProps<{
     | 'level-avanzado'
     | 'audience-cuidadores'
     | 'audience-profesionales'
+    | 'scope-restricted'
     | 'neutral'
   size?: 'sm' | 'md'
 }>()
@@ -72,5 +73,10 @@ defineProps<{
 .chip--audience-profesionales {
   background: var(--color-aud-profesionales-bg);
   color: var(--color-aud-profesionales-text);
+}
+
+.chip--scope-restricted {
+  background: var(--color-ochre-soft);
+  color: var(--color-ink-secondary);
 }
 </style>

@@ -1,5 +1,13 @@
 export type Audience = 'cuidadores-familiares' | 'profesionales' | 'mixto'
 export type Level = 'basico' | 'intermedio' | 'avanzado'
+// Clasificación editorial de acceso ("alcance" en la metadata del .md
+// importado) — no confundir con roles de administración. Por ahora es solo
+// clasificación/filtro, ver docs/features/article-scope-filters.md.
+export type ArticleScope =
+  | 'publico'
+  | 'suscriptores_nivel_1'
+  | 'suscriptores_nivel_2'
+  | 'suscriptores_nivel_3'
 
 export type CategorySlug =
   | 'acompanamiento-terapeutico'
@@ -37,6 +45,7 @@ export interface Article {
   categories: CategorySlug[]
   audience: Audience[]
   level: Level
+  scope: ArticleScope
   excerpt: string
   keywords: string[]
   coverImage?: string
@@ -58,5 +67,6 @@ export interface FilterState {
   category: CategorySlug | null
   audience: Audience | null
   level: Level | null
+  scope: ArticleScope | null
   query: string
 }

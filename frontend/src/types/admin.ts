@@ -1,4 +1,4 @@
-import type { Audience, ArticleSource, Level } from './index'
+import type { Audience, ArticleSource, ArticleScope, Level } from './index'
 
 export type ArticleStatus = 'borrador' | 'publicado' | 'archivado'
 
@@ -15,6 +15,7 @@ export interface AdminArticle {
   categorySlugs: string[]
   audience: Audience[]
   level: Level
+  scope: ArticleScope
   keywords: string[]
   coverImage?: string
   coverImagePublicId?: string
@@ -43,6 +44,7 @@ export interface ArticleFormPayload {
   level: Level
   audience: Audience[]
   status?: ArticleStatus
+  scope?: ArticleScope
   categorySlugs: string[]
   tags?: string[]
   readingTime?: number

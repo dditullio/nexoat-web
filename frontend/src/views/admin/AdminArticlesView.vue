@@ -19,6 +19,13 @@
           <option value="">Todas las categorías</option>
           <option v-for="c in categoryOptions" :key="c.slug" :value="c.slug">{{ c.name }}</option>
         </select>
+        <select v-model="scope" class="list__select" @change="fetchPage(1)">
+          <option value="">Todo alcance</option>
+          <option value="publico">Público</option>
+          <option value="suscriptores_nivel_1">Registrados</option>
+          <option value="suscriptores_nivel_2">Nivel 2</option>
+          <option value="suscriptores_nivel_3">Nivel 3</option>
+        </select>
       </div>
 
       <RouterLink to="/nexoat-admin/articulos/nuevo" class="btn btn--primary">
@@ -35,16 +42,17 @@
             <th>Título</th>
             <th>Categorías</th>
             <th>Status</th>
+            <th>Alcance</th>
             <th>Actualizado</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="isLoading">
-            <td colspan="5" class="list__empty">Cargando…</td>
+            <td colspan="6" class="list__empty">Cargando…</td>
           </tr>
           <tr v-else-if="!articles.length">
-            <td colspan="5" class="list__empty">No hay artículos con estos filtros.</td>
+            <td colspan="6" class="list__empty">No hay artículos con estos filtros.</td>
           </tr>
           <tr v-for="article in articles" v-else :key="article.id">
             <td>
@@ -59,6 +67,16 @@
               <span class="pill" :class="`pill--${article.status}`">{{
                 STATUS_LABELS[article.status]
               }}</span>
+            </td>
+            <td>
+              <span
+                v-if="article.scope !== 'publico'"
+                class="pill pill--scope"
+                :title="SCOPE_LABELS[article.scope]"
+              >
+                {{ SCOPE_LABELS[article.scope] }}
+              </span>
+              <span v-else class="list__cats">Público</span>
             </td>
             <td class="list__date">{{ formatDate(article.updatedAt) }}</td>
             <td class="list__actions">
@@ -91,11 +109,19 @@ import {
   type CategoryOption,
 } from '@/services/admin/articles.api'
 import type { AdminArticle, ArticleStatus } from '@/types/admin'
+import type { ArticleScope } from '@/types'
 
 const STATUS_LABELS: Record<ArticleStatus, string> = {
   borrador: 'Borrador',
   publicado: 'Publicado',
   archivado: 'Archivado',
+}
+
+const SCOPE_LABELS: Record<ArticleScope, string> = {
+  publico: 'Público',
+  suscriptores_nivel_1: 'Registrados',
+  suscriptores_nivel_2: 'Nivel 2',
+  suscriptores_nivel_3: 'Nivel 3',
 }
 
 const articles = ref<AdminArticle[]>([])
@@ -106,6 +132,7 @@ const errorMessage = ref('')
 const search = ref('')
 const status = ref('')
 const category = ref('')
+const scope = ref('')
 const page = ref(1)
 const total = ref(0)
 const pageSize = 20
@@ -128,6 +155,7 @@ async function fetchPage(nextPage: number) {
       search: search.value || undefined,
       status: status.value || undefined,
       category: category.value || undefined,
+      scope: scope.value || undefined,
       page: page.value,
       pageSize,
     })
@@ -281,6 +309,11 @@ onMounted(async () => {
 .pill--archivado {
   background: var(--color-accent-soft);
   color: var(--color-accent-dark);
+}
+
+.pill--scope {
+  background: var(--color-ochre-soft);
+  color: var(--color-ink-secondary);
 }
 
 .list__actions {

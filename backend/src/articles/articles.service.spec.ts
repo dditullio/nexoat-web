@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing'
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
-import { ArticleStatus, Level, type User } from '@prisma/client'
+import { ArticleScope, ArticleStatus, Level, type User } from '@prisma/client'
 import { ArticlesService } from './articles.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
@@ -161,6 +161,25 @@ describe('ArticlesService', () => {
       const createArgs = prisma.article.create.mock.calls[0][0]
       expect(createArgs.data.sources).toEqual(sources)
       expect(createArgs.data.importMetadata).toEqual({ estado: 'revisado' })
+    })
+
+    it('guarda scope cuando viene en el dto', async () => {
+      prisma.article.findUnique.mockResolvedValue(null)
+      prisma.category.findMany.mockResolvedValue([{ id: 'cat-1', slug: 'salud-mental' }])
+      prisma.article.create.mockImplementation(({ data }) => ({
+        ...data,
+        id: 'art-1',
+        categories: [],
+        tags: [],
+        author: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }))
+
+      await service.create({ ...baseDto, scope: ArticleScope.suscriptores_nivel_2 }, actor)
+
+      const createArgs = prisma.article.create.mock.calls[0][0]
+      expect(createArgs.data.scope).toBe('suscriptores_nivel_2')
     })
   })
 

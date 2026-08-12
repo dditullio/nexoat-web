@@ -27,6 +27,7 @@
           >
             {{ aud === 'cuidadores-familiares' ? 'Para familias' : 'Para profesionales' }}
           </AppChip>
+          <AppChip v-if="scopeLabel" variant="scope-restricted">{{ scopeLabel }}</AppChip>
         </div>
 
         <h1 class="art-head__title">{{ article.title }}</h1>
@@ -147,7 +148,7 @@
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
-import { getCategoryTheme } from '@/utils/theme'
+import { getCategoryTheme, SCOPE_CHIPS } from '@/utils/theme'
 import { http } from '@/services/http'
 import { renderMarkdown } from '@/utils/markdown'
 import AppChip from '@/components/ui/AppChip.vue'
@@ -210,6 +211,11 @@ const levelLabel = computed(
       article.value?.level ?? 'basico'
     ]
 )
+
+// "publico" no muestra chip — solo se anuncian los artículos restringidos.
+// Todavía es solo clasificación (sin recorte real de contenido), ver
+// docs/features/article-scope-filters.md.
+const scopeLabel = computed(() => article.value && SCOPE_CHIPS[article.value.scope]?.label)
 </script>
 
 <style scoped>

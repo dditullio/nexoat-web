@@ -15,7 +15,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator'
-import { ArticleStatus, Level } from '@prisma/client'
+import { ArticleScope, ArticleStatus, Level } from '@prisma/client'
 import { AUDIENCE_API_VALUES, type AudienceApiValue } from '../audience.util'
 
 export class ArticleSourceDto {
@@ -86,6 +86,17 @@ export class CreateArticleDto {
   @IsOptional()
   @IsEnum(ArticleStatus)
   status?: ArticleStatus
+
+  @ApiPropertyOptional({
+    enum: ArticleScope,
+    default: ArticleScope.publico,
+    description:
+      'Clasificación de acceso ("alcance" en la metadata del .md). Por ahora es solo ' +
+      'clasificación/filtro, el recorte de contenido real se implementa en una etapa futura.',
+  })
+  @IsOptional()
+  @IsEnum(ArticleScope)
+  scope?: ArticleScope
 
   @ApiProperty({
     type: [String],

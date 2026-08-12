@@ -1,8 +1,14 @@
 import type { ArticleFormPayload } from '@/types/admin'
-import type { ArticleSource, Audience, Level } from '@/types'
+import type { ArticleScope, ArticleSource, Audience, Level } from '@/types'
 
 const LEVEL_VALUES: Level[] = ['basico', 'intermedio', 'avanzado']
 const AUDIENCE_VALUES: Audience[] = ['cuidadores-familiares', 'profesionales', 'mixto']
+const SCOPE_VALUES: ArticleScope[] = [
+  'publico',
+  'suscriptores_nivel_1',
+  'suscriptores_nivel_2',
+  'suscriptores_nivel_3',
+]
 
 export interface ParsedArticleImport {
   data: Partial<ArticleFormPayload> & { tagsInput?: string }
@@ -98,6 +104,15 @@ export function parseArticleMarkdown(
       warnings.push(`Nivel "${meta.nivel}" no reconocido — se dejó el valor actual del formulario.`)
   }
 
+  if (meta.alcance) {
+    if (SCOPE_VALUES.includes(meta.alcance as ArticleScope))
+      data.scope = meta.alcance as ArticleScope
+    else
+      warnings.push(
+        `Alcance "${meta.alcance}" no reconocido — se dejó el valor actual del formulario.`
+      )
+  }
+
   if (meta.audienciaList.length) {
     const audience = meta.audienciaList.filter((a): a is Audience =>
       AUDIENCE_VALUES.includes(a as Audience)
@@ -122,6 +137,7 @@ export function parseArticleMarkdown(
     fecha: meta.fecha,
     temas: meta.temasList,
     nivel: meta.nivel,
+    alcance: meta.alcance,
     audiencia: meta.audienciaList,
     palabras_clave: meta.palabrasClaveList,
     descripcion: meta.descripcion,
@@ -140,6 +156,7 @@ interface ParsedMeta {
   descripcion?: string
   fecha?: string
   nivel?: string
+  alcance?: string
   temasList: string[]
   audienciaList: string[]
   palabrasClaveList: string[]
@@ -237,6 +254,9 @@ function parseMetaBlock(metaLines: string[]): ParsedMeta {
         break
       case 'nivel':
         meta.nivel = unquote(value.trim())
+        break
+      case 'alcance':
+        meta.alcance = unquote(value.trim())
         break
       case 'temas':
         currentList = meta.temasList

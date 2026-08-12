@@ -20,6 +20,7 @@ export function toPublicArticleSummary(article: ArticleWithRelations) {
     categories: article.categories.map((c) => c.category.slug),
     audience: audienceToApi(article.audience),
     level: article.level,
+    scope: article.scope,
     excerpt: article.excerpt ?? '',
     keywords: article.tags.map((t) => t.tag.name),
     coverImage: article.coverImage ?? undefined,

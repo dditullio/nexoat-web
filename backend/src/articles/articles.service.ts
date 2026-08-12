@@ -41,6 +41,7 @@ export class ArticlesService {
     const where: Prisma.ArticleWhereInput = {
       status: ArticleStatus.publicado,
       level: filters.level,
+      scope: filters.scope,
       audience: filters.audience ? { has: audienceFromApi([filters.audience])[0] } : undefined,
       categories: filters.category ? { some: { category: { slug: filters.category } } } : undefined,
       ...(filters.query
@@ -84,6 +85,7 @@ export class ArticlesService {
 
     const where: Prisma.ArticleWhereInput = {
       status: filters.status,
+      scope: filters.scope,
       categories: filters.category ? { some: { category: { slug: filters.category } } } : undefined,
       ...(filters.search
         ? {
@@ -141,6 +143,7 @@ export class ArticlesService {
         level: dto.level,
         audience: audienceFromApi(dto.audience),
         status,
+        scope: dto.scope,
         readingTime: dto.readingTime,
         // La fecha explícita (ej. "fecha" del .md importado) manda; si no
         // vino y se publica de una, se usa la fecha/hora actual.
@@ -205,6 +208,7 @@ export class ArticlesService {
         level: dto.level,
         audience: dto.audience ? audienceFromApi(dto.audience) : undefined,
         status: dto.status,
+        scope: dto.scope,
         readingTime: dto.readingTime,
         // Si viene una fecha explícita (ej. al editar la "fecha" importada)
         // manda esa; si no, solo se toca al pasar A publicado por primera

@@ -76,7 +76,13 @@ export const useBlogStore = defineStore('blog', () => {
   const categoriesRaw = ref<CategoryMeta[]>(CATEGORY_SEED)
   const isLoading = ref(false)
   const isLoadingCategories = ref(false)
-  const filters = ref<FilterState>({ category: null, audience: null, level: null, query: '' })
+  const filters = ref<FilterState>({
+    category: null,
+    audience: null,
+    level: null,
+    scope: null,
+    query: '',
+  })
 
   const categories = computed<Category[]>(() =>
     categoriesRaw.value.map((cat) => ({
@@ -92,6 +98,7 @@ export const useBlogStore = defineStore('blog', () => {
         return false
       if (filters.value.audience && !article.audience.includes(filters.value.audience)) return false
       if (filters.value.level && article.level !== filters.value.level) return false
+      if (filters.value.scope && article.scope !== filters.value.scope) return false
       if (filters.value.query) {
         const q = filters.value.query.toLowerCase()
         return (
@@ -109,7 +116,7 @@ export const useBlogStore = defineStore('blog', () => {
   }
 
   function clearFilters() {
-    filters.value = { category: null, audience: null, level: null, query: '' }
+    filters.value = { category: null, audience: null, level: null, scope: null, query: '' }
   }
 
   function getCategoryBySlug(slug: CategorySlug): Category | undefined {

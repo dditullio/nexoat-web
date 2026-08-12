@@ -9,6 +9,7 @@ export const mockArticles: Article[] = [
     categories: ['acompanamiento-terapeutico'],
     audience: ['cuidadores-familiares'],
     level: 'basico',
+    scope: 'publico',
     excerpt:
       'Una guía clara para familias que acaban de escuchar el término por primera vez. Qué hace un AT, cómo trabaja en equipo interdisciplinario y cuándo es la indicación adecuada.',
     keywords: ['acompañamiento terapéutico', 'rol del AT', 'salud mental', 'adulto mayor'],
@@ -22,6 +23,7 @@ export const mockArticles: Article[] = [
     categories: ['cuidar-al-cuidador'],
     audience: ['cuidadores-familiares'],
     level: 'intermedio',
+    scope: 'publico',
     excerpt:
       'El agotamiento del cuidador es real y tiene nombre. Cómo reconocerlo a tiempo y dónde encontrar apoyo antes de llegar al límite.',
     keywords: ['burnout', 'síndrome del cuidador', 'agotamiento', 'autocuidado'],
@@ -35,6 +37,7 @@ export const mockArticles: Article[] = [
     categories: ['neurodiversidad-y-discapacidad'],
     audience: ['cuidadores-familiares'],
     level: 'basico',
+    scope: 'publico',
     excerpt:
       'Entender el TDAH en la adolescencia requiere mirar más allá de los síntomas. Esta guía te ayuda a acompañar desde la comprensión, no desde el control.',
     keywords: ['TDAH', 'adolescencia', 'familia', 'regulación emocional'],
@@ -48,6 +51,7 @@ export const mockArticles: Article[] = [
     categories: ['patologias-en-la-vejez'],
     audience: ['cuidadores-familiares'],
     level: 'intermedio',
+    scope: 'publico',
     excerpt:
       'Pequeñas modificaciones en el espacio físico pueden marcar una gran diferencia en la calidad de vida de una persona con Parkinson.',
     keywords: ['Parkinson', 'adaptaciones hogar', 'autonomía', 'adulto mayor'],
@@ -61,6 +65,7 @@ export const mockArticles: Article[] = [
     categories: ['familia-y-vinculos'],
     audience: ['cuidadores-familiares', 'profesionales'],
     level: 'intermedio',
+    scope: 'publico',
     excerpt:
       'Recibir un diagnóstico cambia la vida de toda la familia. Explorar esas emociones complejas es el primer paso hacia el acompañamiento real.',
     keywords: ['duelo diagnóstico', 'familia', 'diagnóstico', 'emociones'],
@@ -74,6 +79,7 @@ export const mockArticles: Article[] = [
     categories: ['acompanamiento-terapeutico'],
     audience: ['profesionales'],
     level: 'avanzado',
+    scope: 'publico',
     excerpt:
       'Análisis de los marcos conceptuales que sostienen la práctica del AT desde una perspectiva clínica e institucional con profundidad teórica.',
     keywords: ['encuadre terapéutico', 'AT', 'práctica clínica', 'interdisciplinario'],
@@ -87,6 +93,7 @@ export const mockArticles: Article[] = [
     categories: ['acompanamiento-terapeutico', 'neurodiversidad-y-discapacidad'],
     audience: ['profesionales', 'cuidadores-familiares'],
     level: 'intermedio',
+    scope: 'publico',
     excerpt:
       'El AT puede ser el enlace entre la institución escolar y la familia cuando los trastornos de conducta generan conflicto en el aula.',
     keywords: ['conducta escolar', 'AT', 'integración', 'niños'],
@@ -100,6 +107,7 @@ export const mockArticles: Article[] = [
     categories: ['guia-cuidador'],
     audience: ['cuidadores-familiares'],
     level: 'basico',
+    scope: 'publico',
     excerpt:
       'La movilización incorrecta es una de las principales causas de caídas y lesiones. Esta guía paso a paso protege a ambas partes.',
     keywords: ['movilización', 'adulto mayor', 'cuidador', 'técnica segura'],
@@ -113,6 +121,7 @@ export const mockArticles: Article[] = [
     categories: ['neurodiversidad-y-discapacidad', 'acompanamiento-terapeutico'],
     audience: ['cuidadores-familiares', 'profesionales'],
     level: 'intermedio',
+    scope: 'publico',
     excerpt:
       'La sobreprotección es una forma de no confiar. Aprender a dejar espacio para que la persona con discapacidad intelectual desarrolle su autonomía real.',
     keywords: ['discapacidad intelectual', 'autonomía', 'sobreprotección', 'AT'],

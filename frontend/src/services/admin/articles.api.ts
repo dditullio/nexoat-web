@@ -4,6 +4,7 @@ import type { AdminArticle, ArticleFormPayload, Paginated } from '@/types/admin'
 export interface AdminArticlesQuery {
   status?: string
   category?: string
+  scope?: string
   search?: string
   page?: number
   pageSize?: number

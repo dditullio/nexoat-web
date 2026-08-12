@@ -28,6 +28,21 @@
       </button>
     </div>
 
+    <span class="fb__sep" aria-hidden="true"></span>
+
+    <div class="fb__group">
+      <span class="fb__label">Alcance</span>
+      <button
+        v-for="opt in scopeOptions"
+        :key="String(opt.value)"
+        class="fb__btn"
+        :class="{ 'is-on': store.filters.scope === opt.value }"
+        @click="store.setFilter('scope', opt.value)"
+      >
+        {{ opt.label }}
+      </button>
+    </div>
+
     <button v-if="hasActiveFilters" class="fb__clear" @click="store.clearFilters">
       Limpiar
       <svg
@@ -49,7 +64,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBlogStore } from '@/stores/blog'
-import type { Audience, Level } from '@/types'
+import type { Audience, ArticleScope, Level } from '@/types'
 
 const store = useBlogStore()
 
@@ -66,8 +81,17 @@ const levelOptions: { value: Level | null; label: string }[] = [
   { value: 'avanzado', label: 'Avanzado' },
 ]
 
+const scopeOptions: { value: ArticleScope | null; label: string }[] = [
+  { value: null, label: 'Todos' },
+  { value: 'publico', label: 'Público' },
+  { value: 'suscriptores_nivel_1', label: 'Registrados' },
+  { value: 'suscriptores_nivel_2', label: 'Nivel 2' },
+  { value: 'suscriptores_nivel_3', label: 'Nivel 3' },
+]
+
 const hasActiveFilters = computed(
-  () => store.filters.audience !== null || store.filters.level !== null
+  () =>
+    store.filters.audience !== null || store.filters.level !== null || store.filters.scope !== null
 )
 </script>
 

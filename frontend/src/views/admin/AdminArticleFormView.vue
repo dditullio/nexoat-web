@@ -120,6 +120,19 @@
         </label>
 
         <div class="side-block">
+          <span class="field__label">Alcance</span>
+          <select v-model="form.scope" class="field__input">
+            <option v-for="opt in SCOPE_OPTIONS" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <p class="side-block__hint">
+            Clasificación de acceso — todavía sin recorte real de contenido, solo se usa para
+            filtrar y ordenar.
+          </p>
+        </div>
+
+        <div class="side-block">
           <span class="field__label">Nivel</span>
           <select v-model="form.level" class="field__input">
             <option v-for="opt in LEVEL_OPTIONS" :key="opt.value" :value="opt.value">
@@ -225,7 +238,7 @@ import { renderMarkdown } from '@/utils/markdown'
 import { parseArticleMarkdown } from '@/utils/articleMarkdownImport'
 import { ApiError } from '@/services/http'
 import type { ArticleFormPayload, ArticleStatus } from '@/types/admin'
-import type { Audience, Level } from '@/types'
+import type { Audience, ArticleScope, Level } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -256,6 +269,7 @@ const form = ref<ArticleFormPayload>({
   level: 'basico',
   audience: [],
   status: 'borrador',
+  scope: 'publico',
   categorySlugs: [],
   tags: [],
   readingTime: undefined,
@@ -290,6 +304,13 @@ const STATUS_OPTIONS: { value: ArticleStatus; label: string }[] = [
   { value: 'borrador', label: 'Borrador' },
   { value: 'publicado', label: 'Publicado' },
   { value: 'archivado', label: 'Archivado' },
+]
+
+const SCOPE_OPTIONS: { value: ArticleScope; label: string }[] = [
+  { value: 'publico', label: 'Público' },
+  { value: 'suscriptores_nivel_1', label: 'Registrados (nivel 1)' },
+  { value: 'suscriptores_nivel_2', label: 'Suscriptores nivel 2' },
+  { value: 'suscriptores_nivel_3', label: 'Suscriptores nivel 3' },
 ]
 
 function toggleAudience(value: Audience) {
@@ -393,6 +414,7 @@ async function loadArticle(id: string) {
       level: article.level,
       audience: [...article.audience],
       status: article.status,
+      scope: article.scope,
       categorySlugs: [...article.categorySlugs],
       tags: [...article.keywords],
       readingTime: article.readingTimeMinutes,

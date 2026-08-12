@@ -33,6 +33,19 @@ enum ArticleStatus {
   archivado
 }
 
+// Clasificación editorial de acceso ("alcance" en la metadata del .md
+// importado) — no confundir con Role (permisos de administración). Por
+// ahora es solo clasificación/filtro: el recorte de contenido real para
+// suscriptores_nivel_1/2/3 se implementa en una etapa futura, junto con el
+// login público de lectores y el sistema de pagos (ver
+// docs/features/article-scope-filters.md).
+enum ArticleScope {
+  publico
+  suscriptores_nivel_1
+  suscriptores_nivel_2
+  suscriptores_nivel_3
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -89,6 +102,7 @@ model Article {
   // una audiencia a la vez (ver frontend/src/data/mockArticles.ts).
   audience           Audience[]
   status             ArticleStatus     @default(borrador)
+  scope              ArticleScope      @default(publico)
   publishedAt        DateTime?
   readingTime        Int? // minutos estimados
   // Fuentes citadas por el artículo: [{ title, url, description? }]. Se
