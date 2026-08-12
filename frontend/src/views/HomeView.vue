@@ -14,7 +14,7 @@
           </span>
 
           <h1 class="hero__title rise" style="animation-delay: 0.15s">
-            Cuidar a alguien<br />
+            Acompañar a alguien<br />
             no debería hacerse<br />
             <em>a ciegas.</em>
           </h1>

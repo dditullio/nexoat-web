@@ -6,10 +6,13 @@ export interface UploadedMedia {
   publicId: string
 }
 
-// Todas las imágenes del sitio conviven bajo esta carpeta en la cuenta de
-// Cloudinary — evita que se mezclen con otros usos futuros de la misma
-// cuenta (avatares, directorio de acompañantes, etc.).
-const FOLDER = 'nexoat/articles'
+// Raíz común de Cloudinary para todo el sitio, con una subcarpeta por tipo
+// de imagen — evita que se mezclen con otros usos futuros de la misma
+// cuenta (avatares, directorio de acompañantes, etc.) y permite borrar con
+// confianza sabiendo de qué feature viene cada publicId.
+const ROOT_FOLDER = 'nexoat'
+export const MEDIA_FOLDERS = ['articles', 'categories'] as const
+export type MediaFolder = (typeof MEDIA_FOLDERS)[number]
 
 export const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
@@ -51,12 +54,19 @@ export class MediaService {
   // credenciales sean correctas — probado a mano contra la API de
   // Cloudinary. Como el archivo ya está entero en memoria (tope 5MB, ver
   // MAX_IMAGE_SIZE_BYTES) no hay ninguna ventaja real en streamearlo.
-  async upload(buffer: Buffer, mimetype: string): Promise<UploadedMedia> {
+  async upload(
+    buffer: Buffer,
+    mimetype: string,
+    folder: MediaFolder = 'articles'
+  ): Promise<UploadedMedia> {
     const dataUri = `data:${mimetype};base64,${buffer.toString('base64')}`
 
     let result: UploadApiResponse
     try {
-      result = await cloudinary.uploader.upload(dataUri, { folder: FOLDER, resource_type: 'image' })
+      result = await cloudinary.uploader.upload(dataUri, {
+        folder: `${ROOT_FOLDER}/${folder}`,
+        resource_type: 'image',
+      })
     } catch (error) {
       throw new InternalServerErrorException(
         `No se pudo subir la imagen a Cloudinary: ${describeError(error)}`
@@ -67,10 +77,13 @@ export class MediaService {
   }
 
   async delete(publicId: string): Promise<void> {
-    // Defensa en profundidad: nunca borrar nada fuera de la carpeta del
+    // Defensa en profundidad: nunca borrar nada fuera de las carpetas del
     // proyecto, aunque el guard de roles ya limita quién puede llamar esto.
-    if (!publicId.startsWith(`${FOLDER}/`)) {
-      throw new InternalServerErrorException('publicId fuera de la carpeta del proyecto')
+    const isInProjectFolder = MEDIA_FOLDERS.some((folder) =>
+      publicId.startsWith(`${ROOT_FOLDER}/${folder}/`)
+    )
+    if (!isInProjectFolder) {
+      throw new InternalServerErrorException('publicId fuera de las carpetas del proyecto')
     }
     await cloudinary.uploader.destroy(publicId, { resource_type: 'image' })
   }

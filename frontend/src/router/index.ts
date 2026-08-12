@@ -98,6 +98,12 @@ const router = createRouter({
               meta: { title: 'Editar artículo', minRole: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'] },
             },
             {
+              path: 'categorias',
+              name: 'admin-categories',
+              component: () => import('@/views/admin/AdminCategoriesView.vue'),
+              meta: { title: 'Categorías', minRole: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
               path: 'usuarios',
               name: 'admin-users',
               component: () => import('@/views/admin/AdminUsersView.vue'),

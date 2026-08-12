@@ -26,6 +26,7 @@ export interface Category extends CategoryTheme {
   name: string
   description: string
   articleCount: number
+  coverImage?: string
 }
 
 export interface Article {

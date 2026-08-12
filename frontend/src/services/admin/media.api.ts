@@ -5,10 +5,12 @@ export interface UploadedMedia {
   publicId: string
 }
 
-export function uploadMedia(file: File): Promise<UploadedMedia> {
+export type MediaFolder = 'articles' | 'categories'
+
+export function uploadMedia(file: File, folder: MediaFolder = 'articles'): Promise<UploadedMedia> {
   const formData = new FormData()
   formData.append('file', file)
-  return http<UploadedMedia>('/admin/media', { method: 'POST', body: formData })
+  return http<UploadedMedia>(`/admin/media?folder=${folder}`, { method: 'POST', body: formData })
 }
 
 export function deleteMedia(publicId: string): Promise<{ ok: true }> {

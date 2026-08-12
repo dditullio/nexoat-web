@@ -1,7 +1,18 @@
 <template>
   <div v-if="category" class="cat-page">
-    <header class="cat-hero">
-      <div class="cat-hero__wash" :style="{ background: category.gradient }" aria-hidden="true" />
+    <header class="cat-hero" :class="{ 'cat-hero--photo': category.coverImage }">
+      <div
+        v-if="category.coverImage"
+        class="cat-hero__photo"
+        :style="{ backgroundImage: `url(${category.coverImage})` }"
+        aria-hidden="true"
+      />
+      <div
+        v-else
+        class="cat-hero__wash"
+        :style="{ background: category.gradient }"
+        aria-hidden="true"
+      />
 
       <div class="container cat-hero__inner">
         <nav class="crumb" aria-label="Ruta de navegación">
@@ -12,6 +23,7 @@
 
         <div class="cat-hero__row">
           <span
+            v-if="!category.coverImage"
             class="cat-hero__glyph"
             :style="{ background: category.bg, color: category.accent }"
             aria-hidden="true"
@@ -97,8 +109,56 @@ watch(slug, () => store.clearFilters(), { immediate: true })
   pointer-events: none;
 }
 
+/* Con foto: la categoría tiene coverImage — banner a página completa en
+   vez del blob de color difuso, con scrim para que el texto siga legible. */
+.cat-hero--photo {
+  border-bottom: none;
+  padding: 72px 0 56px;
+}
+
+.cat-hero__photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+
+.cat-hero--photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 16, 12, 0.32) 0%,
+    rgba(20, 16, 12, 0.62) 75%,
+    rgba(20, 16, 12, 0.72) 100%
+  );
+}
+
+.cat-hero--photo .crumb,
+.cat-hero--photo .crumb a,
+.cat-hero--photo .cat-hero__title,
+.cat-hero--photo .cat-hero__desc,
+.cat-hero--photo .cat-hero__count {
+  color: #f7f2e9;
+}
+
+.cat-hero--photo .cat-hero__desc {
+  color: rgba(247, 242, 233, 0.82);
+}
+
+.cat-hero--photo .cat-hero__count {
+  color: rgba(247, 242, 233, 0.68);
+}
+
+.cat-hero--photo .crumb a:hover {
+  color: var(--color-primary-light);
+}
+
 .cat-hero__inner {
   position: relative;
+  z-index: 1;
 }
 
 .crumb {

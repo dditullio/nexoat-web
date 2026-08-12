@@ -49,14 +49,16 @@ enum AuthProvider {
 // ─── Modelos ────────────────────────────────────────────────────────────────
 
 model Category {
-  id          String            @id @default(cuid())
-  slug        String            @unique
-  name        String
-  description String?
-  icon        String?
-  articles    ArticleCategory[]
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id                 String            @id @default(cuid())
+  slug               String            @unique
+  name               String
+  description        String?
+  icon               String?
+  coverImage         String?
+  coverImagePublicId String? // ID de Cloudinary — necesario para poder borrar esa imagen puntual
+  articles           ArticleCategory[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   @@map("categories")
 }

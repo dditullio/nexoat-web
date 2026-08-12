@@ -16,6 +16,16 @@
       </RouterLink>
 
       <RouterLink
+        v-if="authStore.hasRole('EDITOR', 'ADMIN', 'SUPER_ADMIN')"
+        to="/nexoat-admin/categorias"
+        class="dash__card"
+      >
+        <IconImage />
+        <h2>Categorías</h2>
+        <p>Subí o cambiá la imagen de portada de cada categoría.</p>
+      </RouterLink>
+
+      <RouterLink
         v-if="authStore.hasRole('ADMIN', 'SUPER_ADMIN')"
         to="/nexoat-admin/usuarios"
         class="dash__card"
@@ -51,6 +61,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import IconDocument from '@/components/admin/icons/IconDocument.vue'
+import IconImage from '@/components/admin/icons/IconImage.vue'
 import IconUsers from '@/components/admin/icons/IconUsers.vue'
 import IconClock from '@/components/admin/icons/IconClock.vue'
 import IconMail from '@/components/admin/icons/IconMail.vue'

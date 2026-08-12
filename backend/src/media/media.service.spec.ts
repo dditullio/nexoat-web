@@ -37,6 +37,14 @@ describe('MediaService', () => {
       await service.delete('nexoat/articles/abc123')
       expect(destroyMock).toHaveBeenCalledWith('nexoat/articles/abc123', { resource_type: 'image' })
     })
+
+    it('borra un publicId dentro de la carpeta de categorías', async () => {
+      destroyMock.mockResolvedValue({ result: 'ok' })
+      await service.delete('nexoat/categories/abc123')
+      expect(destroyMock).toHaveBeenCalledWith('nexoat/categories/abc123', {
+        resource_type: 'image',
+      })
+    })
   })
 
   describe('upload', () => {
@@ -55,6 +63,18 @@ describe('MediaService', () => {
       const [dataUri, options] = uploadMock.mock.calls[0]
       expect(dataUri).toMatch(/^data:image\/png;base64,/)
       expect(options).toEqual({ folder: 'nexoat/articles', resource_type: 'image' })
+    })
+
+    it('sube a la carpeta indicada cuando se pasa folder', async () => {
+      uploadMock.mockResolvedValue({
+        secure_url: 'https://res.cloudinary.com/x/y.jpg',
+        public_id: 'nexoat/categories/y',
+      })
+
+      await service.upload(Buffer.from('fake-image'), 'image/png', 'categories')
+
+      const [, options] = uploadMock.mock.calls[0]
+      expect(options).toEqual({ folder: 'nexoat/categories', resource_type: 'image' })
     })
 
     it('envuelve un error de Cloudinary en InternalServerErrorException', async () => {

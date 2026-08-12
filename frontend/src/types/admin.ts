@@ -43,6 +43,17 @@ export interface ArticleFormPayload {
   readingTime?: number
 }
 
+/** Respuesta de /admin/categories — las 10 categorías son un set fijo, solo se edita la imagen. */
+export interface AdminCategory {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  icon: string | null
+  coverImage?: string
+  coverImagePublicId?: string
+}
+
 export interface AdminUser {
   id: string
   email: string

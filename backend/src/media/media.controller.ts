@@ -13,7 +13,13 @@ import { Role } from '@prisma/client'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { Roles } from '../auth/decorators/roles.decorator'
-import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES, MediaService } from './media.service'
+import {
+  ALLOWED_IMAGE_MIME_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  MEDIA_FOLDERS,
+  MediaService,
+  type MediaFolder,
+} from './media.service'
 
 @ApiTags('admin/media')
 @ApiBearerAuth()
@@ -25,8 +31,13 @@ export class MediaController {
 
   @Post()
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Sube una imagen a Cloudinary — campo "file", máx. 5MB' })
-  async upload(@Req() req: FastifyRequest) {
+  @ApiOperation({
+    summary:
+      'Sube una imagen a Cloudinary — campo "file", máx. 5MB. ?folder=articles|categories (default articles)',
+  })
+  async upload(@Req() req: FastifyRequest, @Query('folder') folderParam?: string) {
+    const folder = this.resolveFolder(folderParam)
+
     const file = await req.file()
     if (!file) throw new BadRequestException('Falta el archivo (campo "file")')
 
@@ -44,7 +55,15 @@ export class MediaController {
       )
     }
 
-    return this.mediaService.upload(buffer, file.mimetype)
+    return this.mediaService.upload(buffer, file.mimetype, folder)
+  }
+
+  private resolveFolder(folderParam?: string): MediaFolder {
+    if (!folderParam) return 'articles'
+    if (!MEDIA_FOLDERS.includes(folderParam as MediaFolder)) {
+      throw new BadRequestException(`folder debe ser uno de: ${MEDIA_FOLDERS.join(', ')}`)
+    }
+    return folderParam as MediaFolder
   }
 
   @Delete()

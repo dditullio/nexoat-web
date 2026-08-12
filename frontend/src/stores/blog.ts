@@ -9,6 +9,7 @@ interface CategoryMeta {
   slug: CategorySlug
   name: string
   description: string
+  coverImage?: string
 }
 
 // Semilla estática: evita que el nav/las tarjetas parpadeen sin nombre de

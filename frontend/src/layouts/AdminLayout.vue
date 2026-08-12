@@ -23,6 +23,16 @@
         </RouterLink>
 
         <RouterLink
+          v-if="authStore.hasRole('EDITOR', 'ADMIN', 'SUPER_ADMIN')"
+          to="/nexoat-admin/categorias"
+          class="admin__link"
+          :class="{ 'is-active': $route.path === '/nexoat-admin/categorias' }"
+        >
+          <IconImage />
+          Categorías
+        </RouterLink>
+
+        <RouterLink
           v-if="authStore.hasRole('ADMIN', 'SUPER_ADMIN')"
           to="/nexoat-admin/usuarios"
           class="admin__link"
@@ -87,6 +97,7 @@ import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 import IconGrid from '@/components/admin/icons/IconGrid.vue'
 import IconDocument from '@/components/admin/icons/IconDocument.vue'
+import IconImage from '@/components/admin/icons/IconImage.vue'
 import IconUsers from '@/components/admin/icons/IconUsers.vue'
 import IconClock from '@/components/admin/icons/IconClock.vue'
 import IconMail from '@/components/admin/icons/IconMail.vue'
