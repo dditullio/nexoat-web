@@ -1,8 +1,18 @@
 <template>
   <RouterLink :to="`/articulo/${article.slug}`" class="card">
     <!-- Portada: arco superior, el motivo estructural del sitio -->
-    <div class="card__cover" :style="{ background: theme.gradient }">
-      <span class="card__monogram">{{ theme.icon }}</span>
+    <div
+      class="card__cover"
+      :class="{ 'card__cover--photo': article.coverImage }"
+      :style="{ background: theme.gradient }"
+    >
+      <img
+        v-if="article.coverImage"
+        :src="article.coverImage"
+        :alt="article.title"
+        class="card__img"
+      />
+      <span v-else class="card__monogram">{{ theme.icon }}</span>
       <span class="card__cat" :style="{ background: theme.bg, color: theme.accent }">
         {{ primaryCategoryName }}
       </span>
@@ -98,6 +108,27 @@ function audienceChip(aud: Audience) {
   align-items: flex-end;
   padding: 16px;
   overflow: hidden;
+}
+
+.card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease-out-soft);
+}
+
+.card:hover .card__img {
+  transform: scale(1.06);
+}
+
+/* Scrim para que el chip de categoría siga siendo legible sobre una foto */
+.card__cover--photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 16, 12, 0) 55%, rgba(20, 16, 12, 0.55) 100%);
 }
 
 .card__monogram {
