@@ -61,8 +61,9 @@ async function rawFetch(path: string, options: HttpOptions): Promise<Response> {
 /**
  * Ante un 401 (access token vencido) dispara `authStore.refresh()` una vez
  * y reintenta la request original — silent refresh vía la cookie httpOnly.
+ * Lanza `ApiError` si la respuesta final no es ok.
  */
-export async function http<T>(path: string, options: HttpOptions = {}): Promise<T> {
+async function request(path: string, options: HttpOptions): Promise<Response> {
   let res = await rawFetch(path, options)
 
   if (res.status === 401 && !options.skipAuthRetry) {
@@ -83,8 +84,23 @@ export async function http<T>(path: string, options: HttpOptions = {}): Promise<
     throw new ApiError(res.status, body)
   }
 
+  return res
+}
+
+export async function http<T>(path: string, options: HttpOptions = {}): Promise<T> {
+  const res = await request(path, options)
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
+}
+
+/**
+ * Igual que `http` pero devuelve el cuerpo crudo — para descargas de
+ * archivos (ej. el zip de un respaldo), que necesitan el header
+ * `Authorization` y por eso no pueden ser un `<a href>` pelado.
+ */
+export async function httpBlob(path: string, options: HttpOptions = {}): Promise<Blob> {
+  const res = await request(path, options)
+  return res.blob()
 }
 
 /** Serializa un objeto plano como querystring, salteando undefined/null/''. */

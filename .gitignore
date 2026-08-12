@@ -38,6 +38,9 @@ pnpm-debug.log*
 # Temporal / archivos de trabajo local
 tmp/
 
+# Copias de seguridad de la DB — contienen emails y hashes de contraseña
+backend/storage/
+
 # Claude Code — configuración personal (no compartir en equipo)
 .claude/settings.local.json
 

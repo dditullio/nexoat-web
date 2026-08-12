@@ -121,6 +121,14 @@ const router = createRouter({
               component: () => import('@/views/admin/AdminSubscribersView.vue'),
               meta: { title: 'Suscripciones', minRole: ['ADMIN', 'SUPER_ADMIN'] },
             },
+            {
+              path: 'respaldos',
+              name: 'admin-backups',
+              component: () => import('@/views/admin/AdminBackupsView.vue'),
+              // Solo SUPER_ADMIN: restaurar reemplaza el estado completo del
+              // sitio, usuarios incluidos (ver docs/features/database-backups.md).
+              meta: { title: 'Respaldos', minRole: ['SUPER_ADMIN'] },
+            },
           ],
         },
       ],

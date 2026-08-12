@@ -54,6 +54,16 @@
         <h2>Suscripciones</h2>
         <p>Suscriptores al newsletter del sitio público.</p>
       </RouterLink>
+
+      <RouterLink
+        v-if="authStore.hasRole('SUPER_ADMIN')"
+        to="/nexoat-admin/respaldos"
+        class="dash__card"
+      >
+        <IconArchive />
+        <h2>Respaldos</h2>
+        <p>Copias de seguridad de la base: crear, descargar y restaurar.</p>
+      </RouterLink>
     </div>
   </div>
 </template>
@@ -65,6 +75,7 @@ import IconImage from '@/components/admin/icons/IconImage.vue'
 import IconUsers from '@/components/admin/icons/IconUsers.vue'
 import IconClock from '@/components/admin/icons/IconClock.vue'
 import IconMail from '@/components/admin/icons/IconMail.vue'
+import IconArchive from '@/components/admin/icons/IconArchive.vue'
 
 const authStore = useAuthStore()
 </script>

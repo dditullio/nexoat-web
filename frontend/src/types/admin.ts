@@ -87,6 +87,32 @@ export interface NewsletterSubscriber {
   unsubscribedAt: string | null
 }
 
+/** Metadata que viaja dentro del zip de un respaldo (ver docs/features/database-backups.md). */
+export interface BackupMetadata {
+  formatVersion: number
+  createdAt: string
+  kind: 'manual' | 'pre-restore'
+  comment: string | null
+  createdBy: { id: string | null; email: string | null; name: string | null }
+  source: { environment: string; database: string | null }
+  counts: Record<string, number>
+}
+
+export interface BackupSummary {
+  filename: string
+  sizeBytes: number
+  metadata: BackupMetadata
+}
+
+export interface RestoreResult {
+  filename: string
+  counts: Record<string, number>
+  /** Respaldo automático del estado previo, por si la restauración fue un error. */
+  safetyBackup: string
+  source: BackupMetadata['source']
+  backupCreatedAt: string
+}
+
 export interface Paginated<T> {
   items: T[]
   total: number
