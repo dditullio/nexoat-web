@@ -64,14 +64,29 @@
         </div>
 
         <!-- Arco: eco del motivo que se repite en tarjetas y glifos -->
-        <div class="hero__arch rise" style="animation-delay: 0.3s" aria-hidden="true">
-          <div class="hero__arch-inner">
+        <div class="hero__arch rise" style="animation-delay: 0.3s">
+          <div class="hero__arch-inner" aria-hidden="true">
             <span class="hero__arch-mark">AT</span>
           </div>
-          <div class="hero__arch-note">
-            <strong>{{ store.articles.length }}</strong>
-            <span>artículos publicados</span>
-          </div>
+          <RouterLink to="/buscar" class="hero__stat">
+            <span class="hero__stat-text">
+              <strong>{{ store.articles.length }}</strong>
+              <span>artículos publicados</span>
+            </span>
+            <svg
+              class="hero__stat-arrow"
+              width="15"
+              height="15"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M2 7h10M7 2l5 5-5 5" />
+            </svg>
+          </RouterLink>
         </div>
       </div>
     </section>
@@ -92,8 +107,14 @@
           class="feat reveal"
           :style="{ '--feat-grad': featuredTheme.gradient }"
         >
-          <div class="feat__cover">
-            <span class="feat__mark">{{ featuredTheme.icon }}</span>
+          <div class="feat__cover" :class="{ 'feat__cover--photo': featured.coverImage }">
+            <img
+              v-if="featured.coverImage"
+              :src="featured.coverImage"
+              :alt="featured.title"
+              class="feat__img"
+            />
+            <span v-else class="feat__mark">{{ featuredTheme.icon }}</span>
           </div>
 
           <div class="feat__body">
@@ -661,15 +682,39 @@ async function subscribe() {
   letter-spacing: -0.05em;
 }
 
-.hero__arch-note {
+/* Stat clickeable: lleva al buscador con todos los artículos */
+.hero__stat {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: 1px;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  max-width: 260px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-light);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px 14px 20px;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.3s var(--ease-out-soft),
+    border-color 0.2s ease,
+    box-shadow 0.3s ease;
 }
 
-.hero__arch-note strong {
+.hero__stat:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-md);
+}
+
+.hero__stat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+}
+
+.hero__stat-text strong {
   font-family: var(--font-display);
   font-variation-settings: 'SOFT' 60;
   font-size: 1.7rem;
@@ -678,12 +723,22 @@ async function subscribe() {
   line-height: 1;
 }
 
-.hero__arch-note span {
-  font-size: 0.74rem;
+.hero__stat-text span {
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--color-ink-faint);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
+}
+
+.hero__stat-arrow {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  transition: transform 0.3s var(--ease-out-soft);
+}
+
+.hero__stat:hover .hero__stat-arrow {
+  transform: translateX(3px);
 }
 
 /* ═══ DESTACADO ═══ */
@@ -737,6 +792,27 @@ async function subscribe() {
 
 .feat:hover .feat__mark {
   transform: scale(1.08);
+}
+
+.feat__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease-out-soft);
+}
+
+.feat:hover .feat__img {
+  transform: scale(1.05);
+}
+
+/* Scrim: por si algún día el destacado suma texto sobre la foto */
+.feat__cover--photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 16, 12, 0) 60%, rgba(20, 16, 12, 0.28) 100%);
 }
 
 .feat__body {
