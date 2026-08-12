@@ -14,6 +14,7 @@
 - [`features/article-md-import.md`](features/article-md-import.md) — Autocompletar el formulario de artículo soltando el `.md` de origen (drag & drop). **Estado: implementado.**
 - [`features/category-cover-images.md`](features/category-cover-images.md) — Imagen de portada por categoría (tarjetas y encabezado), con pantalla admin nueva en `/nexoat-admin/categorias`. **Estado: implementado.**
 - [`features/database-backups.md`](features/database-backups.md) — Copias de seguridad manuales de la DB (zip con JSONL + metadata), listado/descarga/restauración en `/nexoat-admin/respaldos`, solo SUPER_ADMIN. **Estado: implementado.**
+- [`features/article-sources-and-published-date.md`](features/article-sources-and-published-date.md) — La `fecha` del `.md` importado pasa a ser `publishedAt` real, y las `fuentes` del `.md` (o cargadas a mano) se muestran en el artículo público. **Estado: implementado.**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

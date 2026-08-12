@@ -1,4 +1,4 @@
-import type { Audience, Level } from './index'
+import type { Audience, ArticleSource, Level } from './index'
 
 export type ArticleStatus = 'borrador' | 'publicado' | 'archivado'
 
@@ -19,9 +19,14 @@ export interface AdminArticle {
   coverImage?: string
   coverImagePublicId?: string
   readingTimeMinutes?: number
+  sources: ArticleSource[]
+  /** Metadata cruda del .md importado (fecha, estado, temas, etc.), si el artículo vino de un import. */
+  importMetadata: Record<string, unknown> | null
   status: ArticleStatus
   authorId: string | null
   authorName: string | null
+  /** Fecha de publicación real (puede ser null si nunca se publicó) — distinta de `date`, que cae a `createdAt`. */
+  publishedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -41,6 +46,10 @@ export interface ArticleFormPayload {
   categorySlugs: string[]
   tags?: string[]
   readingTime?: number
+  /** Fecha de publicación (ej. la "fecha" del .md importado), formato YYYY-MM-DD. */
+  publishedAt?: string
+  sources?: ArticleSource[]
+  importMetadata?: Record<string, unknown>
 }
 
 /** Respuesta de /admin/categories — las 10 categorías son un set fijo, solo se edita la imagen. */

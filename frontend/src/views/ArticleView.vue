@@ -53,6 +53,23 @@
           <p class="art__note">No se pudo cargar el contenido de este artículo.</p>
         </div>
 
+        <section v-if="article.sources.length" class="art__sources">
+          <h2 class="eyebrow art__sources-title">Fuentes</h2>
+          <ol class="art__sources-list">
+            <li v-for="source in article.sources" :key="source.url" class="art__source">
+              <a
+                :href="source.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="art__source-link"
+              >
+                {{ source.title }}
+              </a>
+              <p v-if="source.description" class="art__source-desc">{{ source.description }}</p>
+            </li>
+          </ol>
+        </section>
+
         <footer class="art__foot">
           <aside class="art__disclaimer">
             <strong>Nota</strong>
@@ -324,6 +341,62 @@ async function copyLink() {
   font-style: italic;
   color: var(--color-ink-muted);
   font-size: 0.98rem;
+}
+
+/* ── Fuentes ── */
+.art__sources {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--color-line-light);
+  max-width: var(--container-prose);
+}
+
+.art__sources-title {
+  margin-bottom: 16px;
+}
+
+.art__sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+  counter-reset: source;
+}
+
+.art__source {
+  counter-increment: source;
+  padding-left: 26px;
+  position: relative;
+}
+
+.art__source::before {
+  content: counter(source) '.';
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+  color: var(--color-ink-faint);
+  font-size: 0.86rem;
+}
+
+.art__source-link {
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-color: var(--color-line);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.art__source-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.art__source-desc {
+  margin-top: 4px;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
 }
 
 /* ── Pie del artículo ── */

@@ -29,7 +29,11 @@ export function toPublicArticleSummary(article: ArticleWithRelations) {
 
 /** Forma pública completa — coincide con `ArticleFull` en frontend/src/types/index.ts. */
 export function toPublicArticleFull(article: ArticleWithRelations) {
-  return { ...toPublicArticleSummary(article), content: article.content }
+  return {
+    ...toPublicArticleSummary(article),
+    content: article.content,
+    sources: (article.sources as ArticleSourceShape[] | null) ?? [],
+  }
 }
 
 /** Forma admin — suma campos de gestión que el blog público no necesita ver. */
@@ -42,7 +46,15 @@ export function toAdminArticle(article: ArticleWithRelations) {
     categorySlugs: article.categories.map((c) => c.category.slug),
     authorId: article.authorId,
     authorName: article.author?.name ?? article.author?.email ?? null,
+    publishedAt: article.publishedAt ? article.publishedAt.toISOString() : null,
+    importMetadata: (article.importMetadata as Record<string, unknown> | null) ?? null,
     createdAt: article.createdAt.toISOString(),
     updatedAt: article.updatedAt.toISOString(),
   }
+}
+
+export interface ArticleSourceShape {
+  title: string
+  url: string
+  description?: string
 }

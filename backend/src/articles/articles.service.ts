@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { ArticleStatus, type Prisma, type User } from '@prisma/client'
+import { ArticleStatus, Prisma, type User } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { slugify } from '../common/slugify'
@@ -142,7 +142,16 @@ export class ArticlesService {
         audience: audienceFromApi(dto.audience),
         status,
         readingTime: dto.readingTime,
-        publishedAt: status === ArticleStatus.publicado ? new Date() : null,
+        // La fecha explícita (ej. "fecha" del .md importado) manda; si no
+        // vino y se publica de una, se usa la fecha/hora actual.
+        publishedAt: dto.publishedAt
+          ? new Date(dto.publishedAt)
+          : status === ArticleStatus.publicado
+            ? new Date()
+            : null,
+        sources: (dto.sources as unknown as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+        importMetadata:
+          (dto.importMetadata as unknown as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
         authorId: actor.id,
         categories: { create: categoryLinks },
         tags: { create: tagLinks },
@@ -197,9 +206,22 @@ export class ArticlesService {
         audience: dto.audience ? audienceFromApi(dto.audience) : undefined,
         status: dto.status,
         readingTime: dto.readingTime,
-        // publishedAt solo se toca al pasar A publicado por primera vez —
-        // archivar/despublicar no borra la fecha histórica de publicación.
-        publishedAt: willPublishNow ? new Date() : undefined,
+        // Si viene una fecha explícita (ej. al editar la "fecha" importada)
+        // manda esa; si no, solo se toca al pasar A publicado por primera
+        // vez — archivar/despublicar no borra la fecha histórica.
+        publishedAt: dto.publishedAt
+          ? new Date(dto.publishedAt)
+          : willPublishNow
+            ? new Date()
+            : undefined,
+        sources:
+          dto.sources !== undefined
+            ? ((dto.sources as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull)
+            : undefined,
+        importMetadata:
+          dto.importMetadata !== undefined
+            ? ((dto.importMetadata as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull)
+            : undefined,
         ...(categoryLinks ? { categories: { deleteMany: {}, create: categoryLinks } } : {}),
         ...(tagLinks ? { tags: { deleteMany: {}, create: tagLinks } } : {}),
       },

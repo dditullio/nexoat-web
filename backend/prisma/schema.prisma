@@ -91,6 +91,13 @@ model Article {
   status             ArticleStatus     @default(borrador)
   publishedAt        DateTime?
   readingTime        Int? // minutos estimados
+  // Fuentes citadas por el artículo: [{ title, url, description? }]. Se
+  // completa al importar el .md (campo `fuentes`) o a mano en el form admin.
+  sources            Json?
+  // Metadata cruda del .md de origen (fecha, estado, temas, auditoría, etc.)
+  // tal cual la extrae el importador — no se usa para renderizar, queda de
+  // referencia/auditoría del artículo importado.
+  importMetadata     Json?
   categories         ArticleCategory[]
   tags               ArticleTag[]
   authorId           String?

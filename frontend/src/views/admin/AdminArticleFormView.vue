@@ -72,6 +72,36 @@
           ></textarea>
           <div v-else class="prose field__preview" v-html="previewHtml"></div>
         </div>
+
+        <div class="field">
+          <div class="field__label-row">
+            <span class="field__label">Fuentes</span>
+            <button type="button" class="field__preview-toggle" @click="addSource">
+              + Agregar fuente
+            </button>
+          </div>
+          <p v-if="!form.sources?.length" class="side__empty-note">
+            Sin fuentes cargadas — se completan al importar el .md o se pueden agregar a mano.
+          </p>
+          <div v-for="(source, idx) in form.sources" :key="idx" class="source-row">
+            <input
+              v-model="source.title"
+              type="text"
+              class="field__input"
+              placeholder="Título de la fuente"
+            />
+            <input v-model="source.url" type="url" class="field__input" placeholder="https://…" />
+            <textarea
+              v-model="source.description"
+              rows="2"
+              class="field__input field__textarea"
+              placeholder="Descripción (opcional)"
+            ></textarea>
+            <button type="button" class="source-row__remove" @click="removeSource(idx)">
+              Quitar
+            </button>
+          </div>
+        </div>
       </div>
 
       <aside class="form-page__side">
@@ -83,6 +113,11 @@
             </option>
           </select>
         </div>
+
+        <label class="side-block">
+          <span class="field__label">Fecha de publicación</span>
+          <input v-model="form.publishedAt" type="date" class="field__input" />
+        </label>
 
         <div class="side-block">
           <span class="field__label">Nivel</span>
@@ -224,7 +259,18 @@ const form = ref<ArticleFormPayload>({
   categorySlugs: [],
   tags: [],
   readingTime: undefined,
+  publishedAt: '',
+  sources: [],
+  importMetadata: undefined,
 })
+
+function addSource() {
+  form.value.sources = [...(form.value.sources ?? []), { title: '', url: '', description: '' }]
+}
+
+function removeSource(idx: number) {
+  form.value.sources = (form.value.sources ?? []).filter((_, i) => i !== idx)
+}
 
 const previewHtml = computed(() => renderMarkdown(form.value.content))
 
@@ -350,6 +396,9 @@ async function loadArticle(id: string) {
       categorySlugs: [...article.categorySlugs],
       tags: [...article.keywords],
       readingTime: article.readingTimeMinutes,
+      publishedAt: article.publishedAt ? article.publishedAt.slice(0, 10) : '',
+      sources: article.sources.map((s) => ({ ...s })),
+      importMetadata: article.importMetadata ?? undefined,
     }
     tagsInput.value = article.keywords.join(', ')
   } catch {
@@ -388,6 +437,16 @@ async function onSubmit() {
       .map((t) => t.trim())
       .filter(Boolean),
     readingTime: form.value.readingTime || undefined,
+    publishedAt: form.value.publishedAt?.trim() || undefined,
+    // Se descartan filas de fuente cargadas a medias (sin título o URL) —
+    // no tiene sentido mandarlas al backend, que además las rechazaría.
+    sources: (form.value.sources ?? [])
+      .filter((s) => s.title.trim() && s.url.trim())
+      .map((s) => ({
+        title: s.title.trim(),
+        url: s.url.trim(),
+        description: s.description?.trim(),
+      })),
   }
 
   try {
@@ -637,6 +696,29 @@ async function onSubmit() {
 .field__code {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 0.85rem;
+}
+
+.side__empty-note {
+  font-size: 0.84rem;
+  color: var(--color-ink-faint);
+  font-style: italic;
+}
+
+.source-row {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  background: var(--color-canvas);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+}
+
+.source-row__remove {
+  justify-self: flex-start;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-accent-dark);
 }
 
 .field__preview {

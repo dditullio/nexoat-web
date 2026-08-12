@@ -119,6 +119,49 @@ describe('ArticlesService', () => {
       const createArgs = prisma.article.create.mock.calls[0][0]
       expect(createArgs.data.publishedAt).toBeNull()
     })
+
+    it('usa publishedAt explícito (ej. la "fecha" del .md importado) en vez de la fecha actual', async () => {
+      prisma.article.findUnique.mockResolvedValue(null)
+      prisma.category.findMany.mockResolvedValue([{ id: 'cat-1', slug: 'salud-mental' }])
+      prisma.article.create.mockImplementation(({ data }) => ({
+        ...data,
+        id: 'art-1',
+        categories: [],
+        tags: [],
+        author: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }))
+
+      await service.create(
+        { ...baseDto, status: ArticleStatus.publicado, publishedAt: '2026-06-16' },
+        actor
+      )
+
+      const createArgs = prisma.article.create.mock.calls[0][0]
+      expect(createArgs.data.publishedAt).toEqual(new Date('2026-06-16'))
+    })
+
+    it('guarda sources e importMetadata cuando vienen en el dto', async () => {
+      prisma.article.findUnique.mockResolvedValue(null)
+      prisma.category.findMany.mockResolvedValue([{ id: 'cat-1', slug: 'salud-mental' }])
+      prisma.article.create.mockImplementation(({ data }) => ({
+        ...data,
+        id: 'art-1',
+        categories: [],
+        tags: [],
+        author: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }))
+
+      const sources = [{ title: 'Fuente', url: 'https://ejemplo.org', description: 'desc' }]
+      await service.create({ ...baseDto, sources, importMetadata: { estado: 'revisado' } }, actor)
+
+      const createArgs = prisma.article.create.mock.calls[0][0]
+      expect(createArgs.data.sources).toEqual(sources)
+      expect(createArgs.data.importMetadata).toEqual({ estado: 'revisado' })
+    })
   })
 
   describe('update', () => {

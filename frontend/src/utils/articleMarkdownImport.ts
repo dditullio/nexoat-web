@@ -1,5 +1,5 @@
 import type { ArticleFormPayload } from '@/types/admin'
-import type { Audience, Level } from '@/types'
+import type { ArticleSource, Audience, Level } from '@/types'
 
 const LEVEL_VALUES: Level[] = ['basico', 'intermedio', 'avanzado']
 const AUDIENCE_VALUES: Audience[] = ['cuidadores-familiares', 'profesionales', 'mixto']
@@ -110,6 +110,24 @@ export function parseArticleMarkdown(
 
   if (meta.palabrasClaveList.length) data.tagsInput = meta.palabrasClaveList.join(', ')
 
+  if (meta.fecha) data.publishedAt = meta.fecha
+  if (meta.fuentesList.length) data.sources = meta.fuentesList
+
+  // Se guarda toda la metadata cruda del .md (fecha, estado, temas, auditoría,
+  // etc.) sin transformar, como referencia — no se usa para renderizar nada.
+  data.importMetadata = {
+    ...meta.extra,
+    titulo: meta.titulo,
+    subtitulo: meta.subtitulo,
+    fecha: meta.fecha,
+    temas: meta.temasList,
+    nivel: meta.nivel,
+    audiencia: meta.audienciaList,
+    palabras_clave: meta.palabrasClaveList,
+    descripcion: meta.descripcion,
+    fuentes: meta.fuentesList,
+  }
+
   const fileSlug = fileNameToSlug(fileName)
   if (fileSlug) data.slug = fileSlug
 
@@ -120,30 +138,89 @@ interface ParsedMeta {
   titulo?: string
   subtitulo?: string
   descripcion?: string
+  fecha?: string
   nivel?: string
   temasList: string[]
   audienciaList: string[]
   palabrasClaveList: string[]
+  fuentesList: ArticleSource[]
+  /** Claves sueltas no mapeadas a un campo conocido (estado, auditoria_externa, verificacion_factual, ...). */
+  extra: Record<string, string>
 }
 
+/**
+ * Parsea el bloque de metadata. No es YAML válido (ver comentario de más
+ * arriba), así que se resuelve a mano con indentación: claves de primer
+ * nivel sin sangría, listas simples con `  - item`, y `fuentes` como lista
+ * de objetos (`  - titulo: "..."` seguido de `    url: "..."` / `    descripcion: "..."`
+ * indentados un nivel más, sin guion).
+ */
 function parseMetaBlock(metaLines: string[]): ParsedMeta {
-  const meta: ParsedMeta = { temasList: [], audienciaList: [], palabrasClaveList: [] }
+  const meta: ParsedMeta = {
+    temasList: [],
+    audienciaList: [],
+    palabrasClaveList: [],
+    fuentesList: [],
+    extra: {},
+  }
   let currentList: string[] | null = null
+  let currentListKey: string | null = null
+  let currentSource: Partial<ArticleSource> | null = null
+
+  const flushSource = () => {
+    if (currentSource?.title && currentSource?.url) {
+      meta.fuentesList.push({
+        title: currentSource.title,
+        url: currentSource.url,
+        description: currentSource.description ?? '',
+      })
+    }
+    currentSource = null
+  }
 
   for (const rawLine of metaLines) {
-    const line = rawLine.replace(/\s+$/, '')
-    if (line.trim() === '') continue
+    if (rawLine.trim() === '') continue
+    const indent = rawLine.length - rawLine.trimStart().length
 
-    const listItemMatch = line.match(/^\s*-\s*(.+)$/)
-    if (listItemMatch && currentList) {
-      currentList.push(unquote(listItemMatch[1].trim()))
+    // Campo anidado de una fuente en curso: "    url: ..." (sin guion).
+    if (currentSource && indent >= 4 && !rawLine.trimStart().startsWith('- ')) {
+      const kv = rawLine.trim().match(/^([a-z_]+):\s*(.*)$/i)
+      if (kv) {
+        const [, key, value] = kv
+        if (key === 'titulo') currentSource.title = unquote(value.trim())
+        else if (key === 'url') currentSource.url = unquote(value.trim())
+        else if (key === 'descripcion') currentSource.description = unquote(value.trim())
+        continue
+      }
+    }
+
+    // Ítem de lista: "  - ..."
+    const listItemMatch = rawLine.match(/^\s*-\s*(.*)$/)
+    if (listItemMatch) {
+      const rest = listItemMatch[1]
+      if (currentListKey === 'fuentes') {
+        flushSource()
+        currentSource = {}
+        const kv = rest.match(/^([a-z_]+):\s*(.*)$/i)
+        if (kv) {
+          const [, key, value] = kv
+          if (key === 'titulo') currentSource.title = unquote(value.trim())
+          else if (key === 'url') currentSource.url = unquote(value.trim())
+          else if (key === 'descripcion') currentSource.description = unquote(value.trim())
+        }
+        continue
+      }
+      if (currentList) currentList.push(unquote(rest.trim()))
       continue
     }
 
-    const kvMatch = line.match(/^([a-z_]+):\s*(.*)$/i)
+    // Clave de primer nivel: "clave: valor"
+    flushSource()
+    const kvMatch = rawLine.match(/^([a-z_]+):\s*(.*)$/i)
     if (!kvMatch) continue
     const [, key, value] = kvMatch
     currentList = null
+    currentListKey = null
 
     switch (key) {
       case 'titulo':
@@ -155,14 +232,22 @@ function parseMetaBlock(metaLines: string[]): ParsedMeta {
       case 'descripcion':
         meta.descripcion = unquote(value.trim())
         break
+      case 'fecha':
+        meta.fecha = unquote(value.trim())
+        break
       case 'nivel':
         meta.nivel = unquote(value.trim())
         break
       case 'temas':
         currentList = meta.temasList
+        currentListKey = 'temas'
         break
       case 'palabras_clave':
         currentList = meta.palabrasClaveList
+        currentListKey = 'palabras_clave'
+        break
+      case 'fuentes':
+        currentListKey = 'fuentes'
         break
       case 'audiencia':
         meta.audienciaList = value
@@ -171,11 +256,14 @@ function parseMetaBlock(metaLines: string[]): ParsedMeta {
           .filter(Boolean)
         break
       default:
-        // fecha / estado / auditoria_externa u otros campos: no se mapean
-        // a ningún campo del formulario, ver docs/features/article-md-import.md
+        // estado / auditoria_externa / verificacion_factual u otros campos
+        // libres: no mapean a un campo del formulario, pero se conservan en
+        // `extra` para el volcado a `importMetadata`.
+        if (value.trim()) meta.extra[key] = unquote(value.trim())
         break
     }
   }
+  flushSource()
 
   return meta
 }

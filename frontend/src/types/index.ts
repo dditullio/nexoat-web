@@ -43,8 +43,15 @@ export interface Article {
   readingTimeMinutes?: number
 }
 
+export interface ArticleSource {
+  title: string
+  url: string
+  description?: string
+}
+
 export interface ArticleFull extends Article {
   content: string
+  sources: ArticleSource[]
 }
 
 export interface FilterState {

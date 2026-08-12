@@ -1,17 +1,38 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
 import {
   ArrayNotEmpty,
   IsArray,
+  IsDateString,
   IsEnum,
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
+  IsUrl,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator'
 import { ArticleStatus, Level } from '@prisma/client'
 import { AUDIENCE_API_VALUES, type AudienceApiValue } from '../audience.util'
+
+export class ArticleSourceDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  title!: string
+
+  @ApiProperty()
+  @IsUrl({ require_protocol: true })
+  url!: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string
+}
 
 export class CreateArticleDto {
   @ApiProperty()
@@ -89,4 +110,30 @@ export class CreateArticleDto {
   @IsInt()
   @Min(1)
   readingTime?: number
+
+  @ApiPropertyOptional({
+    description:
+      'Fecha de publicación (ej. la "fecha" del .md importado). Si se omite y el status pasa ' +
+      'a "publicado", se usa la fecha/hora actual.',
+  })
+  @IsOptional()
+  @IsDateString()
+  publishedAt?: string
+
+  @ApiPropertyOptional({
+    type: [ArticleSourceDto],
+    description: 'Fuentes en las que se basa el artículo',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ArticleSourceDto)
+  sources?: ArticleSourceDto[]
+
+  @ApiPropertyOptional({
+    description: 'Metadata cruda del .md de origen (fecha, estado, temas, etc.), sin transformar',
+  })
+  @IsOptional()
+  @IsObject()
+  importMetadata?: Record<string, unknown>
 }

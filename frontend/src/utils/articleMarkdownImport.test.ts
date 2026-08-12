@@ -25,6 +25,14 @@ palabras_clave:
   - intervención del AT en la escuela
 descripcion: "Una guía para entender cuándo y cómo interviene el AT."
 auditoria_externa: completada
+verificacion_factual: ok
+fuentes:
+  - titulo: "Fuente uno"
+    url: "https://ejemplo.org/uno"
+    descripcion: "Descripción de la fuente uno."
+  - titulo: "Fuente dos"
+    url: "https://ejemplo.org/dos"
+    descripcion: "Descripción de la fuente dos."
 # Crisis en el aula: cuándo y cómo el AT debe intervenir
 
 *Son las diez de la mañana en un salón de tercer grado.*
@@ -107,6 +115,30 @@ describe('parseArticleMarkdown', () => {
     const { data } = parseArticleMarkdown(MD_WITH_SECTION_DIVIDERS, KNOWN_CATEGORIES, 'x.md')
 
     expect(data.tagsInput).toBe('crisis emocional en el aula, intervención del AT en la escuela')
+  })
+
+  it('mapea fecha a publishedAt y fuentes a sources, y vuelca todo en importMetadata', () => {
+    const { data } = parseArticleMarkdown(MD_WITH_SECTION_DIVIDERS, KNOWN_CATEGORIES, 'x.md')
+
+    expect(data.publishedAt).toBe('2026-06-22')
+    expect(data.sources).toEqual([
+      {
+        title: 'Fuente uno',
+        url: 'https://ejemplo.org/uno',
+        description: 'Descripción de la fuente uno.',
+      },
+      {
+        title: 'Fuente dos',
+        url: 'https://ejemplo.org/dos',
+        description: 'Descripción de la fuente dos.',
+      },
+    ])
+    expect(data.importMetadata).toMatchObject({
+      estado: 'revisado',
+      auditoria_externa: 'completada',
+      verificacion_factual: 'ok',
+      fecha: '2026-06-22',
+    })
   })
 
   it('limpia el contenido: sin frontmatter, sin H1, sin cursiva inicial, sin --- ni disclaimer final', () => {

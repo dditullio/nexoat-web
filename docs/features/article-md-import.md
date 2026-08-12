@@ -54,18 +54,19 @@ Por ser un formato casero y no-YAML-válido, **no se usa un parser YAML genéric
 
 ## Mapeo de campos
 
-| Campo del `.md`                        | Campo del formulario                                                                                                                                                                                                             |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `titulo`                               | `title`                                                                                                                                                                                                                          |
-| `subtitulo`                            | `subtitle`                                                                                                                                                                                                                       |
-| `descripcion`                          | `excerpt`                                                                                                                                                                                                                        |
-| `temas` (lista)                        | `categorySlugs` — solo se marcan los slugs que existen en `categoryOptions`; los que no matchean se listan en una advertencia, no se inventan categorías nuevas                                                                  |
-| `nivel`                                | `level` — validado contra `basico\|intermedio\|avanzado`, si no matchea se ignora y se avisa                                                                                                                                     |
-| `audiencia`                            | `audience` — se separa por coma, se valida contra `cuidadores-familiares\|profesionales\|mixto`                                                                                                                                  |
-| `palabras_clave` (lista)               | `tags` (vía `tagsInput`, mismo input de texto separado por comas que ya existe)                                                                                                                                                  |
-| — (nombre de archivo)                  | `slug` — se propone el nombre de archivo sin `.md` como slug (así se subió el artículo anterior a mano); el campo sigue editable                                                                                                 |
-| `fecha`, `estado`, `auditoria_externa` | **no se mapean** — `fecha` no es editable en el form (la fecha real es `createdAt`, gestionada por el backend); `estado`/`auditoria_externa` son metadata del flujo editorial externo (Google Docs → texto revisado), no del CMS |
-| resto del cuerpo (limpio)              | `content`                                                                                                                                                                                                                        |
+| Campo del `.md`           | Campo del formulario                                                                                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `titulo`                  | `title`                                                                                                                                                         |
+| `subtitulo`               | `subtitle`                                                                                                                                                      |
+| `descripcion`             | `excerpt`                                                                                                                                                       |
+| `temas` (lista)           | `categorySlugs` — solo se marcan los slugs que existen en `categoryOptions`; los que no matchean se listan en una advertencia, no se inventan categorías nuevas |
+| `nivel`                   | `level` — validado contra `basico\|intermedio\|avanzado`, si no matchea se ignora y se avisa                                                                    |
+| `audiencia`               | `audience` — se separa por coma, se valida contra `cuidadores-familiares\|profesionales\|mixto`                                                                 |
+| `palabras_clave` (lista)  | `tags` (vía `tagsInput`, mismo input de texto separado por comas que ya existe)                                                                                 |
+| — (nombre de archivo)     | `slug` — se propone el nombre de archivo sin `.md` como slug (así se subió el artículo anterior a mano); el campo sigue editable                                |
+| resto del cuerpo (limpio) | `content`                                                                                                                                                       |
+
+> **Actualizado:** `fecha` y `fuentes` sí se mapean (a `publishedAt` y `sources` respectivamente) desde que se agregó [`article-sources-and-published-date.md`](article-sources-and-published-date.md) — leer ese doc para el detalle. `estado`, `auditoria_externa`, `verificacion_factual` y cualquier otra clave suelta siguen sin mapear a un campo del form, pero ahora se conservan en `importMetadata` como referencia.
 
 `status` (borrador/publicado/archivado) y la imagen de portada **no** se tocan — quedan en lo que ya tuviera el formulario (por defecto "borrador"), porque no vienen en el `.md` y la portada se sigue cargando aparte con el flujo de Cloudinary ya existente.
 
