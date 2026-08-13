@@ -49,8 +49,14 @@ RUN npm pkg delete scripts.prepare
 RUN pnpm install --frozen-lockfile --filter @nexoat/backend... --prod
 
 COPY --from=builder /app/backend/dist ./backend/dist
-COPY --from=builder /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
 COPY backend/prisma ./backend/prisma
+
+# Con pnpm workspaces el cliente generado no queda en
+# backend/node_modules/.prisma sino dentro del store virtual
+# (node_modules/.pnpm/...), así que copiarlo de la etapa "builder" por esa
+# ruta no funciona (ni existe ahí). Más simple: generarlo de nuevo acá,
+# contra el node_modules --prod recién instalado.
+RUN pnpm --filter @nexoat/backend db:generate
 
 EXPOSE 3001
 
