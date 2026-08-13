@@ -147,6 +147,12 @@ const router = createRouter({
               // sitio, usuarios incluidos (ver docs/features/database-backups.md).
               meta: { title: 'Respaldos', minRole: ['SUPER_ADMIN'] },
             },
+            {
+              path: 'configuracion',
+              name: 'admin-settings',
+              component: () => import('@/views/admin/AdminSettingsView.vue'),
+              meta: { title: 'Configuración', minRole: ['ADMIN', 'SUPER_ADMIN'] },
+            },
           ],
         },
       ],

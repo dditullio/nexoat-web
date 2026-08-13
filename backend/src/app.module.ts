@@ -13,6 +13,7 @@ import { NewsletterModule } from './newsletter/newsletter.module'
 import { MailModule } from './mail/mail.module'
 import { MediaModule } from './media/media.module'
 import { BackupModule } from './backup/backup.module'
+import { SettingsModule } from './settings/settings.module'
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { BackupModule } from './backup/backup.module'
     NewsletterModule,
     MediaModule,
     BackupModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

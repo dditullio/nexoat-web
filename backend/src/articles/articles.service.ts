@@ -7,6 +7,7 @@ import {
 import { ArticleStatus, Prisma, type User } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
+import { SettingsService } from '../settings/settings.service'
 import { slugify } from '../common/slugify'
 import {
   ARTICLE_INCLUDE,
@@ -30,18 +31,25 @@ function paginate(page?: number, pageSize?: number, maxPageSize = 100, defaultPa
 export class ArticlesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly settings: SettingsService
   ) {}
 
   // ─── Público ────────────────────────────────────────────────────────────
 
   async findPublished(filters: QueryPublicArticlesDto) {
     const { page, pageSize, skip } = paginate(filters.page, filters.pageSize)
+    const visibleScopes = await this.settings.getVisiblePublicScopes()
 
     const where: Prisma.ArticleWhereInput = {
       status: ArticleStatus.publicado,
       level: filters.level,
-      scope: filters.scope,
+      // Si pidieron un scope puntual que la configuración tiene apagado,
+      // `in: []` no matchea nada — no se filtra "de más" silenciosamente
+      // devolviendo otros scopes que no pidieron.
+      scope: {
+        in: filters.scope ? visibleScopes.filter((s) => s === filters.scope) : visibleScopes,
+      },
       audience: filters.audience ? { has: audienceFromApi([filters.audience])[0] } : undefined,
       categories: filters.category ? { some: { category: { slug: filters.category } } } : undefined,
       ...(filters.query
@@ -75,6 +83,15 @@ export class ArticlesService {
       include: ARTICLE_INCLUDE,
     })
     if (!article) throw new NotFoundException('Artículo no encontrado')
+
+    // Nivel apagado desde Configuración → se comporta como si el artículo no
+    // existiera para el público (no un recorte, oculto del todo). El admin
+    // (EDITOR+) nunca pasa por acá — solo por findOneAdmin.
+    const visibleScopes = await this.settings.getVisiblePublicScopes()
+    if (!visibleScopes.includes(article.scope)) {
+      throw new NotFoundException('Artículo no encontrado')
+    }
+
     return toPublicArticleFullFor(article, viewer)
   }
 

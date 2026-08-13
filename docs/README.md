@@ -19,6 +19,7 @@
 - [`features/reader-accounts-and-paywall.md`](features/reader-accounts-and-paywall.md) — Fase 2 del `alcance`: registro/login público de lectores (solo email) + recorte real de contenido (marcador `<!--corte-->`) en el backend. **Estado: implementado.**
 - [`features/new-categories-batch-1.md`](features/new-categories-batch-1.md) — 5 categorías nuevas (Maltrato y Abuso, Aspectos Legales y Derechos, Historias que Humanizan, Autismo y TEA, Discapacidad Intelectual y Psicosocial) que llevan el set de 10 a 15. **Estado: implementado (alta de categoría — reclasificación de artículos pendiente).**
 - [`features/deploy-vps-traefik.md`](features/deploy-vps-traefik.md) — Deploy a producción en el VPS de Hostinger, detrás del Traefik compartido con las otras apps del servidor. **Estado: implementado.**
+- [`features/site-settings-visible-scopes.md`](features/site-settings-visible-scopes.md) — Sección "Configuración" en el admin (`/nexoat-admin/configuracion`, solo ADMIN+) para prender/apagar por nivel (1/2/3) qué artículos de suscripción se muestran en el sitio público, mientras no exista el cobro real. **Estado: implementado.**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

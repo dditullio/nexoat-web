@@ -124,6 +124,13 @@ export interface RestoreResult {
   backupCreatedAt: string
 }
 
+/** Respuesta de /admin/settings — "publico" no aparece, siempre está visible. */
+export interface SiteSettings {
+  id: string
+  visibleArticleScopes: Exclude<ArticleScope, 'publico'>[]
+  updatedAt: string
+}
+
 export interface Paginated<T> {
   items: T[]
   total: number

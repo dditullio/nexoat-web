@@ -71,6 +71,16 @@
           <IconArchive />
           Respaldos
         </RouterLink>
+
+        <RouterLink
+          v-if="authStore.hasRole('ADMIN', 'SUPER_ADMIN')"
+          to="/nexoat-admin/configuracion"
+          class="admin__link"
+          :class="{ 'is-active': $route.path === '/nexoat-admin/configuracion' }"
+        >
+          <IconSettings />
+          Configuración
+        </RouterLink>
       </nav>
 
       <div class="admin__sidebar-foot">
@@ -112,6 +122,7 @@ import IconUsers from '@/components/admin/icons/IconUsers.vue'
 import IconClock from '@/components/admin/icons/IconClock.vue'
 import IconMail from '@/components/admin/icons/IconMail.vue'
 import IconArchive from '@/components/admin/icons/IconArchive.vue'
+import IconSettings from '@/components/admin/icons/IconSettings.vue'
 import IconExternal from '@/components/admin/icons/IconExternal.vue'
 
 const route = useRoute()

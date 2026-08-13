@@ -232,3 +232,17 @@ model NewsletterSubscriber {
 
   @@map("newsletter_subscribers")
 }
+
+// Fila única (id fijo "singleton", forzado por SettingsService — nunca se
+// crea una segunda) con configuración global del sitio editable desde
+// "Configuración" en el admin. Por ahora solo controla qué niveles de
+// ArticleScope se muestran en el sitio público: "publico" no aparece acá
+// porque siempre se muestra, no es togglable. Pensado como el lugar donde
+// sumar más configuraciones a futuro sin agregar una tabla por setting.
+model SiteSettings {
+  id                   String         @id @default("singleton")
+  visibleArticleScopes ArticleScope[] @default([suscriptores_nivel_1])
+  updatedAt            DateTime       @updatedAt
+
+  @@map("site_settings")
+}

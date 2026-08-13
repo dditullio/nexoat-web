@@ -4,6 +4,7 @@ import { ArticleScope, ArticleStatus, Level, Role, type User } from '@prisma/cli
 import { ArticlesService } from './articles.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
+import { SettingsService } from '../settings/settings.service'
 import type { CreateArticleDto } from './dto/create-article.dto'
 
 type MockPrisma = {
@@ -25,6 +26,7 @@ describe('ArticlesService', () => {
   let service: ArticlesService
   let prisma: MockPrisma
   let audit: { record: jest.Mock }
+  let settings: { getVisiblePublicScopes: jest.Mock }
 
   const actor = { id: 'author-1' } as User
 
@@ -52,12 +54,26 @@ describe('ArticlesService', () => {
       $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     }
     audit = { record: jest.fn() }
+    // Por defecto, todos los scopes visibles — así los tests existentes (que
+    // no le importa esta configuración) no se ven afectados; los tests que
+    // sí ejercitan el filtrado pisan este mock puntualmente.
+    settings = {
+      getVisiblePublicScopes: jest
+        .fn()
+        .mockResolvedValue([
+          ArticleScope.publico,
+          ArticleScope.suscriptores_nivel_1,
+          ArticleScope.suscriptores_nivel_2,
+          ArticleScope.suscriptores_nivel_3,
+        ]),
+    }
 
     const module = await Test.createTestingModule({
       providers: [
         ArticlesService,
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: audit },
+        { provide: SettingsService, useValue: settings },
       ],
     }).compile()
 
@@ -267,6 +283,39 @@ describe('ArticlesService', () => {
     it('lanza NotFoundException si el artículo no existe o no está publicado', async () => {
       prisma.article.findFirst.mockResolvedValue(null)
       await expect(service.findPublishedBySlug('inexistente')).rejects.toThrow(NotFoundException)
+    })
+
+    it('lanza NotFoundException si el nivel del artículo está apagado en Configuración', async () => {
+      prisma.article.findFirst.mockResolvedValue(restrictedArticle)
+      settings.getVisiblePublicScopes.mockResolvedValue([ArticleScope.publico])
+
+      await expect(service.findPublishedBySlug('un-articulo-restringido')).rejects.toThrow(
+        NotFoundException
+      )
+    })
+  })
+
+  describe('findPublished', () => {
+    it('filtra por los scopes visibles según Configuración cuando no se pide un scope puntual', async () => {
+      prisma.article.findMany.mockResolvedValue([])
+      prisma.article.count.mockResolvedValue(0)
+      settings.getVisiblePublicScopes.mockResolvedValue([ArticleScope.publico])
+
+      await service.findPublished({})
+
+      const where = prisma.article.findMany.mock.calls[0][0].where
+      expect(where.scope).toEqual({ in: [ArticleScope.publico] })
+    })
+
+    it('no devuelve nada si se pide explícitamente un scope apagado en Configuración', async () => {
+      prisma.article.findMany.mockResolvedValue([])
+      prisma.article.count.mockResolvedValue(0)
+      settings.getVisiblePublicScopes.mockResolvedValue([ArticleScope.publico])
+
+      await service.findPublished({ scope: ArticleScope.suscriptores_nivel_2 })
+
+      const where = prisma.article.findMany.mock.calls[0][0].where
+      expect(where.scope).toEqual({ in: [] })
     })
   })
 
