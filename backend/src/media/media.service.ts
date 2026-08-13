@@ -24,6 +24,14 @@ export const ALLOWED_IMAGE_MIME_TYPES = new Set([
 // para el mensaje de error del controller — mismo número, un solo lugar.
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
+// Ancho/calidad tope compartido entre `upload` (subida nueva) y
+// `reoptimize` (assets ya existentes, ver scripts/reoptimize-images.ts) —
+// misma receta en los dos casos, un solo lugar si se ajusta más adelante.
+const OPTIMIZED_TRANSFORMATION = [
+  { width: 1920, crop: 'limit' },
+  { quality: 'auto:good', fetch_format: 'auto' },
+]
+
 // El SDK de Cloudinary a veces rechaza con un objeto plano (ej.
 // { message, http_code }), no con una instancia de Error — un template
 // string sobre eso da "[object Object]" sin esto.
@@ -75,14 +83,34 @@ export class MediaService {
         // - quality "auto:good" + fetch_format "auto": Cloudinary elige
         //   la compresión y el formato (WebP/AVIF si conviene) que mejor
         //   balancea peso y calidad para esa imagen en particular.
-        transformation: [
-          { width: 1920, crop: 'limit' },
-          { quality: 'auto:good', fetch_format: 'auto' },
-        ],
+        transformation: OPTIMIZED_TRANSFORMATION,
       })
     } catch (error) {
       throw new InternalServerErrorException(
         `No se pudo subir la imagen a Cloudinary: ${describeError(error)}`
+      )
+    }
+
+    return { url: result.secure_url, publicId: result.public_id }
+  }
+
+  // Reprocesa un asset ya alojado en Cloudinary (subido antes de que
+  // `upload` optimizara en la subida): se lo pasa como URL de origen — lo
+  // baja y resube Cloudinary mismo, no nuestro backend — con la misma
+  // transformación, y queda como un asset nuevo (publicId nuevo). Usado
+  // por scripts/reoptimize-images.ts; el caller es responsable de
+  // actualizar la referencia guardada y borrar el asset viejo.
+  async reoptimize(sourceUrl: string, folder: MediaFolder): Promise<UploadedMedia> {
+    let result: UploadApiResponse
+    try {
+      result = await cloudinary.uploader.upload(sourceUrl, {
+        folder: `${ROOT_FOLDER}/${folder}`,
+        resource_type: 'image',
+        transformation: OPTIMIZED_TRANSFORMATION,
+      })
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `No se pudo reoptimizar la imagen en Cloudinary: ${describeError(error)}`
       )
     }
 
