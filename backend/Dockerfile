@@ -13,6 +13,12 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY backend/package.json ./backend/
 
+# HUSKY=0 no alcanza en la etapa runner: ahí la instalación es --prod, así
+# que husky ni siquiera queda en node_modules/.bin y el shell falla con
+# "husky: not found" antes de que el propio binario llegue a leer esa
+# variable. Se borra el script directamente del package.json copiado.
+RUN npm pkg delete scripts.prepare
+
 RUN pnpm install --frozen-lockfile --filter @nexoat/backend...
 
 COPY backend/ ./backend/
@@ -30,6 +36,12 @@ RUN npm install -g pnpm
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY backend/package.json ./backend/
+
+# HUSKY=0 no alcanza en la etapa runner: ahí la instalación es --prod, así
+# que husky ni siquiera queda en node_modules/.bin y el shell falla con
+# "husky: not found" antes de que el propio binario llegue a leer esa
+# variable. Se borra el script directamente del package.json copiado.
+RUN npm pkg delete scripts.prepare
 
 RUN pnpm install --frozen-lockfile --filter @nexoat/backend... --prod
 
