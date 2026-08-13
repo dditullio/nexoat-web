@@ -23,8 +23,11 @@ RUN pnpm install --frozen-lockfile --filter @nexoat/backend...
 
 COPY backend/ ./backend/
 
-RUN pnpm --filter @nexoat/backend build
+# db:generate (prisma generate) tiene que ir antes del build: "nest build"
+# necesita los tipos del cliente de Prisma (Role, User, Prisma.*, etc.) ya
+# generados, si no falla con "no exported member" en cada import.
 RUN pnpm --filter @nexoat/backend db:generate
+RUN pnpm --filter @nexoat/backend build
 
 FROM node:20-alpine AS runner
 
