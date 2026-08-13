@@ -11,6 +11,13 @@ RUN pnpm install --frozen-lockfile --filter @nexoat/frontend...
 
 COPY frontend/ ./frontend/
 
+# Vite inlinea las env vars VITE_* en el bundle en tiempo de build, no en
+# runtime — por eso hace falta pasarla como build arg (ver
+# docker-compose.prod.yml) en vez de una variable de entorno del
+# contenedor final, que ya no tendría efecto.
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN pnpm --filter @nexoat/frontend build
 
 FROM nginx:alpine AS runner

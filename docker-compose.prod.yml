@@ -1,0 +1,65 @@
+# Despliegue de producción detrás de Traefik (ya corriendo en el VPS,
+# compartido con otras apps — ver docs/features/, sección deploy).
+# Sin puertos publicados al host: Traefik descubre los contenedores vía el
+# socket de Docker y los enruta por su red interna, igual que el resto de
+# las apps del servidor. TLS automático vía Let's Encrypt (certresolver
+# "letsencrypt", ya configurado en el Traefik del VPS).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexoat-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexoat}
+      POSTGRES_USER: ${POSTGRES_USER:-nexoat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nexoat}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    # Contexto = raíz del repo (no ./backend): el Dockerfile copia
+    # package.json/pnpm-lock.yaml/pnpm-workspace.yaml de la raíz del
+    # monorepo antes de instalar con --filter, así que necesita verlos.
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: nexoat-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexoat}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nexoat}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nexoat-api.entrypoints=websecure
+      - traefik.http.routers.nexoat-api.rule=Host(`${BACKEND_DOMAIN}`)
+      - traefik.http.routers.nexoat-api.tls.certresolver=letsencrypt
+      - traefik.http.services.nexoat-api.loadbalancer.server.port=3001
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: https://${BACKEND_DOMAIN}/v1
+    container_name: nexoat-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nexoat-web.entrypoints=websecure
+      - traefik.http.routers.nexoat-web.rule=Host(`${FRONTEND_DOMAIN}`)
+      - traefik.http.routers.nexoat-web.tls.certresolver=letsencrypt
+      - traefik.http.services.nexoat-web.loadbalancer.server.port=80
+
+volumes:
+  postgres_data:
