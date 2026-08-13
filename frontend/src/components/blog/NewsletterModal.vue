@@ -58,7 +58,14 @@ function onBackdropClick(event: MouseEvent) {
 
 <style scoped>
 .nm {
+  /* El reset global (main.css) pone margin: 0 en *, lo que anula el
+     margin: auto con el que el navegador centra <dialog> al abrirlo con
+     showModal(). Lo centramos a mano con inset + margin: auto. */
+  position: fixed;
+  inset: 0;
+  margin: auto;
   width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
   padding: 0;
   border: none;
   border-radius: var(--radius-2xl);

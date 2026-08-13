@@ -16,7 +16,24 @@
           <h1 class="hero__title rise" style="animation-delay: 0.15s">
             Acompañar a alguien<br />
             no debería hacerse<br />
-            <em>a ciegas.</em>
+            <span class="hero__accent">
+              <em>a ciegas.</em>
+              <!-- Trazo a mano alzada: el gesto humano detrás del énfasis -->
+              <svg
+                class="hero__swash"
+                viewBox="0 0 220 16"
+                fill="none"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 11.5c34-6 78-8.5 122-7.5 32 .7 60 3 92 6.5"
+                  stroke="currentColor"
+                  stroke-width="3.2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
           </h1>
 
           <p class="hero__lead rise" style="animation-delay: 0.25s">
@@ -63,31 +80,13 @@
           </div>
         </div>
 
-        <!-- Arco: eco del motivo que se repite en tarjetas y glifos -->
-        <div class="hero__arch rise" style="animation-delay: 0.3s">
-          <div class="hero__arch-inner" aria-hidden="true">
-            <span class="hero__arch-mark">AT</span>
-          </div>
-          <RouterLink to="/buscar" class="hero__stat">
-            <span class="hero__stat-text">
-              <strong>{{ store.articles.length }}</strong>
-              <span>artículos publicados</span>
-            </span>
-            <svg
-              class="hero__stat-arrow"
-              width="15"
-              height="15"
-              viewBox="0 0 14 14"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              aria-hidden="true"
-            >
-              <path d="M2 7h10M7 2l5 5-5 5" />
-            </svg>
-          </RouterLink>
-        </div>
+        <!-- Pila de arcos con las portadas reales: el motivo del sitio
+             convertido en contenido navegable, no en decoración. -->
+        <HeroArticleStack
+          :articles="heroArticles"
+          class="hero__deck rise"
+          style="animation-delay: 0.3s"
+        />
       </div>
     </section>
 
@@ -310,6 +309,7 @@ import { getCategoryTheme, LEVEL_CHIPS } from '@/utils/theme'
 import { useReveal } from '@/composables/useReveal'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CategoryCard from '@/components/blog/CategoryCard.vue'
+import HeroArticleStack from '@/components/blog/HeroArticleStack.vue'
 import NewsletterForm from '@/components/blog/NewsletterForm.vue'
 
 const router = useRouter()
@@ -321,6 +321,10 @@ useReveal()
 const searchQuery = ref('')
 
 const quickCategories = computed(() => store.categories.slice(0, 3))
+
+// El hero es la primera impresión: solo artículos de alcance público, para
+// no ofrecer en portada una lectura que el visitante todavía no puede abrir.
+const heroArticles = computed(() => store.articles.filter((a) => a.scope === 'publico'))
 const featured = computed(() => store.articles[0])
 const featuredTheme = computed(() =>
   getCategoryTheme(featured.value?.categories[0] ?? 'acompanamiento-terapeutico')
@@ -468,6 +472,36 @@ function goToSearch() {
     'WONK' 1;
 }
 
+/* Énfasis subrayado a mano: el trazo se dibuja solo al entrar la página */
+.hero__accent {
+  position: relative;
+  display: inline-block;
+}
+
+.hero__swash {
+  position: absolute;
+  left: 0.06em;
+  right: 0.06em;
+  bottom: -0.1em;
+  width: auto;
+  height: 0.2em;
+  color: var(--color-accent);
+  opacity: 0.75;
+  overflow: visible;
+}
+
+.hero__swash path {
+  stroke-dasharray: 232;
+  stroke-dashoffset: 232;
+  animation: hero-draw 1.1s var(--ease-out-soft) 0.75s forwards;
+}
+
+@keyframes hero-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 .hero__lead {
   font-size: 1.1rem;
   color: var(--color-ink-secondary);
@@ -573,97 +607,10 @@ function goToSearch() {
   transform: translateY(-2px);
 }
 
-/* Arco decorativo */
-.hero__arch {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.hero__arch-inner {
-  width: 100%;
-  max-width: 260px;
-  aspect-ratio: 3 / 4;
-  border-radius: 999px 999px var(--radius-lg) var(--radius-lg) / 55% 55% var(--radius-lg)
-    var(--radius-lg);
-  background: var(--cat-at-grad);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-bloom);
-  position: relative;
-  overflow: hidden;
-}
-
-.hero__arch-mark {
-  font-family: var(--font-display);
-  font-variation-settings:
-    'SOFT' 70,
-    'WONK' 1;
-  font-size: 4.5rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.22);
-  letter-spacing: -0.05em;
-}
-
-/* Stat clickeable: lleva al buscador con todos los artículos */
-.hero__stat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  width: 100%;
-  max-width: 260px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line-light);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px 14px 20px;
-  box-shadow: var(--shadow-sm);
-  transition:
-    transform 0.3s var(--ease-out-soft),
-    border-color 0.2s ease,
-    box-shadow 0.3s ease;
-}
-
-.hero__stat:hover {
-  transform: translateY(-3px);
-  border-color: var(--color-primary-light);
-  box-shadow: var(--shadow-md);
-}
-
-.hero__stat-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  text-align: left;
-}
-
-.hero__stat-text strong {
-  font-family: var(--font-display);
-  font-variation-settings: 'SOFT' 60;
-  font-size: 1.7rem;
-  font-weight: 600;
-  color: var(--color-ink);
-  line-height: 1;
-}
-
-.hero__stat-text span {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--color-ink-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.hero__stat-arrow {
-  flex-shrink: 0;
-  color: var(--color-primary);
-  transition: transform 0.3s var(--ease-out-soft);
-}
-
-.hero__stat:hover .hero__stat-arrow {
-  transform: translateX(3px);
+/* La pila de portadas vive en HeroArticleStack.vue; acá solo su lugar
+   en la grilla del hero. */
+.hero__deck {
+  min-width: 0;
 }
 
 /* ═══ DESTACADO ═══ */
@@ -941,17 +888,6 @@ function goToSearch() {
     gap: 44px;
   }
 
-  .hero__arch {
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 28px;
-  }
-
-  .hero__arch-inner {
-    max-width: 150px;
-  }
-
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1006,8 +942,10 @@ function goToSearch() {
     width: 100%;
   }
 
-  .hero__arch {
-    display: none;
+  /* La pila ya no se oculta en mobile como el arco decorativo que
+     reemplazó: son artículos reales, vale la pena mostrarlos. */
+  .hero__deck {
+    margin-top: 8px;
   }
 
   .grid-3,

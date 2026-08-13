@@ -34,12 +34,18 @@
 
       <FilterBar class="srch__filters" />
 
-      <!-- Con búsqueda activa -->
-      <template v-if="store.filters.query">
+      <!-- Con búsqueda de texto o algún filtro de la barra activo: la lista
+           siempre pasa por filteredArticles, que aplica texto + audiencia +
+           nivel + alcance juntos (antes, sin texto, se listaba
+           store.articles crudo y los filtros de la barra quedaban
+           marcados como activos sin efecto real). -->
+      <template v-if="hasAnyFilter">
         <p class="srch__count">
           <strong>{{ store.filteredArticles.length }}</strong>
-          {{ store.filteredArticles.length === 1 ? 'resultado' : 'resultados' }} para
-          <em>«{{ store.filters.query }}»</em>
+          {{ store.filteredArticles.length === 1 ? 'resultado' : 'resultados' }}
+          <template v-if="store.filters.query">
+            para <em>«{{ store.filters.query }}»</em>
+          </template>
         </p>
 
         <div v-if="store.filteredArticles.length" class="grid-3">
@@ -53,8 +59,8 @@
         <div v-else class="empty">
           <h2 class="empty__title">Sin coincidencias</h2>
           <p class="empty__desc">
-            No encontramos nada con esos términos. Probá con una palabra más general, o entrá por
-            tema.
+            No encontramos nada con esos filtros. Probá con otra combinación, una palabra más
+            general, o entrá por tema.
           </p>
           <div class="empty__cats">
             <RouterLink
@@ -70,7 +76,7 @@
         </div>
       </template>
 
-      <!-- Estado inicial -->
+      <!-- Estado inicial: sin texto ni filtros de la barra -->
       <template v-else>
         <div class="srch__browse">
           <span class="eyebrow">O explorá</span>
@@ -88,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
@@ -97,6 +103,14 @@ import FilterBar from '@/components/blog/FilterBar.vue'
 const route = useRoute()
 const store = useBlogStore()
 const localQuery = ref('')
+
+const hasAnyFilter = computed(
+  () =>
+    !!store.filters.query ||
+    store.filters.audience !== null ||
+    store.filters.level !== null ||
+    store.filters.scope !== null
+)
 
 onMounted(() => {
   const q = route.query.q as string
