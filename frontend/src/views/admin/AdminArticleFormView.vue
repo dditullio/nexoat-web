@@ -4,11 +4,25 @@
       <RouterLink to="/nexoat-admin/articulos" class="form-page__back">← Artículos</RouterLink>
       <h1 v-if="isEditing" class="form-page__title">Editar artículo</h1>
       <h1 v-else class="form-page__title">Nuevo artículo</h1>
+
+      <!-- Mismo botón que al fondo del panel lateral, para no obligar a
+           scrollear hasta abajo cada vez que se quiere guardar. Referencia
+           el <form> por id porque vive fuera de su árbol de DOM — atributo
+           `form` estándar de HTML, soportado en todos los navegadores. -->
+      <button
+        v-if="!isLoading"
+        type="submit"
+        form="article-form"
+        class="btn btn--primary form-page__submit-top"
+        :disabled="isSaving"
+      >
+        {{ isSaving ? 'Guardando…' : 'Guardar' }}
+      </button>
     </div>
 
     <p v-if="isLoading" class="section-lead">Cargando…</p>
 
-    <form v-else class="form-page__grid" @submit.prevent="onSubmit">
+    <form v-else id="article-form" class="form-page__grid" @submit.prevent="onSubmit">
       <div class="form-page__main">
         <div
           v-if="!isEditing"
@@ -119,6 +133,44 @@
           <input v-model="form.publishedAt" type="date" class="field__input" />
         </label>
 
+        <div
+          class="side-block"
+          @dragover.prevent="onCoverDragOver"
+          @dragleave.prevent="isDraggingCover = false"
+          @drop.prevent="onDropCover"
+        >
+          <span class="field__label">Imagen de portada</span>
+
+          <div v-if="form.coverImage" class="cover" :class="{ 'is-dragging': isDraggingCover }">
+            <img :src="form.coverImage" alt="Portada del artículo" class="cover__img" />
+            <button
+              type="button"
+              class="cover__remove"
+              :disabled="isUploadingCover"
+              @click="onRemoveCover"
+            >
+              Quitar imagen
+            </button>
+          </div>
+
+          <label
+            v-else
+            class="cover-upload"
+            :class="{ 'is-disabled': isUploadingCover, 'is-dragging': isDraggingCover }"
+          >
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              class="cover-upload__input"
+              :disabled="isUploadingCover"
+              @change="onSelectCoverFile"
+            />
+            {{ isUploadingCover ? 'Subiendo…' : 'Elegí una imagen o soltala acá…' }}
+          </label>
+
+          <p v-if="coverError" class="cover-error" role="alert">{{ coverError }}</p>
+        </div>
+
         <div class="side-block">
           <span class="field__label">Alcance</span>
           <select v-model="form.scope" class="field__input">
@@ -179,35 +231,6 @@
           />
         </label>
 
-        <div class="side-block">
-          <span class="field__label">Imagen de portada</span>
-
-          <div v-if="form.coverImage" class="cover">
-            <img :src="form.coverImage" alt="Portada del artículo" class="cover__img" />
-            <button
-              type="button"
-              class="cover__remove"
-              :disabled="isUploadingCover"
-              @click="onRemoveCover"
-            >
-              Quitar imagen
-            </button>
-          </div>
-
-          <label v-else class="cover-upload" :class="{ 'is-disabled': isUploadingCover }">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              class="cover-upload__input"
-              :disabled="isUploadingCover"
-              @change="onSelectCoverFile"
-            />
-            {{ isUploadingCover ? 'Subiendo…' : 'Elegir imagen…' }}
-          </label>
-
-          <p v-if="coverError" class="cover-error" role="alert">{{ coverError }}</p>
-        </div>
-
         <label class="side-block">
           <span class="field__label">Minutos de lectura</span>
           <input v-model.number="form.readingTime" type="number" min="1" class="field__input" />
@@ -254,6 +277,8 @@ const showPreview = ref(false)
 const tagsInput = ref('')
 const isUploadingCover = ref(false)
 const coverError = ref('')
+const isDraggingCover = ref(false)
+const COVER_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const isDraggingImport = ref(false)
 const importWarnings = ref<string[]>([])
 const importFileInput = ref<HTMLInputElement | null>(null)
@@ -329,8 +354,16 @@ async function onSelectCoverFile(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = '' // permite volver a elegir el mismo archivo más adelante si hace falta
+  if (file) await uploadCoverFile(file)
+}
 
-  if (!file) return
+// Compartida por el <input type="file"> y por soltar un archivo arrastrado
+// sobre el bloque de portada.
+async function uploadCoverFile(file: File) {
+  if (!COVER_MIME_TYPES.includes(file.type)) {
+    coverError.value = 'Formato no soportado — usá JPG, PNG, WEBP o GIF.'
+    return
+  }
 
   coverError.value = ''
   isUploadingCover.value = true
@@ -353,6 +386,17 @@ async function onSelectCoverFile(event: Event) {
   } finally {
     isUploadingCover.value = false
   }
+}
+
+function onCoverDragOver() {
+  if (!isUploadingCover.value) isDraggingCover.value = true
+}
+
+function onDropCover(event: DragEvent) {
+  isDraggingCover.value = false
+  if (isUploadingCover.value) return
+  const file = event.dataTransfer?.files?.[0]
+  if (file) uploadCoverFile(file)
 }
 
 async function onRemoveCover() {
@@ -510,6 +554,11 @@ async function onSubmit() {
   margin: 0;
 }
 
+.form-page__submit-top {
+  margin-left: auto;
+  padding: 9px 20px;
+}
+
 .form-page__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -567,6 +616,12 @@ async function onSubmit() {
   gap: 8px;
 }
 
+.cover.is-dragging {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-md);
+}
+
 .cover__img {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -604,9 +659,14 @@ async function onSubmit() {
     color 0.2s ease;
 }
 
-.cover-upload:hover {
+.cover-upload:hover,
+.cover-upload.is-dragging {
   border-color: var(--color-primary);
   color: var(--color-primary-dark);
+}
+
+.cover-upload.is-dragging {
+  background: var(--color-surface-sunken);
 }
 
 .cover-upload.is-disabled {

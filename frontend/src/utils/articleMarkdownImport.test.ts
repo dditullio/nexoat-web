@@ -216,6 +216,58 @@ describe('parseArticleMarkdown', () => {
     expect(warnings.some((w) => w.includes('nivel_premium'))).toBe(true)
   })
 
+  it('mapea tiempo_lectura a readingTime cuando está presente', () => {
+    const md = MD_WITH_SECTION_DIVIDERS.replace(
+      'nivel: intermedio',
+      'nivel: intermedio\ntiempo_lectura: 7'
+    )
+    const { data, warnings } = parseArticleMarkdown(md, KNOWN_CATEGORIES, 'x.md')
+
+    expect(data.readingTime).toBe(7)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('calcula readingTime a partir de las palabras del cuerpo si falta tiempo_lectura', () => {
+    const { data } = parseArticleMarkdown(MD_WITH_SECTION_DIVIDERS, KNOWN_CATEGORIES, 'x.md')
+
+    const wordCount = (data.content ?? '').split(/\s+/).filter(Boolean).length
+    expect(data.readingTime).toBe(Math.max(1, Math.round(wordCount / 200)))
+    expect(data.readingTime).toBeGreaterThan(0)
+  })
+
+  it('mapea tiempo_lectura con texto alrededor del número ("8 min")', () => {
+    const md = MD_WITH_SECTION_DIVIDERS.replace(
+      'nivel: intermedio',
+      'nivel: intermedio\ntiempo_lectura: "8 min"'
+    )
+    const { data, warnings } = parseArticleMarkdown(md, KNOWN_CATEGORIES, 'x.md')
+
+    expect(data.readingTime).toBe(8)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('mapea tiempo_lectura con texto largo ("8 minutos de lectura")', () => {
+    const md = MD_WITH_SECTION_DIVIDERS.replace(
+      'nivel: intermedio',
+      'nivel: intermedio\ntiempo_lectura: "8 minutos de lectura"'
+    )
+    const { data, warnings } = parseArticleMarkdown(md, KNOWN_CATEGORIES, 'x.md')
+
+    expect(data.readingTime).toBe(8)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('avisa y calcula por palabras si tiempo_lectura no es un número válido', () => {
+    const md = MD_WITH_SECTION_DIVIDERS.replace(
+      'nivel: intermedio',
+      'nivel: intermedio\ntiempo_lectura: "unos minutos"'
+    )
+    const { data, warnings } = parseArticleMarkdown(md, KNOWN_CATEGORIES, 'x.md')
+
+    expect(warnings.some((w) => w.includes('tiempo_lectura'))).toBe(true)
+    expect(data.readingTime).toBeGreaterThan(0)
+  })
+
   it('no toca el formulario si el archivo no empieza con ---', () => {
     const { data, warnings } = parseArticleMarkdown(
       '# Solo un título\n\nTexto suelto.',

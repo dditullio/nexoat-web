@@ -128,6 +128,22 @@ export function parseArticleMarkdown(
   if (meta.fecha) data.publishedAt = meta.fecha
   if (meta.fuentesList.length) data.sources = meta.fuentesList
 
+  if (meta.tiempoLectura !== undefined) {
+    const parsed = parseReadingTime(meta.tiempoLectura)
+    if (parsed !== undefined) data.readingTime = parsed
+    else
+      warnings.push(
+        `"tiempo_lectura" no es un número válido (${meta.tiempoLectura}) — se calculó a partir del cuerpo del artículo.`
+      )
+  }
+  // Sin el dato en la metadata (o inválido): se estima a ~200 palabras por
+  // minuto, la misma referencia que usa el resto del sitio para mostrar
+  // "N min de lectura".
+  if (data.readingTime === undefined) {
+    const wordCount = content.split(/\s+/).filter(Boolean).length
+    if (wordCount > 0) data.readingTime = Math.max(1, Math.round(wordCount / 200))
+  }
+
   // Se guarda toda la metadata cruda del .md (fecha, estado, temas, auditoría,
   // etc.) sin transformar, como referencia — no se usa para renderizar nada.
   data.importMetadata = {
@@ -142,6 +158,7 @@ export function parseArticleMarkdown(
     palabras_clave: meta.palabrasClaveList,
     descripcion: meta.descripcion,
     fuentes: meta.fuentesList,
+    tiempo_lectura: meta.tiempoLectura,
   }
 
   const fileSlug = fileNameToSlug(fileName)
@@ -157,6 +174,7 @@ interface ParsedMeta {
   fecha?: string
   nivel?: string
   alcance?: string
+  tiempoLectura?: string
   temasList: string[]
   audienciaList: string[]
   palabrasClaveList: string[]
@@ -258,6 +276,9 @@ function parseMetaBlock(metaLines: string[]): ParsedMeta {
       case 'alcance':
         meta.alcance = unquote(value.trim())
         break
+      case 'tiempo_lectura':
+        meta.tiempoLectura = unquote(value.trim())
+        break
       case 'temas':
         currentList = meta.temasList
         currentListKey = 'temas'
@@ -286,6 +307,18 @@ function parseMetaBlock(metaLines: string[]): ParsedMeta {
   flushSource()
 
   return meta
+}
+
+/**
+ * "tiempo_lectura" puede venir como número puro ("9") o con texto alrededor
+ * ("8 min", "8 minutos", "~7min") — se toma el primer número que aparece en
+ * el string. `undefined` si no hay ninguno o el resultado no es positivo.
+ */
+function parseReadingTime(value: string): number | undefined {
+  const match = value.match(/\d+([.,]\d+)?/)
+  if (!match) return undefined
+  const parsed = Number(match[0].replace(',', '.'))
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : undefined
 }
 
 function unquote(value: string): string {
