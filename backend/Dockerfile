@@ -62,5 +62,8 @@ EXPOSE 3001
 
 # "prisma" es dependencia normal (no dev) justamente para que la CLI esté
 # disponible acá: el contenedor de producción nunca corría las migraciones
-# antes de este cambio.
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=./backend/prisma/schema.prisma && node backend/dist/main"]
+# antes de este cambio. "npx prisma" no sirve: con el layout de pnpm no
+# encuentra el binario ya instalado (6.19.3) y termina bajando el último
+# major de npm (7.x, incompatible con "url" en el datasource) — "pnpm
+# --filter ... exec" sí resuelve el binario del workspace.
+CMD ["sh", "-c", "pnpm --filter @nexoat/backend exec prisma migrate deploy && node backend/dist/main"]
