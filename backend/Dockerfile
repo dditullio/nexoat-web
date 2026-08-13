@@ -66,4 +66,6 @@ EXPOSE 3001
 # encuentra el binario ya instalado (6.19.3) y termina bajando el último
 # major de npm (7.x, incompatible con "url" en el datasource) — "pnpm
 # --filter ... exec" sí resuelve el binario del workspace.
-CMD ["sh", "-c", "pnpm --filter @nexoat/backend exec prisma migrate deploy && node backend/dist/main"]
+# El build de Nest mantiene "src/" en la salida (dist/src/main.js, no
+# dist/main.js) — nest-cli.json no aplana la carpeta.
+CMD ["sh", "-c", "pnpm --filter @nexoat/backend exec prisma migrate deploy && node backend/dist/src/main"]
