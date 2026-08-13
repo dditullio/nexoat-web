@@ -72,7 +72,7 @@
                 ? 'suscriptores registrados'
                 : 'suscriptores de nivel superior'
             }}
-            — a continuación vas a poder leer solo una parte, no el contenido completo.
+            — a continuación usted podrá leer solo una parte, no el contenido completo.
           </p>
           <RouterLink
             v-if="article.requiredScope === 'suscriptores_nivel_1'"
@@ -81,7 +81,9 @@
           >
             Registrate gratis
           </RouterLink>
-          <span v-else class="art-head__notice-badge">Próximamente</span>
+          <RouterLink v-else to="/planes" class="btn btn--primary art-head__notice-cta">
+            Ver planes
+          </RouterLink>
         </div>
       </div>
     </header>
@@ -92,7 +94,12 @@
           <img :src="article.coverImage" :alt="article.title" />
         </figure>
 
-        <div v-if="contentHtml" class="prose art__body" v-html="contentHtml"></div>
+        <div
+          v-if="contentHtml"
+          class="prose art__body"
+          :class="{ 'art__body--truncated': article.isTruncated }"
+          v-html="contentHtml"
+        ></div>
         <div v-else class="prose art__body">
           <p class="art__note">No se pudo cargar el contenido de este artículo.</p>
         </div>
@@ -112,11 +119,15 @@
             </RouterLink>
           </template>
           <template v-else>
-            <h2 class="art__paywall-title">Próximamente</h2>
+            <h2 class="art__paywall-title">Estamos preparando este contenido</h2>
             <p class="art__paywall-text">
-              Este contenido es para suscriptores de nivel superior. Todavía no tenemos abierto el
-              sistema de suscripciones pagas.
+              El resto de este artículo es exclusivo para suscriptores {{ scopeLabel }}. Todavía
+              estamos afinando el lanzamiento de las suscripciones pagas — sumate a la lista de
+              espera y vas a ser de las primeras personas en acceder.
             </p>
+            <RouterLink to="/planes" class="btn btn--primary">
+              Sumarme a la lista de espera
+            </RouterLink>
           </template>
         </aside>
 
@@ -415,19 +426,6 @@ const scopeLabel = computed(() => article.value && SCOPE_CHIPS[article.value.sco
   padding: 0.6rem 1.15rem;
 }
 
-.art-head__notice-badge {
-  flex-shrink: 0;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-ink-muted);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-full);
-  padding: 7px 14px;
-}
-
 /* ── Layout ── */
 .art-layout {
   display: grid;
@@ -457,6 +455,25 @@ const scopeLabel = computed(() => article.value && SCOPE_CHIPS[article.value.sco
   font-style: italic;
   color: var(--color-ink-muted);
   font-size: 0.98rem;
+}
+
+/* Se desvanece hacia abajo cuando el contenido está recortado — sin esto,
+   el corte se sentía arbitrario/roto (el texto paraba en seco a mitad de
+   idea). El degradado hacia el color de fondo de la página comunica "esto
+   se interrumpe a propósito" antes de llegar al bloque de paywall. */
+.art__body--truncated {
+  position: relative;
+}
+
+.art__body--truncated::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 220px;
+  background: linear-gradient(to bottom, transparent, var(--color-canvas));
+  pointer-events: none;
 }
 
 /* ── Paywall (contenido recortado) ── */

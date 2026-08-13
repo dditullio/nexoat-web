@@ -66,6 +66,12 @@ const router = createRouter({
       meta: { title: 'Registrarme' },
     },
     {
+      path: '/planes',
+      name: 'plans',
+      component: () => import('@/views/PlansView.vue'),
+      meta: { title: 'Planes de suscripción' },
+    },
+    {
       path: '/nexoat-admin',
       meta: { layout: 'admin' },
       children: [

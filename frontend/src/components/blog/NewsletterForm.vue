@@ -15,10 +15,8 @@
     </svg>
   </div>
 
-  <h2 class="nf__title">Un artículo nuevo por semana</h2>
-  <p class="nf__desc">
-    Sin ruido y sin spam. Solo el contenido nuevo, cuando sale, directo a tu correo.
-  </p>
+  <h2 class="nf__title">{{ title }}</h2>
+  <p class="nf__desc">{{ description }}</p>
 
   <form v-if="!submitted" class="nf__form" @submit.prevent="subscribe">
     <input
@@ -31,7 +29,7 @@
       :disabled="subscribing"
     />
     <button type="submit" class="btn btn--primary nf__btn" :disabled="subscribing">
-      {{ subscribing ? 'Enviando…' : 'Me sumo' }}
+      {{ subscribing ? 'Enviando…' : buttonLabel }}
     </button>
   </form>
   <p v-if="subscribeError" class="nf__error" role="alert">{{ subscribeError }}</p>
@@ -51,7 +49,7 @@
     >
       <path d="M2.5 10.5l5 5L17.5 5" />
     </svg>
-    <span>¡Listo! Te suscribiste correctamente.</span>
+    <span>{{ successMessage }}</span>
   </div>
 </template>
 
@@ -62,8 +60,25 @@ import { http } from '@/services/http'
 // `source` viaja tal cual a NewsletterSubscriber.source (ver admin de
 // suscripciones) — cada punto de entrada al formulario pasa el suyo, así se
 // puede distinguir de dónde vino el alta (ej. "homepage-hero" vs
-// "header-modal").
-const props = defineProps<{ source: string }>()
+// "header-modal" vs "plans-waitlist"). El copy es configurable porque este
+// mismo formulario se reutiliza tanto para el alta al newsletter como para
+// la lista de espera de PlansView.vue — la lógica de suscripción es
+// idéntica, solo cambia el texto alrededor.
+const props = withDefaults(
+  defineProps<{
+    source: string
+    title?: string
+    description?: string
+    buttonLabel?: string
+    successMessage?: string
+  }>(),
+  {
+    title: 'Un artículo nuevo por semana',
+    description: 'Sin ruido y sin spam. Solo el contenido nuevo, cuando sale, directo a tu correo.',
+    buttonLabel: 'Me sumo',
+    successMessage: '¡Listo! Te suscribiste correctamente.',
+  }
+)
 
 const email = ref('')
 const submitted = ref(false)
