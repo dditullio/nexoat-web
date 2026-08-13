@@ -2,6 +2,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Ver nota equivalente en backend/Dockerfile: sin esto, "pnpm install"
+# dispara el "prepare: husky" del package.json raíz, que en el contenedor
+# no tiene sentido (no hay .git).
+ENV HUSKY=0
+
 RUN npm install -g pnpm
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
