@@ -66,6 +66,19 @@ export class MediaService {
       result = await cloudinary.uploader.upload(dataUri, {
         folder: `${ROOT_FOLDER}/${folder}`,
         resource_type: 'image',
+        // Se optimiza en la subida (no solo al servir): el archivo que
+        // queda guardado ya es el liviano, así que cada <img> del sitio
+        // que usa esta URL tal cual se beneficia sin tocar nada más.
+        // - width/crop "limit": nunca agranda, solo achica lo que exceda
+        //   1920px (portadas de artículo y el banner de categoría son las
+        //   piezas más grandes del sitio; de sobra para el resto).
+        // - quality "auto:good" + fetch_format "auto": Cloudinary elige
+        //   la compresión y el formato (WebP/AVIF si conviene) que mejor
+        //   balancea peso y calidad para esa imagen en particular.
+        transformation: [
+          { width: 1920, crop: 'limit' },
+          { quality: 'auto:good', fetch_format: 'auto' },
+        ],
       })
     } catch (error) {
       throw new InternalServerErrorException(

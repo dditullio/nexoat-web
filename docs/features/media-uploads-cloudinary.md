@@ -49,6 +49,8 @@ model Article {
 
 No hay borrado automático server-side al reemplazar `coverImage` en `PATCH /admin/articles/:id` — el frontend es quien orquesta "subir la nueva → borrar la vieja" antes de guardar el artículo, para no acoplar `ArticlesService` a Cloudinary.
 
+> **Actualizado:** las imágenes que llegaban directo de la cámara/celular de origen pesaban varios MB y tardaban en cargar en el sitio. `MediaService.upload` ahora pasa `transformation` en el propio `cloudinary.uploader.upload(...)` (no solo al servir): `{ width: 1920, crop: 'limit' }` para nunca exceder ese ancho (de sobra para la pieza más grande del sitio, el banner de categoría) sin agrandar imágenes ya chicas, más `{ quality: 'auto:good', fetch_format: 'auto' }` para que Cloudinary elija la compresión/formato (WebP/AVIF si conviene) más liviano sin perder calidad visible. Al aplicarse en la subida, el asset que queda guardado ya es el liviano — ningún `<img>` del resto del sitio necesitó cambios.
+
 ## Frontend (`frontend/src`) — archivos a tocar
 
 | Archivo                                | Qué hace                                                                                                                                                                                                                                                                                                                                                 |

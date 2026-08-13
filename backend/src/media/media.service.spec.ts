@@ -62,7 +62,14 @@ describe('MediaService', () => {
       })
       const [dataUri, options] = uploadMock.mock.calls[0]
       expect(dataUri).toMatch(/^data:image\/png;base64,/)
-      expect(options).toEqual({ folder: 'nexoat/articles', resource_type: 'image' })
+      expect(options).toEqual({
+        folder: 'nexoat/articles',
+        resource_type: 'image',
+        transformation: [
+          { width: 1920, crop: 'limit' },
+          { quality: 'auto:good', fetch_format: 'auto' },
+        ],
+      })
     })
 
     it('sube a la carpeta indicada cuando se pasa folder', async () => {
@@ -74,7 +81,7 @@ describe('MediaService', () => {
       await service.upload(Buffer.from('fake-image'), 'image/png', 'categories')
 
       const [, options] = uploadMock.mock.calls[0]
-      expect(options).toEqual({ folder: 'nexoat/categories', resource_type: 'image' })
+      expect(options).toMatchObject({ folder: 'nexoat/categories', resource_type: 'image' })
     })
 
     it('envuelve un error de Cloudinary en InternalServerErrorException', async () => {
