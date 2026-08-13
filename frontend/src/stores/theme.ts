@@ -17,12 +17,11 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   function init() {
+    // Modo claro por defecto para quien nunca eligió: no se sigue la
+    // preferencia del sistema (prefers-color-scheme) — solo se respeta una
+    // vez que la persona toca el switch, ahí sí queda guardada.
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      applyTheme(stored === 'dark')
-    } else {
-      applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches)
-    }
+    applyTheme(stored === 'dark')
   }
 
   return { isDark, toggle, init }

@@ -7,19 +7,31 @@ import { onMounted, onBeforeUnmount } from 'vue'
  *
  * Los elementos ya visibles al cargar se revelan de inmediato, de modo
  * que nada queda invisible si IntersectionObserver no está disponible.
+ *
+ * El escaneo inicial de `.reveal` no alcanza: secciones como "De esta
+ * semana" o "Lo más reciente" dependen de un fetch async (fetchArticles),
+ * así que sus `.reveal` todavía no existen en el DOM cuando corre el
+ * onMounted de esta vista — quedaban en opacity:0 para siempre hasta que
+ * se remontaba la vista con el store ya poblado (ej. navegando y volviendo).
+ * Un MutationObserver cubre ese caso: cualquier `.reveal` que aparezca
+ * después también se observa.
  */
 export function useReveal(options: { stagger?: number; threshold?: number } = {}) {
   const { stagger = 90, threshold = 0.12 } = options
   let observer: IntersectionObserver | null = null
+  let mutationObserver: MutationObserver | null = null
 
   onMounted(() => {
-    const targets = Array.from(document.querySelectorAll<HTMLElement>('.reveal'))
-    if (!targets.length) return
+    const reducedMotion =
+      'matchMedia' in window && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const hasIO = 'IntersectionObserver' in window
 
-    // Sin soporte: mostrar todo antes que dejarlo invisible.
-    if (!('IntersectionObserver' in window)) {
-      targets.forEach((el) => el.classList.add('is-visible'))
-      return
+    // Sin soporte (o el usuario pide menos movimiento): mostrar todo antes
+    // que dejarlo invisible — no hace falta observar nada.
+    if (!hasIO || reducedMotion) {
+      const reveal = (el: HTMLElement) => el.classList.add('is-visible')
+      document.querySelectorAll<HTMLElement>('.reveal').forEach(reveal)
+      if (!hasIO) return
     }
 
     observer = new IntersectionObserver(
@@ -48,11 +60,28 @@ export function useReveal(options: { stagger?: number; threshold?: number } = {}
       { threshold, rootMargin: '0px 0px -8% 0px' }
     )
 
-    targets.forEach((el) => observer!.observe(el))
+    const observeIfPending = (el: HTMLElement) => {
+      if (!el.classList.contains('is-visible')) observer!.observe(el)
+    }
+
+    document.querySelectorAll<HTMLElement>('.reveal').forEach(observeIfPending)
+
+    mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return
+          if (node.matches('.reveal')) observeIfPending(node)
+          node.querySelectorAll<HTMLElement>('.reveal').forEach(observeIfPending)
+        })
+      }
+    })
+    mutationObserver.observe(document.body, { childList: true, subtree: true })
   })
 
   onBeforeUnmount(() => {
     observer?.disconnect()
     observer = null
+    mutationObserver?.disconnect()
+    mutationObserver = null
   })
 }
