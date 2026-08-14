@@ -69,14 +69,7 @@
 
           <div class="hero__quick rise" style="animation-delay: 0.45s">
             <span class="hero__quick-label">Empezá por</span>
-            <RouterLink
-              v-for="cat in quickCategories"
-              :key="cat.slug"
-              :to="`/categoria/${cat.slug}`"
-              class="hero__chip"
-            >
-              {{ cat.name }}
-            </RouterLink>
+            <TrackSwitch />
           </div>
         </div>
 
@@ -208,7 +201,6 @@
             Cada tema reúne los artículos de un área concreta del cuidado. Entrá por donde más lo
             necesites hoy.
           </p>
-          <TrackSwitch class="topics-sec__switch" />
         </div>
 
         <div class="grid-5">
@@ -324,8 +316,6 @@ const { filteredArticles } = storeToRefs(store)
 useReveal()
 
 const searchQuery = ref('')
-
-const quickCategories = computed(() => store.categories.slice(0, 3))
 
 // El eje elegido en TrackSwitch es un filtro SUAVE: nunca oculta contenido
 // del otro eje, solo lo prioriza — antepone los que matchean sin descartar
@@ -786,10 +776,6 @@ function goToSearch() {
 
 .topics-sec__lead {
   text-align: center;
-}
-
-.topics-sec__switch {
-  margin-top: 10px;
 }
 
 /* ═══ AUDIENCIAS ═══ */
