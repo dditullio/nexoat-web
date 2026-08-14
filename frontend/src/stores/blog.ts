@@ -132,6 +132,7 @@ export const useBlogStore = defineStore('blog', () => {
   const filters = ref<FilterState>({
     category: null,
     audience: null,
+    track: null,
     level: null,
     scope: null,
     query: '',
@@ -150,6 +151,7 @@ export const useBlogStore = defineStore('blog', () => {
       if (filters.value.category && !article.categories.includes(filters.value.category))
         return false
       if (filters.value.audience && !article.audience.includes(filters.value.audience)) return false
+      if (filters.value.track && !article.tracks.includes(filters.value.track)) return false
       if (filters.value.level && article.level !== filters.value.level) return false
       if (filters.value.scope && article.scope !== filters.value.scope) return false
       if (filters.value.query) {
@@ -169,7 +171,14 @@ export const useBlogStore = defineStore('blog', () => {
   }
 
   function clearFilters() {
-    filters.value = { category: null, audience: null, level: null, scope: null, query: '' }
+    filters.value = {
+      category: null,
+      audience: null,
+      track: null,
+      level: null,
+      scope: null,
+      query: '',
+    }
   }
 
   function getCategoryBySlug(slug: CategorySlug): Category | undefined {

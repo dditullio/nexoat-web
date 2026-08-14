@@ -8,6 +8,7 @@ export const mockArticles: Article[] = [
     date: '2026-06-12',
     categories: ['acompanamiento-terapeutico'],
     audience: ['cuidadores-familiares'],
+    tracks: [],
     level: 'basico',
     scope: 'publico',
     excerpt:
@@ -22,6 +23,7 @@ export const mockArticles: Article[] = [
     date: '2026-06-08',
     categories: ['cuidar-al-cuidador'],
     audience: ['cuidadores-familiares'],
+    tracks: [],
     level: 'intermedio',
     scope: 'publico',
     excerpt:
@@ -36,6 +38,7 @@ export const mockArticles: Article[] = [
     date: '2026-06-03',
     categories: ['neurodiversidad-y-discapacidad'],
     audience: ['cuidadores-familiares'],
+    tracks: [],
     level: 'basico',
     scope: 'publico',
     excerpt:
@@ -50,6 +53,7 @@ export const mockArticles: Article[] = [
     date: '2026-05-28',
     categories: ['patologias-en-la-vejez'],
     audience: ['cuidadores-familiares'],
+    tracks: [],
     level: 'intermedio',
     scope: 'publico',
     excerpt:
@@ -64,6 +68,7 @@ export const mockArticles: Article[] = [
     date: '2026-05-21',
     categories: ['familia-y-vinculos'],
     audience: ['cuidadores-familiares', 'profesionales'],
+    tracks: [],
     level: 'intermedio',
     scope: 'publico',
     excerpt:
@@ -78,6 +83,7 @@ export const mockArticles: Article[] = [
     date: '2026-05-15',
     categories: ['acompanamiento-terapeutico'],
     audience: ['profesionales'],
+    tracks: [],
     level: 'avanzado',
     scope: 'publico',
     excerpt:
@@ -92,6 +98,7 @@ export const mockArticles: Article[] = [
     date: '2026-05-10',
     categories: ['acompanamiento-terapeutico', 'neurodiversidad-y-discapacidad'],
     audience: ['profesionales', 'cuidadores-familiares'],
+    tracks: [],
     level: 'intermedio',
     scope: 'publico',
     excerpt:
@@ -106,6 +113,7 @@ export const mockArticles: Article[] = [
     date: '2026-05-05',
     categories: ['guia-cuidador'],
     audience: ['cuidadores-familiares'],
+    tracks: [],
     level: 'basico',
     scope: 'publico',
     excerpt:
@@ -120,6 +128,7 @@ export const mockArticles: Article[] = [
     date: '2026-04-28',
     categories: ['neurodiversidad-y-discapacidad', 'acompanamiento-terapeutico'],
     audience: ['cuidadores-familiares', 'profesionales'],
+    tracks: [],
     level: 'intermedio',
     scope: 'publico',
     excerpt:

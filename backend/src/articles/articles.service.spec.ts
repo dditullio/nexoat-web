@@ -218,6 +218,7 @@ describe('ArticlesService', () => {
         // el service manda `audience: undefined` en ese caso, así que el
         // mock simula el valor ya persistido en vez de `undefined`.
         audience: data.audience ?? ['profesionales'],
+        tracks: data.tracks ?? [],
         id: 'art-1',
         categories: [],
         tags: [],
@@ -246,6 +247,7 @@ describe('ArticlesService', () => {
       categories: [],
       tags: [],
       audience: [],
+      tracks: [],
       sources: null,
     }
 

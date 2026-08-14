@@ -1,6 +1,21 @@
 <template>
   <div class="fb">
     <div class="fb__group">
+      <span class="fb__label">Eje</span>
+      <button
+        v-for="opt in trackOptions"
+        :key="String(opt.value)"
+        class="fb__btn"
+        :class="{ 'is-on': store.filters.track === opt.value }"
+        @click="store.setFilter('track', opt.value)"
+      >
+        {{ opt.label }}
+      </button>
+    </div>
+
+    <span class="fb__sep" aria-hidden="true"></span>
+
+    <div class="fb__group">
       <span class="fb__label">Para quién</span>
       <button
         v-for="opt in audienceOptions"
@@ -62,11 +77,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useBlogStore } from '@/stores/blog'
-import type { Audience, ArticleScope, Level } from '@/types'
+import { useTrackStore } from '@/stores/track'
+import type { Audience, ArticleScope, ContentTrack, Level } from '@/types'
 
 const store = useBlogStore()
+const trackStore = useTrackStore()
+
+// Al entrar a esta vista, el filtro de eje arranca con la preferencia
+// elegida en el TrackSwitch del Home (si había alguna) — pero desde acá se
+// puede cambiar/limpiar sin tocar esa preferencia global, ver
+// docs/features/content-tracks.md.
+onMounted(() => {
+  if (store.filters.track === null) store.setFilter('track', trackStore.activeTrack)
+})
+
+const trackOptions: { value: ContentTrack | null; label: string }[] = [
+  { value: null, label: 'Todos' },
+  { value: 'acompanamiento-terapeutico', label: 'AT' },
+  { value: 'cuidado-de-mayores', label: 'Cuidado de mayores' },
+  { value: 'recursos-profesionales-at', label: 'Recursos para AT' },
+]
 
 const audienceOptions: { value: Audience | null; label: string }[] = [
   { value: null, label: 'Todos' },
@@ -91,7 +123,10 @@ const scopeOptions: { value: ArticleScope | null; label: string }[] = [
 
 const hasActiveFilters = computed(
   () =>
-    store.filters.audience !== null || store.filters.level !== null || store.filters.scope !== null
+    store.filters.track !== null ||
+    store.filters.audience !== null ||
+    store.filters.level !== null ||
+    store.filters.scope !== null
 )
 </script>
 

@@ -16,6 +16,7 @@ import {
   toPublicArticleSummary,
 } from './articles.mapper'
 import { audienceFromApi } from './audience.util'
+import { suggestTracksFromCategories, trackFromApi } from './track.util'
 import type { CreateArticleDto } from './dto/create-article.dto'
 import type { UpdateArticleDto } from './dto/update-article.dto'
 import type { QueryPublicArticlesDto } from './dto/query-public-articles.dto'
@@ -51,6 +52,7 @@ export class ArticlesService {
         in: filters.scope ? visibleScopes.filter((s) => s === filters.scope) : visibleScopes,
       },
       audience: filters.audience ? { has: audienceFromApi([filters.audience])[0] } : undefined,
+      tracks: filters.track ? { has: trackFromApi([filters.track])[0] } : undefined,
       categories: filters.category ? { some: { category: { slug: filters.category } } } : undefined,
       ...(filters.query
         ? {
@@ -159,6 +161,13 @@ export class ArticlesService {
         coverImagePublicId: dto.coverImagePublicId,
         level: dto.level,
         audience: audienceFromApi(dto.audience),
+        // Si no viene explícito, se autocompleta según las categorías
+        // elegidas (ver docs/features/content-tracks.md). Un array vacío
+        // explícito ([]) se respeta tal cual — dto.tracks !== undefined.
+        tracks:
+          dto.tracks !== undefined
+            ? trackFromApi(dto.tracks)
+            : suggestTracksFromCategories(dto.categorySlugs),
         status,
         scope: dto.scope,
         readingTime: dto.readingTime,
@@ -224,6 +233,10 @@ export class ArticlesService {
         coverImagePublicId: dto.coverImagePublicId,
         level: dto.level,
         audience: dto.audience ? audienceFromApi(dto.audience) : undefined,
+        // A diferencia de create(), acá no se auto-sugiere si falta — editar
+        // categorías no debe pisar un `tracks` ya ajustado a mano (ver
+        // docs/features/content-tracks.md, "Fuera de alcance").
+        tracks: dto.tracks ? trackFromApi(dto.tracks) : undefined,
         status: dto.status,
         scope: dto.scope,
         readingTime: dto.readingTime,

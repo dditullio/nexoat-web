@@ -1,4 +1,4 @@
-import type { Audience, ArticleSource, ArticleScope, Level } from './index'
+import type { Audience, ArticleSource, ArticleScope, ContentTrack, Level } from './index'
 
 export type ArticleStatus = 'borrador' | 'publicado' | 'archivado'
 
@@ -14,6 +14,7 @@ export interface AdminArticle {
   categories: string[]
   categorySlugs: string[]
   audience: Audience[]
+  tracks: ContentTrack[]
   level: Level
   scope: ArticleScope
   keywords: string[]
@@ -43,6 +44,8 @@ export interface ArticleFormPayload {
   coverImagePublicId?: string
   level: Level
   audience: Audience[]
+  /** Si se omite al crear, el backend lo autocompleta según las categorías elegidas. */
+  tracks?: ContentTrack[]
   status?: ArticleStatus
   scope?: ArticleScope
   categorySlugs: string[]

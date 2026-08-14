@@ -1,4 +1,4 @@
-import type { CategorySlug, Level, Audience, ArticleScope } from '@/types'
+import type { CategorySlug, Level, Audience, ArticleScope, ContentTrack } from '@/types'
 
 /**
  * Paleta por categoría.
@@ -214,6 +214,26 @@ export const SCOPE_CHIPS: Partial<
     bg: 'var(--color-ochre-soft)',
     text: 'var(--color-ink-secondary)',
     label: 'Nivel 3',
+  },
+}
+
+// Solo 3 valores de alto nivel, no una paleta de 20 categorías — reusa
+// tokens de marca en vez de inventar `--cat-*` nuevos.
+export const TRACK_CHIPS: Record<ContentTrack, { bg: string; text: string; label: string }> = {
+  'acompanamiento-terapeutico': {
+    bg: 'var(--color-primary-soft)',
+    text: 'var(--color-primary-dark)',
+    label: 'Acompañamiento terapéutico',
+  },
+  'cuidado-de-mayores': {
+    bg: 'var(--color-accent-soft)',
+    text: 'var(--color-accent-dark)',
+    label: 'Cuidado de personas mayores',
+  },
+  'recursos-profesionales-at': {
+    bg: 'var(--color-ochre-soft)',
+    text: 'var(--color-ink-secondary)',
+    label: 'Recursos para AT',
   },
 }
 
