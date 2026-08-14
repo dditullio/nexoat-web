@@ -60,6 +60,17 @@ services:
       - traefik.http.routers.nexoat-web.rule=Host(`${FRONTEND_DOMAIN}`)
       - traefik.http.routers.nexoat-web.tls.certresolver=letsencrypt
       - traefik.http.services.nexoat-web.loadbalancer.server.port=80
+      # www.${FRONTEND_DOMAIN} redirige (301) al dominio canónico en vez de
+      # servir el mismo contenido en dos hosts — evita contenido duplicado
+      # de cara a SEO y necesita su propio router porque la regla de
+      # nexoat-web de arriba no matchea el host "www".
+      - traefik.http.routers.nexoat-web-www.entrypoints=websecure
+      - traefik.http.routers.nexoat-web-www.rule=Host(`www.${FRONTEND_DOMAIN}`)
+      - traefik.http.routers.nexoat-web-www.tls.certresolver=letsencrypt
+      - traefik.http.routers.nexoat-web-www.middlewares=nexoat-www-redirect
+      - traefik.http.middlewares.nexoat-www-redirect.redirectregex.regex=^https://www\.(.+)
+      - traefik.http.middlewares.nexoat-www-redirect.redirectregex.replacement=https://$${1}
+      - traefik.http.middlewares.nexoat-www-redirect.redirectregex.permanent=true
 
 volumes:
   postgres_data:
