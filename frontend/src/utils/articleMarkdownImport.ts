@@ -324,7 +324,9 @@ function parseReadingTime(value: string): number | undefined {
 function unquote(value: string): string {
   const trimmed = value.trim()
   if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed.slice(1, -1)
+    // Comillas internas escapadas (ej. `"...por qué no son \"rendirse\""`)
+    // — se desescapan, si no quedan literalmente en el texto mostrado.
+    return trimmed.slice(1, -1).replace(/\\"/g, '"')
   }
   return trimmed
 }

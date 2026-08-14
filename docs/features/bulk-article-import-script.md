@@ -27,6 +27,31 @@ Por nombre de archivo base, sin importar extensión: `crisis-aula-at.md` con `cr
 
 `temas` del `.md` se filtra contra `GET /categories` (slugs reales). Los `temas` que no matchean ninguna categoría existente se descartan de `categorySlugs` (no se inventan categorías) y se listan en el resumen. Si después de filtrar no queda **ninguna** categoría válida, el artículo se **salta entero** (no se crea) porque `categorySlugs` es obligatorio y no vacío en `CreateArticleDto` — se reporta como error, no como warning.
 
+## Resiliencia de sesión y de ritmo (aprendido en la primera corrida real)
+
+La primera corrida contra el lote completo (187 artículos) reveló dos problemas que no aparecen con lotes de prueba chicos:
+
+- **El access token expira a los 15 min** (`ACCESS_TOKEN_TTL` en `auth.service.ts`) y el lote entero tarda más que eso — a mitad de camino empezaron a fallar artículos con `401 Unauthorized`, no por ningún problema de esos artículos puntuales.
+- **El límite global de la API es 100 req/60s** (`ThrottlerModule`, `app.module.ts`) y el script no pausaba nada entre requests — con ~2 requests por artículo (subida de imagen + creación), en algún tramo se superó el límite y varios artículos fallaron con `429 Too Many Requests`.
+
+Ninguno de los dos es un problema de contenido — son fallas recuperables del propio script. Se resolvió con `authedFetch()`, un wrapper único usado por la subida de imagen y la creación de artículo:
+
+- **401** → re-loguea una vez con las mismas credenciales guardadas en memoria (`Session.token` es mutable) y reintenta la misma request con el token nuevo.
+- **429** → espera según el header `Retry-After` si vino, si no backoff exponencial (1s, 2s, 4s, 8s, 16s), hasta 5 reintentos.
+- **Pacing preventivo**: 400ms de pausa antes de cada request, para no depender solo de los reintentos.
+- **Cortes de conexión** (`fetch` tirando una excepción tipo `ECONNRESET`, no una respuesta HTTP con status) también aparecieron corriendo contra el backend local durante ratos largos — mismo backoff exponencial que el 429, hasta 5 reintentos, capturando el `throw` de `fetch()` en vez de solo mirar `res.status`.
+
+## Normalización de `nivel`/`audiencia` (aprendido en la primera corrida real)
+
+Con ~200 archivos escritos a mano por distintas personas aparecieron variantes de tipeo que el import individual (un archivo, una persona revisando en el momento) no había necesitado tolerar: `nivel: básico` (con tilde, vs. `basico`), `audiencia: "Cuidadores / familias"` (espacios/barra en vez de guión) y `audiencia: publico-general` (valor inventado, no es ninguno de los tres reales).
+
+Se agregó, solo en `backend/scripts/lib/parseArticleMarkdown.ts` (no en la versión del frontend — el import individual sigue exigiendo que el `.md` venga bien escrito, ahí lo revisa una persona en el momento):
+
+- `normalizeToken()`: quita tildes, pasa a minúsculas, y convierte espacios/`/` a guión, antes de comparar contra los valores válidos de `nivel` y `audiencia`. Cubre variantes de tipeo automáticamente.
+- `AUDIENCE_ALIASES`: mapeo manual para valores que no son una variante de tipeo sino una palabra distinta. Confirmado con el usuario: `publico-general` → `cuidadores-familiares`.
+
+Cualquier valor resuelto por normalización o alias deja un aviso (`Nivel "X" normalizado a "Y"` / `Audiencia "X" normalizada a "Y"`) en el resumen, para que quede rastro de qué se tocó.
+
 ## Validaciones que hacen saltar un artículo (no abortan el lote completo)
 
 Cada `.md` se procesa en su propio `try/catch`; un fallo no interrumpe los siguientes. Se salta con motivo reportado si:

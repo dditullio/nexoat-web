@@ -19,6 +19,26 @@ const SCOPE_VALUES = [
   'suscriptores_nivel_3',
 ] as const
 
+// Tolerancia extra respecto al import individual (frontend): en un lote de
+// ~200 archivos escritos a mano por distintas personas aparecen variantes
+// de tipeo (tildes, mayúsculas, espacios/barras en vez de guiones) y un
+// valor inventado ("publico-general") que no es ninguno de los tres reales
+// — se normaliza y, para ese caso puntual, se alía a mano. Ver
+// docs/features/bulk-article-import-script.md.
+const AUDIENCE_ALIASES: Record<string, string> = {
+  'publico-general': 'cuidadores-familiares',
+  'cuidadores-familias': 'cuidadores-familiares',
+}
+
+function normalizeToken(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // quita acentos/tildes (tras normalize('NFD'))
+    .toLowerCase()
+    .trim()
+    .replace(/[\s/]+/g, '-')
+}
+
 export interface ParsedArticleSource {
   title: string
   url: string
@@ -115,8 +135,12 @@ export function parseArticleMarkdown(
   }
 
   if (meta.nivel) {
-    if ((LEVEL_VALUES as readonly string[]).includes(meta.nivel)) data.level = meta.nivel
-    else warnings.push(`Nivel "${meta.nivel}" no reconocido.`)
+    const normalized = normalizeToken(meta.nivel)
+    if ((LEVEL_VALUES as readonly string[]).includes(normalized)) {
+      data.level = normalized
+      if (normalized !== meta.nivel)
+        warnings.push(`Nivel "${meta.nivel}" normalizado a "${normalized}".`)
+    } else warnings.push(`Nivel "${meta.nivel}" no reconocido.`)
   }
 
   if (meta.alcance) {
@@ -125,13 +149,19 @@ export function parseArticleMarkdown(
   }
 
   if (meta.audienciaList.length) {
-    const audience = meta.audienciaList.filter((a) =>
-      (AUDIENCE_VALUES as readonly string[]).includes(a)
-    )
-    const invalid = meta.audienciaList.filter(
-      (a) => !(AUDIENCE_VALUES as readonly string[]).includes(a)
-    )
-    if (audience.length) data.audience = audience
+    const audience: string[] = []
+    const invalid: string[] = []
+    for (const raw of meta.audienciaList) {
+      const normalized = normalizeToken(raw)
+      const resolved = AUDIENCE_ALIASES[normalized] ?? normalized
+      if ((AUDIENCE_VALUES as readonly string[]).includes(resolved)) {
+        audience.push(resolved)
+        if (resolved !== raw) warnings.push(`Audiencia "${raw}" normalizada a "${resolved}".`)
+      } else {
+        invalid.push(raw)
+      }
+    }
+    if (audience.length) data.audience = Array.from(new Set(audience))
     if (invalid.length)
       warnings.push(`Audiencia sin valor reconocido (ignorada): ${invalid.join(', ')}`)
   }
@@ -310,7 +340,10 @@ function parseReadingTime(value: string): number | undefined {
 function unquote(value: string): string {
   const trimmed = value.trim()
   if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed.slice(1, -1)
+    // Comillas internas escapadas (ej. `"...por qué no son \"rendirse\""`,
+    // visto en varios .md del lote) — se desescapan, si no quedan
+    // literalmente en el título/subtítulo/descripción.
+    return trimmed.slice(1, -1).replace(/\\"/g, '"')
   }
   return trimmed
 }

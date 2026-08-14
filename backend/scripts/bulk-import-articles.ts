@@ -19,6 +19,20 @@ import { parseArticleMarkdown, type ParsedArticleData } from './lib/parseArticle
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
+// Alias manuales de "temas" del .md a slugs de categoría real, para los
+// casos ya identificados donde el nombre del tema no coincide con el slug
+// de la categoría existente pero se refiere claramente a la misma cosa.
+// Ver docs/features/bulk-article-import-script.md.
+const CATEGORY_ALIASES: Record<string, string> = {
+  'maltrato-invisible': 'maltrato-y-abuso',
+}
+
+// Pausa mínima entre requests autenticados, para no reventar el límite
+// global del ThrottlerModule (100 req/60s, ver backend/src/app.module.ts).
+// Con ~2 requests por artículo (subida + creación), 400ms deja margen de
+// sobra sin volver el lote insoportablemente lento.
+const REQUEST_PACING_MS = 400
+
 interface Args {
   articlesDir: string
   imagesDir: string
@@ -62,17 +76,29 @@ function prompt(question: string, hide = false): Promise<string> {
   })
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 interface LoginResponse {
   accessToken: string
   user: { email: string; role: string }
 }
 
-async function login(apiUrl: string): Promise<string> {
-  let email = process.env.BULK_IMPORT_EMAIL
-  let password = process.env.BULK_IMPORT_PASSWORD
-  if (!email) email = await prompt('Email (rol EDITOR o superior): ')
-  if (!password) password = await prompt('Contraseña: ', true)
+/**
+ * Credenciales guardadas para poder volver a loguear cuando el access
+ * token (15 min de vida, ver auth.service.ts) expira a mitad de un lote
+ * largo. `token` es mutable — la sesión completa la comparte por
+ * referencia, así que renovarlo acá alcanza para todo el resto del run.
+ */
+interface Session {
+  apiUrl: string
+  email: string
+  password: string
+  token: string
+}
 
+async function login(apiUrl: string, email: string, password: string): Promise<string> {
   const res = await fetch(`${apiUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -90,6 +116,68 @@ async function login(apiUrl: string): Promise<string> {
   return data.accessToken
 }
 
+async function initSession(apiUrl: string): Promise<Session> {
+  let email = process.env.BULK_IMPORT_EMAIL
+  let password = process.env.BULK_IMPORT_PASSWORD
+  if (!email) email = await prompt('Email (rol EDITOR o superior): ')
+  if (!password) password = await prompt('Contraseña: ', true)
+  const token = await login(apiUrl, email, password)
+  return { apiUrl, email, password, token }
+}
+
+/**
+ * Wrapper de fetch autenticado con dos redes de seguridad, necesarias en
+ * cualquier corrida de más de ~15 minutos (el lote completo tarda bastante
+ * más que eso entre compresión de imágenes y creación de artículos):
+ *
+ * - 401 (access token vencido a mitad de corrida): re-loguea una vez con
+ *   las mismas credenciales y reintenta la request con el token nuevo.
+ * - 429 (ThrottlerException, límite global de la API): espera según
+ *   "Retry-After" si vino, si no backoff exponencial, y reintenta hasta 5
+ *   veces — el lote es grande, un 429 puntual no debería tirar artículos
+ *   a la pila de errores cuando el problema es solo de ritmo.
+ *
+ * Además espeja SIEMPRE `REQUEST_PACING_MS` antes de la request para no
+ * depender únicamente de los reintentos.
+ */
+async function authedFetch(
+  session: Session,
+  path: string,
+  init: RequestInit,
+  attempt = 1
+): Promise<Response> {
+  await sleep(REQUEST_PACING_MS)
+
+  let res: Response
+  try {
+    res = await fetch(`${session.apiUrl}${path}`, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${session.token}` },
+    })
+  } catch (err) {
+    // Corte de conexión a nivel de red (ECONNRESET, etc.) — no es una
+    // respuesta HTTP, así que no cae en los checks de status de abajo.
+    // Mismo backoff que 429, hasta 5 reintentos.
+    if (attempt > 5) throw err
+    await sleep(1000 * 2 ** (attempt - 1))
+    return authedFetch(session, path, init, attempt + 1)
+  }
+
+  if (res.status === 401 && attempt === 1) {
+    session.token = await login(session.apiUrl, session.email, session.password)
+    return authedFetch(session, path, init, attempt + 1)
+  }
+
+  if (res.status === 429 && attempt <= 5) {
+    const retryAfterHeader = res.headers.get('retry-after')
+    const waitMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : 1000 * 2 ** (attempt - 1)
+    await sleep(waitMs)
+    return authedFetch(session, path, init, attempt + 1)
+  }
+
+  return res
+}
+
 async function fetchKnownCategorySlugs(apiUrl: string): Promise<string[]> {
   const res = await fetch(`${apiUrl}/categories`)
   if (!res.ok) throw new Error(`No se pudieron leer las categorías (${res.status})`)
@@ -97,40 +185,37 @@ async function fetchKnownCategorySlugs(apiUrl: string): Promise<string[]> {
   return categories.map((c) => c.slug)
 }
 
+// Las imágenes de portada generadas en lote llevan un sufijo de fecha
+// pegado al nombre del artículo (ej. "mi-articulo_202608140912.jpeg", de
+// nexoat-lote-imagenes-portada) — se matchea por nombre exacto o por
+// "empieza con {baseName}_" seguido solo de dígitos antes de la extensión.
 async function findMatchingImage(imagesDir: string, baseName: string): Promise<string | null> {
   const files = await readdir(imagesDir)
+  const target = baseName.toLowerCase()
   const match = files.find((f) => {
     const ext = extname(f).toLowerCase()
     if (!IMAGE_EXTENSIONS.includes(ext)) return false
-    return basename(f, extname(f)).toLowerCase() === baseName.toLowerCase()
+    const stem = basename(f, extname(f)).toLowerCase()
+    if (stem === target) return true
+    if (!stem.startsWith(`${target}_`)) return false
+    return /^\d+$/.test(stem.slice(target.length + 1))
   })
   return match ? join(imagesDir, match) : null
 }
 
 async function uploadImage(
-  apiUrl: string,
-  token: string,
-  imagePath: string,
-  attempt = 1
+  session: Session,
+  imagePath: string
 ): Promise<{ url: string; publicId: string }> {
-  try {
-    const buffer = await readFile(imagePath)
-    const ext = extname(imagePath).toLowerCase()
-    const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg'
-    const form = new FormData()
-    form.append('file', new Blob([buffer], { type: mime }), basename(imagePath))
+  const buffer = await readFile(imagePath)
+  const ext = extname(imagePath).toLowerCase()
+  const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg'
+  const form = new FormData()
+  form.append('file', new Blob([buffer], { type: mime }), basename(imagePath))
 
-    const res = await fetch(`${apiUrl}/admin/media`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    })
-    if (!res.ok) throw new Error(`(${res.status}) ${await res.text()}`)
-    return (await res.json()) as { url: string; publicId: string }
-  } catch (err) {
-    if (attempt < 2) return uploadImage(apiUrl, token, imagePath, attempt + 1)
-    throw err
-  }
+  const res = await authedFetch(session, '/admin/media', { method: 'POST', body: form })
+  if (!res.ok) throw new Error(`(${res.status}) ${await res.text()}`)
+  return (await res.json()) as { url: string; publicId: string }
 }
 
 interface CreateResult {
@@ -140,13 +225,12 @@ interface CreateResult {
 }
 
 async function createArticle(
-  apiUrl: string,
-  token: string,
+  session: Session,
   data: ParsedArticleData & { coverImage?: string; coverImagePublicId?: string }
 ): Promise<{ ok: true } | { ok: false; status: number; body: string }> {
-  const res = await fetch(`${apiUrl}/admin/articles`, {
+  const res = await authedFetch(session, '/admin/articles', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...data, status: 'publicado' }),
   })
   if (res.ok) return { ok: true }
@@ -157,12 +241,17 @@ async function main() {
   const { articlesDir, imagesDir, apiUrl } = parseArgs()
 
   console.log(`API: ${apiUrl}`)
-  const token = await login(apiUrl)
+  const session = await initSession(apiUrl)
   console.log('Sesión iniciada.\n')
 
   const knownCategorySlugs = await fetchKnownCategorySlugs(apiUrl)
 
-  const files = (await readdir(articlesDir)).filter((f) => f.toLowerCase().endsWith('.md'))
+  // Archivos que empiezan con "_" son auxiliares del lote (ej.
+  // "_prompts_portadas.md", "_progreso.json" del flujo de
+  // nexoat-lote-imagenes-portada), no artículos.
+  const files = (await readdir(articlesDir)).filter(
+    (f) => f.toLowerCase().endsWith('.md') && !f.startsWith('_')
+  )
   if (files.length === 0) {
     console.log('No se encontraron archivos .md en la carpeta indicada.')
     return
@@ -175,11 +264,33 @@ async function main() {
   for (const file of files) {
     const filePath = join(articlesDir, file)
     const raw = await readFile(filePath, 'utf-8')
-    const { data, warnings } = parseArticleMarkdown(raw, knownCategorySlugs, file)
+    const { data, unknownCategorySlugs, warnings } = parseArticleMarkdown(
+      raw,
+      knownCategorySlugs,
+      file
+    )
 
-    if (warnings.length) {
+    // Resuelve alias conocidos (ej. "maltrato-invisible" → "maltrato-y-abuso")
+    // antes de reportar como "sin categoría equivalente".
+    const stillUnknown: string[] = []
+    for (const slug of unknownCategorySlugs) {
+      const alias = CATEGORY_ALIASES[slug]
+      if (alias && knownCategorySlugs.includes(alias)) {
+        data.categorySlugs = Array.from(new Set([...(data.categorySlugs ?? []), alias]))
+      } else {
+        stillUnknown.push(slug)
+      }
+    }
+    const displayWarnings = warnings.filter((w) => !w.startsWith('Temas sin categoría'))
+    if (stillUnknown.length) {
+      displayWarnings.push(
+        `Temas sin categoría equivalente (no se marcaron): ${stillUnknown.join(', ')}`
+      )
+    }
+
+    if (displayWarnings.length) {
       console.log(`⚠ ${file}`)
-      for (const w of warnings) console.log(`   - ${w}`)
+      for (const w of displayWarnings) console.log(`   - ${w}`)
     }
 
     if (!data.title) {
@@ -207,7 +318,7 @@ async function main() {
       missingCovers.push(file)
     } else {
       try {
-        const uploaded = await uploadImage(apiUrl, token, imagePath)
+        const uploaded = await uploadImage(session, imagePath)
         coverImage = uploaded.url
         coverImagePublicId = uploaded.publicId
       } catch (err) {
@@ -215,7 +326,7 @@ async function main() {
       }
     }
 
-    const creation = await createArticle(apiUrl, token, {
+    const creation = await createArticle(session, {
       ...data,
       coverImage,
       coverImagePublicId,
