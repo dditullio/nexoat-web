@@ -27,6 +27,19 @@ enum Audience {
   mixto
 }
 
+// Eje temático del artículo — a qué gran público pertenece (distinto de
+// Audience, que es a quién le habla dentro de ese público). Array porque un
+// artículo puede solapar acompanamiento_terapeutico y cuidado_de_mayores; los
+// de recursos_profesionales_at en la práctica no solapan con los otros dos.
+// Ver docs/features/content-tracks.md. Igual salvedad de guiones que
+// Audience: la traducción a los strings con guion del frontend vive en
+// articles/track.util.ts.
+enum ContentTrack {
+  acompanamiento_terapeutico
+  cuidado_de_mayores
+  recursos_profesionales_at
+}
+
 enum ArticleStatus {
   borrador
   publicado
@@ -113,6 +126,7 @@ model Article {
   // Array, no un enum singular: un artículo puede estar dirigido a más de
   // una audiencia a la vez (ver frontend/src/data/mockArticles.ts).
   audience           Audience[]
+  tracks             ContentTrack[]    @default([])
   status             ArticleStatus     @default(borrador)
   scope              ArticleScope      @default(publico)
   publishedAt        DateTime?

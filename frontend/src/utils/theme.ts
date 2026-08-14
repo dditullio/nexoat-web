@@ -1,4 +1,4 @@
-import type { CategorySlug, Level, Audience, ArticleScope } from '@/types'
+import type { CategorySlug, Level, Audience, ArticleScope, ContentTrack } from '@/types'
 
 /**
  * Paleta por categoría.
@@ -119,6 +119,41 @@ export const CATEGORY_THEMES: Record<
     gradient: 'var(--cat-di-grad)',
     icon: 'DI',
   },
+  'redaccion-clinica-y-objetivos': {
+    bg: 'var(--cat-rco-bg)',
+    accent: 'var(--cat-rco-ink)',
+    cardColor: 'var(--cat-rco-bg)',
+    gradient: 'var(--cat-rco-grad)',
+    icon: 'RCO',
+  },
+  'encuadre-honorarios-y-facturacion': {
+    bg: 'var(--cat-ehf-bg)',
+    accent: 'var(--cat-ehf-ink)',
+    cardColor: 'var(--cat-ehf-bg)',
+    gradient: 'var(--cat-ehf-grad)',
+    icon: 'EHF',
+  },
+  'organizacion-y-salud-ocupacional': {
+    bg: 'var(--cat-oso-bg)',
+    accent: 'var(--cat-oso-ink)',
+    cardColor: 'var(--cat-oso-bg)',
+    gradient: 'var(--cat-oso-grad)',
+    icon: 'OSO',
+  },
+  'recursos-y-materiales-de-trabajo': {
+    bg: 'var(--cat-rmt-bg)',
+    accent: 'var(--cat-rmt-ink)',
+    cardColor: 'var(--cat-rmt-bg)',
+    gradient: 'var(--cat-rmt-grad)',
+    icon: 'RMT',
+  },
+  'equipo-familias-y-capacitacion': {
+    bg: 'var(--cat-efc-bg)',
+    accent: 'var(--cat-efc-ink)',
+    cardColor: 'var(--cat-efc-bg)',
+    gradient: 'var(--cat-efc-grad)',
+    icon: 'EFC',
+  },
 }
 
 export const LEVEL_CHIPS: Record<Level, { bg: string; text: string; label: string }> = {
@@ -179,6 +214,26 @@ export const SCOPE_CHIPS: Partial<
     bg: 'var(--color-ochre-soft)',
     text: 'var(--color-ink-secondary)',
     label: 'Nivel 3',
+  },
+}
+
+// Solo 3 valores de alto nivel, no una paleta de 20 categorías — reusa
+// tokens de marca en vez de inventar `--cat-*` nuevos.
+export const TRACK_CHIPS: Record<ContentTrack, { bg: string; text: string; label: string }> = {
+  'acompanamiento-terapeutico': {
+    bg: 'var(--color-primary-soft)',
+    text: 'var(--color-primary-dark)',
+    label: 'Acompañamiento terapéutico',
+  },
+  'cuidado-de-mayores': {
+    bg: 'var(--color-accent-soft)',
+    text: 'var(--color-accent-dark)',
+    label: 'Cuidado de personas mayores',
+  },
+  'recursos-profesionales-at': {
+    bg: 'var(--color-ochre-soft)',
+    text: 'var(--color-ink-secondary)',
+    label: 'Recursos para AT',
   },
 }
 

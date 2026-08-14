@@ -20,15 +20,18 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import { useBlogStore } from '@/stores/blog'
 import { useThemeStore } from '@/stores/theme'
+import { useTrackStore } from '@/stores/track'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const blogStore = useBlogStore()
 const themeStore = useThemeStore()
+const trackStore = useTrackStore()
 const authStore = useAuthStore()
 
 onMounted(() => {
   themeStore.init()
+  trackStore.init()
   authStore.bootstrap()
   blogStore.fetchArticles()
   blogStore.fetchCategories()

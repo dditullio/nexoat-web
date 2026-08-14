@@ -17,6 +17,7 @@ import {
 } from 'class-validator'
 import { ArticleScope, ArticleStatus, Level } from '@prisma/client'
 import { AUDIENCE_API_VALUES, type AudienceApiValue } from '../audience.util'
+import { TRACK_API_VALUES, type TrackApiValue } from '../track.util'
 
 export class ArticleSourceDto {
   @ApiProperty()
@@ -81,6 +82,18 @@ export class CreateArticleDto {
   @ArrayNotEmpty()
   @IsIn(AUDIENCE_API_VALUES, { each: true })
   audience!: AudienceApiValue[]
+
+  @ApiPropertyOptional({
+    enum: TRACK_API_VALUES,
+    isArray: true,
+    description:
+      'Eje temático. Si se omite, se autocompleta a partir de las categorías elegidas ' +
+      '(ver docs/features/content-tracks.md). Un array vacío explícito se respeta tal cual.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(TRACK_API_VALUES, { each: true })
+  tracks?: TrackApiValue[]
 
   @ApiPropertyOptional({ enum: ArticleStatus, default: ArticleStatus.borrador })
   @IsOptional()

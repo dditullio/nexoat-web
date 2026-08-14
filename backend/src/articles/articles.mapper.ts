@@ -1,5 +1,6 @@
 import type { Prisma, User } from '@prisma/client'
 import { audienceToApi } from './audience.util'
+import { trackToApi } from './track.util'
 import { hasAccess, truncateContent } from './scope.util'
 
 /** Include compartido: todo lo que necesitan tanto el mapper público como el admin. */
@@ -20,6 +21,7 @@ export function toPublicArticleSummary(article: ArticleWithRelations) {
     date: (article.publishedAt ?? article.createdAt).toISOString(),
     categories: article.categories.map((c) => c.category.slug),
     audience: audienceToApi(article.audience),
+    tracks: trackToApi(article.tracks),
     level: article.level,
     scope: article.scope,
     excerpt: article.excerpt ?? '',

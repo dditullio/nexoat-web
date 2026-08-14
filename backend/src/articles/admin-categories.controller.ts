@@ -10,7 +10,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { UpdateCategoryDto } from './dto/update-category.dto'
 
 /**
- * Las 15 categorías son un set fijo (ver seed.ts) — no hay alta/baja acá,
+ * Las 20 categorías son un set fijo (ver seed.ts) — no hay alta/baja acá,
  * solo edición de la imagen de portada de cada una.
  */
 @ApiTags('admin/categories')

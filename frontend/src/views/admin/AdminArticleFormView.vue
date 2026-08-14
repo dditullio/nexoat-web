@@ -208,6 +208,33 @@
         </div>
 
         <div class="side-block">
+          <div class="field__label-row">
+            <span class="field__label">Eje temático</span>
+            <button
+              type="button"
+              class="field__preview-toggle"
+              :disabled="!form.categorySlugs.length"
+              @click="suggestTracks"
+            >
+              Sugerir según categorías
+            </button>
+          </div>
+          <div class="side-block__checks">
+            <label v-for="opt in TRACK_OPTIONS" :key="opt.value" class="check">
+              <input
+                type="checkbox"
+                :checked="form.tracks?.includes(opt.value)"
+                @change="toggleTrack(opt.value)"
+              />
+              {{ opt.label }}
+            </label>
+          </div>
+          <p class="side-block__hint">
+            Si se deja vacío al crear, se autocompleta según las categorías elegidas.
+          </p>
+        </div>
+
+        <div class="side-block">
           <span class="field__label">Categorías *</span>
           <div class="side-block__checks">
             <label v-for="opt in categoryOptions" :key="opt.slug" class="check">
@@ -261,7 +288,7 @@ import { renderMarkdown } from '@/utils/markdown'
 import { parseArticleMarkdown } from '@/utils/articleMarkdownImport'
 import { ApiError } from '@/services/http'
 import type { ArticleFormPayload, ArticleStatus } from '@/types/admin'
-import type { Audience, ArticleScope, Level } from '@/types'
+import type { Audience, ArticleScope, ContentTrack, Level } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -293,6 +320,7 @@ const form = ref<ArticleFormPayload>({
   coverImagePublicId: undefined,
   level: 'basico',
   audience: [],
+  tracks: [],
   status: 'borrador',
   scope: 'publico',
   categorySlugs: [],
@@ -319,6 +347,49 @@ const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
   { value: 'mixto', label: 'Mixto' },
 ]
 
+// Si el editor nunca toca este bloque en un artículo nuevo, `tracks` no se
+// manda en el payload — así el backend autocompleta según categorías (ver
+// onSubmit). Se pone en `true` en cuanto se toca un checkbox o se usa el
+// botón de sugerencia, incluso si el resultado es el mismo array vacío.
+const tracksTouched = ref(false)
+
+const TRACK_OPTIONS: { value: ContentTrack; label: string }[] = [
+  { value: 'acompanamiento-terapeutico', label: 'Acompañamiento terapéutico' },
+  { value: 'cuidado-de-mayores', label: 'Cuidado de personas mayores' },
+  { value: 'recursos-profesionales-at', label: 'Recursos para AT' },
+]
+
+// Duplicado a propósito del mapeo del backend (backend/src/articles/track.util.ts)
+// solo para esta sugerencia en UI — la fuente de verdad, si el campo llega
+// vacío/omitido, sigue siendo el backend. Ver docs/features/content-tracks.md.
+const CATEGORY_TRACK_SUGGESTIONS: Record<string, ContentTrack> = {
+  'acompanamiento-terapeutico': 'acompanamiento-terapeutico',
+  'neurodiversidad-y-discapacidad': 'acompanamiento-terapeutico',
+  'salud-mental': 'acompanamiento-terapeutico',
+  'autismo-y-tea': 'acompanamiento-terapeutico',
+  'discapacidad-intelectual-y-psicosocial': 'acompanamiento-terapeutico',
+  'guia-cuidador': 'cuidado-de-mayores',
+  'patologias-en-la-vejez': 'cuidado-de-mayores',
+  'maltrato-y-abuso': 'cuidado-de-mayores',
+  'aspectos-legales-y-derechos': 'cuidado-de-mayores',
+  'herramientas-practicas': 'cuidado-de-mayores',
+  'redaccion-clinica-y-objetivos': 'recursos-profesionales-at',
+  'encuadre-honorarios-y-facturacion': 'recursos-profesionales-at',
+  'organizacion-y-salud-ocupacional': 'recursos-profesionales-at',
+  'recursos-y-materiales-de-trabajo': 'recursos-profesionales-at',
+  'equipo-familias-y-capacitacion': 'recursos-profesionales-at',
+}
+
+function suggestTracks() {
+  const suggested = new Set<ContentTrack>()
+  for (const slug of form.value.categorySlugs) {
+    const track = CATEGORY_TRACK_SUGGESTIONS[slug]
+    if (track) suggested.add(track)
+  }
+  form.value.tracks = [...suggested]
+  tracksTouched.value = true
+}
+
 const LEVEL_OPTIONS: { value: Level; label: string }[] = [
   { value: 'basico', label: 'Básico' },
   { value: 'intermedio', label: 'Intermedio' },
@@ -342,6 +413,15 @@ function toggleAudience(value: Audience) {
   const idx = form.value.audience.indexOf(value)
   if (idx === -1) form.value.audience.push(value)
   else form.value.audience.splice(idx, 1)
+}
+
+function toggleTrack(value: ContentTrack) {
+  const tracks = form.value.tracks ?? []
+  const idx = tracks.indexOf(value)
+  if (idx === -1) tracks.push(value)
+  else tracks.splice(idx, 1)
+  form.value.tracks = tracks
+  tracksTouched.value = true
 }
 
 function toggleCategory(slug: string) {
@@ -457,6 +537,7 @@ async function loadArticle(id: string) {
       coverImagePublicId: article.coverImagePublicId,
       level: article.level,
       audience: [...article.audience],
+      tracks: [...article.tracks],
       status: article.status,
       scope: article.scope,
       categorySlugs: [...article.categorySlugs],
@@ -467,6 +548,10 @@ async function loadArticle(id: string) {
       importMetadata: article.importMetadata ?? undefined,
     }
     tagsInput.value = article.keywords.join(', ')
+    // Al editar siempre se manda `tracks` explícito (aunque sea el mismo
+    // array que ya tenía) — la omisión que dispara el auto-sugerido del
+    // backend es solo para artículos nuevos, ver onSubmit.
+    tracksTouched.value = true
   } catch {
     errorMessage.value = 'No pudimos cargar el artículo.'
   } finally {
@@ -498,6 +583,10 @@ async function onSubmit() {
   const payload: ArticleFormPayload = {
     ...form.value,
     slug: form.value.slug?.trim() || undefined,
+    // Si nunca se tocó el bloque de eje en un artículo nuevo, se omite el
+    // campo del payload para que el backend autocomplete según categorías
+    // (ver docs/features/content-tracks.md) en vez de mandar `[]` explícito.
+    tracks: tracksTouched.value ? form.value.tracks : undefined,
     tags: tagsInput.value
       .split(',')
       .map((t) => t.trim())

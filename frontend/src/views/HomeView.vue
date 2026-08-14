@@ -69,15 +69,16 @@
 
           <div class="hero__quick rise" style="animation-delay: 0.45s">
             <span class="hero__quick-label">Empezá por</span>
-            <RouterLink
-              v-for="cat in quickCategories"
-              :key="cat.slug"
-              :to="`/categoria/${cat.slug}`"
-              class="hero__chip"
-            >
-              {{ cat.name }}
-            </RouterLink>
+            <TrackSwitch />
           </div>
+
+          <Transition name="hint">
+            <p v-if="trackStore.activeTrack" class="hero__track-hint">
+              Mostrando primero contenido de
+              <strong>{{ TRACK_CHIPS[trackStore.activeTrack].label.toLowerCase() }}</strong>
+              — el resto sigue disponible.
+            </p>
+          </Transition>
         </div>
 
         <!-- Pila de arcos con las portadas reales: el motivo del sitio
@@ -203,7 +204,7 @@
       <div class="container">
         <div class="topics-sec__head reveal">
           <span class="eyebrow eyebrow--plain">Explorá por tema</span>
-          <h2 class="section-title">Quince formas de entrar</h2>
+          <h2 class="section-title">Veinte formas de entrar</h2>
           <p class="section-lead topics-sec__lead">
             Cada tema reúne los artículos de un área concreta del cuidado. Entrá por donde más lo
             necesites hoy.
@@ -212,7 +213,7 @@
 
         <div class="grid-5">
           <CategoryCard
-            v-for="cat in store.categories"
+            v-for="cat in sortedCategories"
             :key="cat.slug"
             :category="cat"
             class="reveal"
@@ -305,27 +306,45 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useBlogStore } from '@/stores/blog'
-import { getCategoryTheme, LEVEL_CHIPS } from '@/utils/theme'
+import { useTrackStore } from '@/stores/track'
+import { getCategoryTheme, LEVEL_CHIPS, TRACK_CHIPS } from '@/utils/theme'
 import { useReveal } from '@/composables/useReveal'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CategoryCard from '@/components/blog/CategoryCard.vue'
 import HeroArticleStack from '@/components/blog/HeroArticleStack.vue'
 import NewsletterForm from '@/components/blog/NewsletterForm.vue'
+import TrackSwitch from '@/components/blog/TrackSwitch.vue'
+import type { Article, Category } from '@/types'
 
 const router = useRouter()
 const store = useBlogStore()
+const trackStore = useTrackStore()
 const { filteredArticles } = storeToRefs(store)
 
 useReveal()
 
 const searchQuery = ref('')
 
-const quickCategories = computed(() => store.categories.slice(0, 3))
+// El eje elegido en TrackSwitch es un filtro SUAVE: nunca oculta contenido
+// del otro eje, solo lo prioriza — antepone los que matchean sin descartar
+// el resto. Ver docs/features/content-tracks.md.
+function prioritizeByTrack<T extends { tracks: Article['tracks'] }>(items: T[]): T[] {
+  const track = trackStore.activeTrack
+  if (!track) return items
+  const matching = items.filter((item) => item.tracks.includes(track))
+  const rest = items.filter((item) => !item.tracks.includes(track))
+  return [...matching, ...rest]
+}
 
 // El hero es la primera impresión: solo artículos de alcance público, para
 // no ofrecer en portada una lectura que el visitante todavía no puede abrir.
-const heroArticles = computed(() => store.articles.filter((a) => a.scope === 'publico'))
-const featured = computed(() => store.articles[0])
+// Va priorizado por eje a propósito: es la única reacción al elegir un eje
+// que queda a la vista sin scrollear (el resto — "Lo último" y "Explorá por
+// tema" — vive más abajo), así el TrackSwitch se siente que hace algo.
+const heroArticles = computed(() =>
+  prioritizeByTrack(store.articles.filter((a) => a.scope === 'publico'))
+)
+const featured = computed(() => prioritizeByTrack(store.articles)[0])
 const featuredTheme = computed(() =>
   getCategoryTheme(featured.value?.categories[0] ?? 'acompanamiento-terapeutico')
 )
@@ -336,7 +355,21 @@ const featuredCategoryName = computed(
       : undefined
     )?.name ?? ''
 )
-const displayedArticles = computed(() => filteredArticles.value.slice(0, 6))
+const displayedArticles = computed(() => prioritizeByTrack(filteredArticles.value).slice(0, 6))
+
+// Categorías sin ningún artículo del eje elegido bajan al final — no
+// desaparecen. Data-driven a partir de los artículos ya cargados, no
+// duplica el mapeo categoría→eje (que vive solo en el backend, ver
+// docs/features/content-tracks.md).
+const sortedCategories = computed(() => {
+  const track = trackStore.activeTrack
+  if (!track) return store.categories
+  const hasMatch = (cat: Category) =>
+    store.articles.some((a) => a.categories.includes(cat.slug) && a.tracks.includes(track))
+  const matching = store.categories.filter(hasMatch)
+  const rest = store.categories.filter((c) => !hasMatch(c))
+  return [...matching, ...rest]
+})
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('es-AR', {
@@ -611,6 +644,32 @@ function goToSearch() {
    en la grilla del hero. */
 .hero__deck {
   min-width: 0;
+}
+
+/* Confirma que elegir un eje tuvo efecto — el resto de la reacción (pila de
+   portadas, "Lo último", "Explorá por tema") queda fuera de este viewport. */
+.hero__track-hint {
+  margin-top: 14px;
+  font-size: 0.82rem;
+  color: var(--color-ink-muted);
+}
+
+.hero__track-hint strong {
+  color: var(--color-primary-dark);
+  font-weight: 700;
+}
+
+.hint-enter-active,
+.hint-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s var(--ease-out-soft);
+}
+
+.hint-enter-from,
+.hint-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 /* ═══ DESTACADO ═══ */

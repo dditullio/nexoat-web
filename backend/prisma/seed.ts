@@ -101,6 +101,39 @@ const CATEGORIES = [
     description: 'Capacidad jurídica, apoyos e inclusión más allá del diagnóstico clínico',
     icon: 'DI',
   },
+  {
+    slug: 'redaccion-clinica-y-objetivos',
+    name: 'Redacción Clínica y Objetivos',
+    description: 'Informes técnicos, formulación de objetivos medibles y registro de campo',
+    icon: 'RCO',
+  },
+  {
+    slug: 'encuadre-honorarios-y-facturacion',
+    name: 'Encuadre, Honorarios y Facturación',
+    description:
+      'Límites con la familia, tarifas, contratos y aspectos administrativos del ejercicio profesional',
+    icon: 'EHF',
+  },
+  {
+    slug: 'organizacion-y-salud-ocupacional',
+    name: 'Organización y Salud Ocupacional',
+    description: 'Gestión del tiempo, burnout y autocuidado propio del acompañante terapéutico',
+    icon: 'OSO',
+  },
+  {
+    slug: 'recursos-y-materiales-de-trabajo',
+    name: 'Recursos y Materiales de Trabajo',
+    description:
+      'Kit de herramientas, adaptación de espacios y materiales didácticos para la jornada',
+    icon: 'RMT',
+  },
+  {
+    slug: 'equipo-familias-y-capacitacion',
+    name: 'Equipo, Familias y Capacitación',
+    description:
+      'Trabajo interdisciplinario, comunicación con familias/escuela y formación continua',
+    icon: 'EFC',
+  },
 ]
 
 async function seedAdmin() {

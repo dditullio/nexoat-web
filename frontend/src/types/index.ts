@@ -1,5 +1,11 @@
 export type Audience = 'cuidadores-familiares' | 'profesionales' | 'mixto'
 export type Level = 'basico' | 'intermedio' | 'avanzado'
+// Eje temático — a qué gran público pertenece el artículo (distinto de
+// Audience, que es a quién le habla). Ver docs/features/content-tracks.md.
+export type ContentTrack =
+  | 'acompanamiento-terapeutico'
+  | 'cuidado-de-mayores'
+  | 'recursos-profesionales-at'
 // Clasificación editorial de acceso ("alcance" en la metadata del .md
 // importado) — no confundir con roles de administración. Por ahora es solo
 // clasificación/filtro, ver docs/features/article-scope-filters.md.
@@ -25,6 +31,11 @@ export type CategorySlug =
   | 'historias-que-humanizan'
   | 'autismo-y-tea'
   | 'discapacidad-intelectual-y-psicosocial'
+  | 'redaccion-clinica-y-objetivos'
+  | 'encuadre-honorarios-y-facturacion'
+  | 'organizacion-y-salud-ocupacional'
+  | 'recursos-y-materiales-de-trabajo'
+  | 'equipo-familias-y-capacitacion'
 
 export interface CategoryTheme {
   bg: string
@@ -49,6 +60,7 @@ export interface Article {
   date: string
   categories: CategorySlug[]
   audience: Audience[]
+  tracks: ContentTrack[]
   level: Level
   scope: ArticleScope
   excerpt: string
@@ -77,6 +89,7 @@ export interface ArticleFull extends Article {
 export interface FilterState {
   category: CategorySlug | null
   audience: Audience | null
+  track: ContentTrack | null
   level: Level | null
   scope: ArticleScope | null
   query: string
