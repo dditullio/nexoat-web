@@ -27,6 +27,18 @@ Por nombre de archivo base, sin importar extensión: `crisis-aula-at.md` con `cr
 
 `temas` del `.md` se filtra contra `GET /categories` (slugs reales). Los `temas` que no matchean ninguna categoría existente se descartan de `categorySlugs` (no se inventan categorías) y se listan en el resumen. Si después de filtrar no queda **ninguna** categoría válida, el artículo se **salta entero** (no se crea) porque `categorySlugs` es obligatorio y no vacío en `CreateArticleDto` — se reporta como error, no como warning.
 
+## Backfill de portadas en re-corridas (artículo existe, portada no)
+
+Correr el script dos veces sobre el mismo destino es seguro y tiene un caso de uso real: la primera vez algunas portadas no matchean por nombre de archivo (se suben después, renombradas, a la misma carpeta), y se quiere que la segunda corrida solo complete lo que falta sin tocar el resto.
+
+Antes de procesar cada `.md`, se trae el listado completo de artículos existentes en el destino (`fetchExistingArticles`, paginado) con su slug y si ya tienen `coverImage`. Con eso, cada archivo cae en uno de tres casos:
+
+1. **No existe** → flujo normal de creación (como se documentó arriba).
+2. **Existe y ya tiene portada** → se saltea, sin tocar nada (comportamiento de siempre).
+3. **Existe pero no tiene portada** → busca una imagen que matchee en `--images` con el mismo criterio de siempre; si la encuentra, la sube y hace **solo** `PATCH coverImage/coverImagePublicId` — no reenvía título, contenido, categorías ni ningún otro campo, así que no hay riesgo de pisar una edición manual hecha desde el panel después de la carga inicial.
+
+Se reporta aparte en el resumen (`Portadas agregadas a artículos existentes`), distinto de `Creados`.
+
 ## Resiliencia de sesión y de ritmo (aprendido en la primera corrida real)
 
 La primera corrida contra el lote completo (187 artículos) reveló dos problemas que no aparecen con lotes de prueba chicos:

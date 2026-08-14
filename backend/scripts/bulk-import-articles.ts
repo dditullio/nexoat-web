@@ -185,6 +185,51 @@ async function fetchKnownCategorySlugs(apiUrl: string): Promise<string[]> {
   return categories.map((c) => c.slug)
 }
 
+interface ExistingArticle {
+  id: string
+  hasCoverImage: boolean
+}
+
+/**
+ * Listado completo (paginado) de artículos ya existentes, por slug — se usa
+ * para dos cosas: no repetir el baile de "crear y recibir 409" cuando ya
+ * sabemos que existe, y para el caso de re-correr el import sobre un lote
+ * ya cargado donde solo cambió qué imágenes están disponibles: si el
+ * artículo existe pero no tiene portada y ahora sí hay una imagen que
+ * matchea, se la sube y actualiza sin tocar el resto del artículo.
+ */
+async function fetchExistingArticles(session: Session): Promise<Map<string, ExistingArticle>> {
+  const bySlug = new Map<string, ExistingArticle>()
+  for (let page = 1; ; page++) {
+    const res = await authedFetch(session, `/admin/articles?page=${page}&pageSize=50`, {})
+    if (!res.ok) throw new Error(`No se pudo listar artículos existentes (${res.status})`)
+    const data = (await res.json()) as {
+      items: { id: string; slug: string; coverImage: string | null }[]
+      total: number
+    }
+    for (const item of data.items) {
+      bySlug.set(item.slug, { id: item.id, hasCoverImage: Boolean(item.coverImage) })
+    }
+    if (page * 50 >= data.total) break
+  }
+  return bySlug
+}
+
+async function updateArticleCoverImage(
+  session: Session,
+  id: string,
+  coverImage: string,
+  coverImagePublicId: string
+): Promise<{ ok: true } | { ok: false; status: number; body: string }> {
+  const res = await authedFetch(session, `/admin/articles/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ coverImage, coverImagePublicId }),
+  })
+  if (res.ok) return { ok: true }
+  return { ok: false, status: res.status, body: await res.text() }
+}
+
 // Las imágenes de portada generadas en lote llevan un sufijo de fecha
 // pegado al nombre del artículo (ej. "mi-articulo_202608140912.jpeg", de
 // nexoat-lote-imagenes-portada) — se matchea por nombre exacto o por
@@ -219,7 +264,7 @@ async function uploadImage(
 }
 
 interface CreateResult {
-  status: 'created' | 'skipped' | 'error'
+  status: 'created' | 'updated' | 'skipped' | 'error'
   file: string
   reason?: string
 }
@@ -245,6 +290,8 @@ async function main() {
   console.log('Sesión iniciada.\n')
 
   const knownCategorySlugs = await fetchKnownCategorySlugs(apiUrl)
+  const existingArticles = await fetchExistingArticles(session)
+  console.log(`${existingArticles.size} artículo(s) ya existentes en el destino.\n`)
 
   // Archivos que empiezan con "_" son auxiliares del lote (ej.
   // "_prompts_portadas.md", "_progreso.json" del flujo de
@@ -311,6 +358,57 @@ async function main() {
     }
 
     const baseName = basename(file, '.md')
+    const existing = data.slug ? existingArticles.get(data.slug) : undefined
+
+    // Ya existe y ya tiene portada: nada que hacer, es el caso normal de
+    // re-correr el import sobre un lote ya cargado.
+    if (existing?.hasCoverImage) {
+      results.push({ status: 'skipped', file, reason: 'ya existe (slug duplicado)' })
+      console.log(`↷ ${file} → ya existe, salteado`)
+      continue
+    }
+
+    // Ya existe pero sin portada: solo intenta agregarle la imagen si ahora
+    // hay una que matchea — no toca título/contenido/categorías de un
+    // artículo que ya está publicado.
+    if (existing && !existing.hasCoverImage) {
+      const imagePath = await findMatchingImage(imagesDir, baseName)
+      if (!imagePath) {
+        results.push({ status: 'skipped', file, reason: 'ya existe, sigue sin portada disponible' })
+        console.log(`↷ ${file} → ya existe, sin portada nueva disponible`)
+        continue
+      }
+      try {
+        const uploaded = await uploadImage(session, imagePath)
+        const patch = await updateArticleCoverImage(
+          session,
+          existing.id,
+          uploaded.url,
+          uploaded.publicId
+        )
+        if (patch.ok) {
+          results.push({ status: 'updated', file })
+          console.log(`✓ ${file} → portada agregada`)
+        } else {
+          results.push({
+            status: 'error',
+            file,
+            reason: `PATCH portada falló (${patch.status}) ${patch.body}`,
+          })
+          console.log(`✗ ${file} → error al actualizar portada: (${patch.status}) ${patch.body}`)
+        }
+      } catch (err) {
+        results.push({
+          status: 'error',
+          file,
+          reason: `falló la subida de portada: ${(err as Error).message}`,
+        })
+        console.log(`✗ ${file} → falló la subida de portada: ${(err as Error).message}`)
+      }
+      continue
+    }
+
+    // No existe todavía: flujo normal de creación.
     let coverImage: string | undefined
     let coverImagePublicId: string | undefined
     const imagePath = await findMatchingImage(imagesDir, baseName)
@@ -338,6 +436,9 @@ async function main() {
     } else {
       const { status, body } = creation
       if (status === 409) {
+        // No debería pasar (ya lo filtramos con existingArticles arriba),
+        // pero por si el listado quedó desactualizado durante una corrida
+        // muy larga, mismo tratamiento que antes: no romper el lote.
         results.push({ status: 'skipped', file, reason: 'ya existe (slug duplicado)' })
         console.log(`↷ ${file} → ya existe, salteado`)
       } else {
@@ -348,16 +449,18 @@ async function main() {
   }
 
   const created = results.filter((r) => r.status === 'created').length
+  const updated = results.filter((r) => r.status === 'updated').length
   const skipped = results.filter((r) => r.status === 'skipped')
   const errors = results.filter((r) => r.status === 'error')
 
   console.log('\n──────── Resumen ────────')
   console.log(`Creados: ${created}`)
+  console.log(`Portadas agregadas a artículos existentes: ${updated}`)
   console.log(`Salteados: ${skipped.length}`)
   for (const s of skipped) console.log(`   - ${s.file}: ${s.reason}`)
   console.log(`Errores: ${errors.length}`)
   for (const e of errors) console.log(`   - ${e.file}: ${e.reason}`)
-  console.log(`Sin portada: ${missingCovers.length}`)
+  console.log(`Sin portada (artículos nuevos creados sin imagen): ${missingCovers.length}`)
   for (const m of missingCovers) console.log(`   - ${m}`)
 }
 
