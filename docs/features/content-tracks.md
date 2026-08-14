@@ -1,6 +1,6 @@
 # Eje temático (`ContentTrack`): filtro suave AT / cuidado de mayores / profesional
 
-**Estado:** diseño — pendiente de implementar.
+**Estado:** implementado y verificado en desarrollo local (seed + migración + backfill corridos, type-check/tests en verde, flujo probado en navegador). **Pendiente de desplegar a producción** — a la espera de confirmación tras más pruebas en local.
 
 ## Contexto
 
