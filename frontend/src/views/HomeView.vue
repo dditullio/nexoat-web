@@ -71,6 +71,14 @@
             <span class="hero__quick-label">Empezá por</span>
             <TrackSwitch />
           </div>
+
+          <Transition name="hint">
+            <p v-if="trackStore.activeTrack" class="hero__track-hint">
+              Mostrando primero contenido de
+              <strong>{{ TRACK_CHIPS[trackStore.activeTrack].label.toLowerCase() }}</strong>
+              — el resto sigue disponible.
+            </p>
+          </Transition>
         </div>
 
         <!-- Pila de arcos con las portadas reales: el motivo del sitio
@@ -299,7 +307,7 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useBlogStore } from '@/stores/blog'
 import { useTrackStore } from '@/stores/track'
-import { getCategoryTheme, LEVEL_CHIPS } from '@/utils/theme'
+import { getCategoryTheme, LEVEL_CHIPS, TRACK_CHIPS } from '@/utils/theme'
 import { useReveal } from '@/composables/useReveal'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CategoryCard from '@/components/blog/CategoryCard.vue'
@@ -330,7 +338,12 @@ function prioritizeByTrack<T extends { tracks: Article['tracks'] }>(items: T[]):
 
 // El hero es la primera impresión: solo artículos de alcance público, para
 // no ofrecer en portada una lectura que el visitante todavía no puede abrir.
-const heroArticles = computed(() => store.articles.filter((a) => a.scope === 'publico'))
+// Va priorizado por eje a propósito: es la única reacción al elegir un eje
+// que queda a la vista sin scrollear (el resto — "Lo último" y "Explorá por
+// tema" — vive más abajo), así el TrackSwitch se siente que hace algo.
+const heroArticles = computed(() =>
+  prioritizeByTrack(store.articles.filter((a) => a.scope === 'publico'))
+)
 const featured = computed(() => prioritizeByTrack(store.articles)[0])
 const featuredTheme = computed(() =>
   getCategoryTheme(featured.value?.categories[0] ?? 'acompanamiento-terapeutico')
@@ -631,6 +644,32 @@ function goToSearch() {
    en la grilla del hero. */
 .hero__deck {
   min-width: 0;
+}
+
+/* Confirma que elegir un eje tuvo efecto — el resto de la reacción (pila de
+   portadas, "Lo último", "Explorá por tema") queda fuera de este viewport. */
+.hero__track-hint {
+  margin-top: 14px;
+  font-size: 0.82rem;
+  color: var(--color-ink-muted);
+}
+
+.hero__track-hint strong {
+  color: var(--color-primary-dark);
+  font-weight: 700;
+}
+
+.hint-enter-active,
+.hint-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s var(--ease-out-soft);
+}
+
+.hint-enter-from,
+.hint-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 /* ═══ DESTACADO ═══ */
