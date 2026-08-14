@@ -25,6 +25,11 @@ export type CategorySlug =
   | 'historias-que-humanizan'
   | 'autismo-y-tea'
   | 'discapacidad-intelectual-y-psicosocial'
+  | 'redaccion-clinica-y-objetivos'
+  | 'encuadre-honorarios-y-facturacion'
+  | 'organizacion-y-salud-ocupacional'
+  | 'recursos-y-materiales-de-trabajo'
+  | 'equipo-familias-y-capacitacion'
 
 export interface CategoryTheme {
   bg: string

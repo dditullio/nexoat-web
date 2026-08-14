@@ -203,7 +203,7 @@
       <div class="container">
         <div class="topics-sec__head reveal">
           <span class="eyebrow eyebrow--plain">Explorá por tema</span>
-          <h2 class="section-title">Quince formas de entrar</h2>
+          <h2 class="section-title">Veinte formas de entrar</h2>
           <p class="section-lead topics-sec__lead">
             Cada tema reúne los artículos de un área concreta del cuidado. Entrá por donde más lo
             necesites hoy.

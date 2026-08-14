@@ -94,6 +94,34 @@ const CATEGORY_SEED: CategoryMeta[] = [
     name: 'Discapacidad Intelectual y Psicosocial',
     description: 'Capacidad jurídica, apoyos e inclusión más allá del diagnóstico clínico',
   },
+  {
+    slug: 'redaccion-clinica-y-objetivos',
+    name: 'Redacción Clínica y Objetivos',
+    description: 'Informes técnicos, formulación de objetivos medibles y registro de campo',
+  },
+  {
+    slug: 'encuadre-honorarios-y-facturacion',
+    name: 'Encuadre, Honorarios y Facturación',
+    description:
+      'Límites con la familia, tarifas, contratos y aspectos administrativos del ejercicio profesional',
+  },
+  {
+    slug: 'organizacion-y-salud-ocupacional',
+    name: 'Organización y Salud Ocupacional',
+    description: 'Gestión del tiempo, burnout y autocuidado propio del acompañante terapéutico',
+  },
+  {
+    slug: 'recursos-y-materiales-de-trabajo',
+    name: 'Recursos y Materiales de Trabajo',
+    description:
+      'Kit de herramientas, adaptación de espacios y materiales didácticos para la jornada',
+  },
+  {
+    slug: 'equipo-familias-y-capacitacion',
+    name: 'Equipo, Familias y Capacitación',
+    description:
+      'Trabajo interdisciplinario, comunicación con familias/escuela y formación continua',
+  },
 ]
 
 export const useBlogStore = defineStore('blog', () => {

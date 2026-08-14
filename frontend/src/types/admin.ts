@@ -54,7 +54,7 @@ export interface ArticleFormPayload {
   importMetadata?: Record<string, unknown>
 }
 
-/** Respuesta de /admin/categories — las 15 categorías son un set fijo, solo se edita la imagen. */
+/** Respuesta de /admin/categories — las 20 categorías son un set fijo, solo se edita la imagen. */
 export interface AdminCategory {
   id: string
   slug: string

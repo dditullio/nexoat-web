@@ -20,6 +20,7 @@
 - [`features/new-categories-batch-1.md`](features/new-categories-batch-1.md) — 5 categorías nuevas (Maltrato y Abuso, Aspectos Legales y Derechos, Historias que Humanizan, Autismo y TEA, Discapacidad Intelectual y Psicosocial) que llevan el set de 10 a 15. **Estado: implementado (alta de categoría — reclasificación de artículos pendiente).**
 - [`features/deploy-vps-traefik.md`](features/deploy-vps-traefik.md) — Deploy a producción en el VPS de Hostinger, detrás del Traefik compartido con las otras apps del servidor. **Estado: implementado.**
 - [`features/site-settings-visible-scopes.md`](features/site-settings-visible-scopes.md) — Sección "Configuración" en el admin (`/nexoat-admin/configuracion`, solo ADMIN+) para prender/apagar por nivel (1/2/3) qué artículos de suscripción se muestran en el sitio público, mientras no exista el cobro real. **Estado: implementado.**
+- [`features/new-categories-batch-2.md`](features/new-categories-batch-2.md) — 5 categorías nuevas de contenido laboral/profesional para AT (Redacción Clínica y Objetivos, Encuadre/Honorarios/Facturación, Organización y Salud Ocupacional, Recursos y Materiales de Trabajo, Equipo/Familias/Capacitación) que llevan el set de 15 a 20. **Estado: implementado (alta de categoría — los artículos que las motivaron todavía no están escritos).**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

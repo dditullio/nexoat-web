@@ -14,8 +14,8 @@ describe('getCategoryTheme', () => {
     expect(theme).toBeDefined()
   })
 
-  it('cubre las 15 categorías del sistema', () => {
-    expect(Object.keys(CATEGORY_THEMES)).toHaveLength(15)
+  it('cubre las 20 categorías del sistema', () => {
+    expect(Object.keys(CATEGORY_THEMES)).toHaveLength(20)
   })
 })
 

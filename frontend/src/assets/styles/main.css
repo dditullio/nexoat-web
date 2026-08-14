@@ -154,7 +154,7 @@
   --nx-aud-mixto-text: #6b5c4d;
 
   /* ── Categorías ──
-     Diez familias tierra/vegetal. Cada una distinguible, todas
+     Veinte familias tierra/vegetal. Cada una distinguible, todas
      dentro del mismo rango tonal para que no compitan con la base. */
   --cat-at-bg: #e9efe6;
   --cat-at-ink: #4d6a44;
@@ -201,6 +201,21 @@
   --cat-di-bg: #efe6de;
   --cat-di-ink: #7a4a2e;
   --cat-di-grad: linear-gradient(145deg, #c99566 0%, #7a4a2e 100%);
+  --cat-rco-bg: #e5e8f2;
+  --cat-rco-ink: #3d4a78;
+  --cat-rco-grad: linear-gradient(145deg, #8b96c4 0%, #3d4a78 100%);
+  --cat-ehf-bg: #e2ebe4;
+  --cat-ehf-ink: #2f5c3f;
+  --cat-ehf-grad: linear-gradient(145deg, #7fab8e 0%, #2f5c3f 100%);
+  --cat-oso-bg: #e6e9ea;
+  --cat-oso-ink: #4c5760;
+  --cat-oso-grad: linear-gradient(145deg, #98a4ac 0%, #4c5760 100%);
+  --cat-rmt-bg: #f1e5d3;
+  --cat-rmt-ink: #96622c;
+  --cat-rmt-grad: linear-gradient(145deg, #d3a56c 0%, #96622c 100%);
+  --cat-efc-bg: #efe3ea;
+  --cat-efc-ink: #74405f;
+  --cat-efc-grad: linear-gradient(145deg, #b98098 0%, #74405f 100%);
 
   /* ══ Tokens semánticos ══ */
 
@@ -389,6 +404,21 @@
   --cat-di-bg: #2e2116;
   --cat-di-ink: #d9a877;
   --cat-di-grad: linear-gradient(145deg, #7a4a2e 0%, #2e2116 100%);
+  --cat-rco-bg: #1f2438;
+  --cat-rco-ink: #aab4dd;
+  --cat-rco-grad: linear-gradient(145deg, #4a5a90 0%, #232a40 100%);
+  --cat-ehf-bg: #1c2c22;
+  --cat-ehf-ink: #9cc7ac;
+  --cat-ehf-grad: linear-gradient(145deg, #3f7a58 0%, #223327 100%);
+  --cat-oso-bg: #262a2d;
+  --cat-oso-ink: #b7c0c6;
+  --cat-oso-grad: linear-gradient(145deg, #6d7981 0%, #2c3134 100%);
+  --cat-rmt-bg: #302512;
+  --cat-rmt-ink: #e3b87c;
+  --cat-rmt-grad: linear-gradient(145deg, #b17d3e 0%, #33270f 100%);
+  --cat-efc-bg: #33212e;
+  --cat-efc-ink: #d9a7c0;
+  --cat-efc-grad: linear-gradient(145deg, #9c5f80 0%, #34212e 100%);
 }
 
 /* ══════════════════════════════════════════════════════════════════
