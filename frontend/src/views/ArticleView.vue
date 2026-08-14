@@ -72,7 +72,7 @@
                 ? 'suscriptores registrados'
                 : 'suscriptores de nivel superior'
             }}
-            — a continuación usted podrá leer solo una parte, no el contenido completo.
+            — a continuación vas a poder leer solo una parte, no el contenido completo.
           </p>
           <RouterLink
             v-if="article.requiredScope === 'suscriptores_nivel_1'"
