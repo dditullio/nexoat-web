@@ -54,16 +54,38 @@ const router = createRouter({
       meta: { title: 'Acerca de' },
     },
     {
+      // Landing "OAuth primero" — ver AuthEntryView.vue. El formulario de
+      // email queda como alternativa secundaria en /ingresar/correo.
       path: '/ingresar',
       name: 'login',
-      component: () => import('@/views/LoginView.vue'),
+      component: () => import('@/views/AuthEntryView.vue'),
+      props: { mode: 'login' },
       meta: { title: 'Ingresar' },
+    },
+    {
+      path: '/ingresar/correo',
+      name: 'login-email',
+      component: () => import('@/views/LoginView.vue'),
+      meta: { title: 'Ingresar con correo' },
     },
     {
       path: '/registrarme',
       name: 'register',
-      component: () => import('@/views/RegisterView.vue'),
+      component: () => import('@/views/AuthEntryView.vue'),
+      props: { mode: 'register' },
       meta: { title: 'Registrarme' },
+    },
+    {
+      path: '/registrarme/correo',
+      name: 'register-email',
+      component: () => import('@/views/RegisterView.vue'),
+      meta: { title: 'Registrarme con correo' },
+    },
+    {
+      path: '/oauth-callback',
+      name: 'oauth-callback',
+      component: () => import('@/views/OAuthCallbackView.vue'),
+      meta: { title: 'Ingresando…' },
     },
     {
       path: '/planes',

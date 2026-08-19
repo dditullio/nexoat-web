@@ -39,25 +39,14 @@
         </button>
       </form>
 
-      <template v-if="authStore.providers.google || authStore.providers.facebook">
-        <div class="login__divider"><span>o continuá con</span></div>
-        <div class="login__oauth">
-          <a
-            v-if="authStore.providers.google"
-            :href="`${apiUrl}/auth/google`"
-            class="btn btn--ghost"
-          >
-            Google
-          </a>
-          <a
-            v-if="authStore.providers.facebook"
-            :href="`${apiUrl}/auth/facebook`"
-            class="btn btn--ghost"
-          >
-            Facebook
-          </a>
-        </div>
-      </template>
+      <!--
+        OAuth (Google/Facebook) para el admin queda oculto a propósito, no
+        eliminado: el equipo editorial entra con email, no tiene sentido
+        priorizar redes sociales acá. El backend (context=admin) y
+        <OAuthButtons /> siguen funcionando igual — si en algún momento se
+        quiere reactivar, es agregar `<OAuthButtons context="admin"
+        :redirect="redirectTarget()" />` acá de nuevo.
+      -->
     </div>
   </div>
 </template>
@@ -71,8 +60,6 @@ import { ApiError } from '@/services/http'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-
-const apiUrl = import.meta.env.VITE_API_URL
 
 const email = ref('')
 const password = ref('')
@@ -200,31 +187,5 @@ async function onSubmit() {
 .login__submit {
   width: 100%;
   margin-top: 6px;
-}
-
-.login__divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 26px 0 18px;
-  font-size: 0.78rem;
-  color: var(--color-ink-faint);
-}
-
-.login__divider::before,
-.login__divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--color-line-light);
-}
-
-.login__oauth {
-  display: flex;
-  gap: 10px;
-}
-
-.login__oauth .btn {
-  flex: 1;
 }
 </style>

@@ -23,6 +23,7 @@
 - [`features/new-categories-batch-2.md`](features/new-categories-batch-2.md) — 5 categorías nuevas de contenido laboral/profesional para AT (Redacción Clínica y Objetivos, Encuadre/Honorarios/Facturación, Organización y Salud Ocupacional, Recursos y Materiales de Trabajo, Equipo/Familias/Capacitación) que llevan el set de 15 a 20. **Estado: implementado (alta de categoría — los artículos que las motivaron todavía no están escritos).**
 - [`features/content-tracks.md`](features/content-tracks.md) — Eje temático (`ContentTrack`: acompañamiento terapéutico / cuidado de mayores / recursos profesionales AT) como filtro suave y persistente, para que cada público vea menos "ruido" del otro sin ocultarlo. **Estado: implementado y verificado en desarrollo local — pendiente de desplegar a producción.**
 - [`features/analytics-umami.md`](features/analytics-umami.md) — Analítica propia (Umami self-hosted, sin cookies) en vez de Google Analytics, por la sensibilidad del contenido del sitio. **Estado: implementado y verificado en producción.**
+- [`features/public-oauth-login.md`](features/public-oauth-login.md) — Login con Google/Facebook para lectores públicos en `/ingresar` y `/registrarme` (el cableado de `auth-and-admin-dashboard.md` hasta ahora solo lo usaba el admin); de paso corrigió dos bugs preexistentes de Fastify/Passport que rompían el flujo de OAuth (incluido para el admin). **Estado: implementado y verificado end-to-end en dev — pendiente deploy a producción.**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

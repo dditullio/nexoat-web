@@ -44,5 +44,9 @@ backend/storage/
 # Claude Code — configuración personal (no compartir en equipo)
 .claude/settings.local.json
 
+# Credenciales OAuth descargadas de Google Cloud Console (contienen el client_secret
+# en texto plano) — se dejan en la raíz para tenerlas a mano, pero nunca van a git.
+client_secret_*.json
+
 # Test coverage
 coverage/
