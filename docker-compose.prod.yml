@@ -50,6 +50,8 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_URL: https://${BACKEND_DOMAIN}/v1
+        VITE_UMAMI_SRC: ${VITE_UMAMI_SRC}
+        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID}
     container_name: nexoat-frontend
     restart: unless-stopped
     depends_on:
@@ -72,5 +74,42 @@ services:
       - traefik.http.middlewares.nexoat-www-redirect.redirectregex.replacement=https://$${1}
       - traefik.http.middlewares.nexoat-www-redirect.redirectregex.permanent=true
 
+  # Analítica propia (self-hosted) — ver docs/features/analytics-umami.md.
+  # Postgres separada de nexoat-db a propósito: no mezclar el ciclo de vida
+  # (migraciones/backups) de la DB de negocio con el esquema de Umami.
+  umami-db:
+    image: postgres:15-alpine
+    container_name: nexoat-umami-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD}
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U umami']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: nexoat-umami
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@umami-db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET}
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nexoat-analytics.entrypoints=websecure
+      - traefik.http.routers.nexoat-analytics.rule=Host(`${ANALYTICS_DOMAIN}`)
+      - traefik.http.routers.nexoat-analytics.tls.certresolver=letsencrypt
+      - traefik.http.services.nexoat-analytics.loadbalancer.server.port=3000
+
 volumes:
   postgres_data:
+  umami_db_data:
