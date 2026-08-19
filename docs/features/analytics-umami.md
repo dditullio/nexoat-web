@@ -1,6 +1,6 @@
 # Analítica del sitio — Umami self-hosted
 
-**Estado: implementado en el repo (compose + frontend) — pendiente de desplegar en el VPS y generar el website ID.**
+**Estado: implementado y verificado en producción.**
 
 ## Contexto
 
