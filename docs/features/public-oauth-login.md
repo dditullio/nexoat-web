@@ -8,6 +8,15 @@
 
 Ese momento es ahora: los lectores en `https://nexoat.com/ingresar` (y `/registrarme`) también deben poder entrar con Google/Facebook, no solo con email.
 
+## Ajuste de UX posterior: OAuth como opción principal, no secundaria
+
+Una vez andando el mecanismo de arriba, se decidió que OAuth no debía ser un agregado al pie del formulario de email — para lectores, tiene que ser **la opción principal**: menos fricción (un click, sin contraseña que recordar) para quien solo quiere leer un artículo. El formulario de email pasa a ser la alternativa, detrás de un link chico.
+
+- `/ingresar` y `/registrarme` ahora renderizan `AuthEntryView.vue` (nueva): el/los botón(es) OAuth configurados como CTA principal (`OAuthButtons` con `variant="primary"` — el primer proveedor en sólido `.btn--primary`, el resto en `.btn--ghost`, sin el divisor "o continuá con"), y un link chico debajo ("o ingresar/registrate con correo electrónico") que lleva al formulario de email de siempre.
+- El formulario de email se movió a rutas nuevas: `/ingresar/correo` (`LoginView.vue`) y `/registrarme/correo` (`RegisterView.vue`) — mismo componente y lógica de antes, sin el bloque OAuth (que ahora vive solo en `AuthEntryView`). Cada uno suma, simétricamente, un link chico de vuelta ("o ingresar/registrate con Google") — el label lista dinámicamente solo los proveedores que `GET /auth/providers` reporta activos (nunca dice "Facebook" si esas credenciales no están cargadas).
+- Si `GET /auth/providers` no reporta ningún proveedor activo (ej. dev sin credenciales seteadas), `AuthEntryView` se salta sola al formulario de email — no tiene sentido mostrar una tarjeta con un solo link chico y nada más.
+- **El admin queda afuera de este cambio a propósito** (decisión explícita): en `/nexoat-admin/login` el email sigue siendo la única opción visible — es una herramienta interna para el equipo editorial, no tiene sentido priorizar redes sociales ahí. El botón de `AdminLoginView.vue` se comentó en el template (no se borró el mecanismo: `context=admin` en el backend y `<OAuthButtons>` siguen funcionando igual si se quisiera reactivar).
+
 ## El problema a resolver
 
 `GoogleAuthController`/`FacebookAuthController` son un único endpoint compartido (`GET /v1/auth/google`, `GET /v1/auth/facebook`) — no hay "una instancia para admin y otra para lectores". Hoy el callback redirige siempre, sin condición, a `${FRONTEND_URL}/nexoat-admin/oauth-callback`. Si un lector public hiciera clic en "Continuar con Google" desde `/ingresar` tal cual está el código hoy, terminaría redirigido al login del admin.

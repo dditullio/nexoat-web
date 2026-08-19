@@ -39,7 +39,14 @@
         </button>
       </form>
 
-      <OAuthButtons context="admin" :redirect="redirectTarget()" />
+      <!--
+        OAuth (Google/Facebook) para el admin queda oculto a propósito, no
+        eliminado: el equipo editorial entra con email, no tiene sentido
+        priorizar redes sociales acá. El backend (context=admin) y
+        <OAuthButtons /> siguen funcionando igual — si en algún momento se
+        quiere reactivar, es agregar `<OAuthButtons context="admin"
+        :redirect="redirectTarget()" />` acá de nuevo.
+      -->
     </div>
   </div>
 </template>
@@ -49,7 +56,6 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/services/http'
-import OAuthButtons from '@/components/auth/OAuthButtons.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,14 +64,7 @@ const authStore = useAuthStore()
 const email = ref('')
 const password = ref('')
 const isSubmitting = ref(false)
-// `?error=oauth`: el backend redirige acá cuando el login con Google/Facebook
-// falla (código inválido/expirado, consentimiento negado, etc.) — ver
-// OAuthErrorFilter y docs/features/public-oauth-login.md.
-const errorMessage = ref(
-  route.query.error === 'oauth'
-    ? 'No pudimos completar el ingreso con Google/Facebook. Probá de nuevo.'
-    : ''
-)
+const errorMessage = ref('')
 
 onMounted(async () => {
   await authStore.bootstrap()

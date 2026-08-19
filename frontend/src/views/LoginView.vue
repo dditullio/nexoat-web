@@ -37,7 +37,13 @@
         </button>
       </form>
 
-      <OAuthButtons context="reader" :redirect="redirectTarget()" />
+      <RouterLink
+        v-if="oauthLabel"
+        :to="{ name: 'login', query: route.query }"
+        class="auth__oauth-link"
+      >
+        o ingresar con {{ oauthLabel }}
+      </RouterLink>
 
       <p class="auth__switch">
         ¿Todavía no tenés cuenta?
@@ -48,11 +54,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/services/http'
-import OAuthButtons from '@/components/auth/OAuthButtons.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -61,13 +66,17 @@ const authStore = useAuthStore()
 const email = ref('')
 const password = ref('')
 const isSubmitting = ref(false)
-// `?error=oauth`: el backend redirige acá cuando el login con Google/Facebook
-// falla (código inválido/expirado, consentimiento negado, etc.) — ver
-// OAuthErrorFilter y docs/features/public-oauth-login.md.
-const errorMessage = ref(
-  route.query.error === 'oauth'
-    ? 'No pudimos completar el ingreso con Google/Facebook. Probá de nuevo.'
-    : ''
+const errorMessage = ref('')
+
+// Vuelve a la landing "OAuth primero" (AuthEntryView) — el label lista solo
+// los proveedores que el backend reporta configurados, así nunca ofrece
+// "Facebook" si esas credenciales todavía no están cargadas.
+const PROVIDER_NAMES = { google: 'Google', facebook: 'Facebook' } as const
+const oauthLabel = computed(() =>
+  (Object.keys(PROVIDER_NAMES) as (keyof typeof PROVIDER_NAMES)[])
+    .filter((p) => authStore.providers[p])
+    .map((p) => PROVIDER_NAMES[p])
+    .join(' o ')
 )
 
 onMounted(async () => {
@@ -179,6 +188,21 @@ async function onSubmit() {
 .auth__submit {
   width: 100%;
   margin-top: 6px;
+}
+
+.auth__oauth-link {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: var(--color-ink-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--color-line);
+  text-underline-offset: 3px;
+}
+
+.auth__oauth-link:hover {
+  color: var(--color-primary-dark);
 }
 
 .auth__switch {
