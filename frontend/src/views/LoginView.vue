@@ -37,6 +37,8 @@
         </button>
       </form>
 
+      <OAuthButtons context="reader" :redirect="redirectTarget()" />
+
       <p class="auth__switch">
         ¿Todavía no tenés cuenta?
         <RouterLink :to="{ name: 'register', query: route.query }">Registrate gratis</RouterLink>
@@ -50,6 +52,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/services/http'
+import OAuthButtons from '@/components/auth/OAuthButtons.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,7 +61,14 @@ const authStore = useAuthStore()
 const email = ref('')
 const password = ref('')
 const isSubmitting = ref(false)
-const errorMessage = ref('')
+// `?error=oauth`: el backend redirige acá cuando el login con Google/Facebook
+// falla (código inválido/expirado, consentimiento negado, etc.) — ver
+// OAuthErrorFilter y docs/features/public-oauth-login.md.
+const errorMessage = ref(
+  route.query.error === 'oauth'
+    ? 'No pudimos completar el ingreso con Google/Facebook. Probá de nuevo.'
+    : ''
+)
 
 onMounted(async () => {
   await authStore.bootstrap()

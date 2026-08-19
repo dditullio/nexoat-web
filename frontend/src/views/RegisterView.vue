@@ -52,6 +52,8 @@
         </button>
       </form>
 
+      <OAuthButtons context="reader" :redirect="redirectTarget()" />
+
       <p class="auth__switch">
         ¿Ya tenés cuenta?
         <RouterLink :to="{ name: 'login', query: route.query }">Ingresá</RouterLink>
@@ -65,6 +67,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/services/http'
+import OAuthButtons from '@/components/auth/OAuthButtons.vue'
 
 const route = useRoute()
 const router = useRouter()

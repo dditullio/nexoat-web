@@ -6,7 +6,7 @@
 
 El VPS (Hostinger, Ubuntu 24.04, IP `2.25.176.94`, hostname `srv1734551.hstgr.cloud`) ya corre otras apps (n8n, WordPress, Hermes) detrás de una instancia compartida de **Traefik v3** (proyecto `traefik-thko`, en `/docker/traefik-thko/docker-compose.yml`). NexoAT tiene que convivir ahí sin pisar esas apps ni requerir su propio proxy.
 
-Todavía no hay dominio propio comprado. Se usa el subdominio wildcard que Hostinger ya provee para el VPS (`*.srv1734551.hstgr.cloud → 2.25.176.94`, confirmado por DNS), el mismo patrón que usan las otras apps del servidor (`wordpress-ukkk.srv1734551.hstgr.cloud`, `n8n-kxsc.srv1734551.hstgr.cloud`). Cuando se compre un dominio propio, solo hace falta cambiar `BACKEND_DOMAIN`/`FRONTEND_DOMAIN` en el `.env` del servidor y redeployar — Traefik y Let's Encrypt no necesitan cambios.
+En el setup inicial no había dominio propio comprado y se usaba el subdominio wildcard que Hostinger provee para el VPS (`*.srv1734551.hstgr.cloud → 2.25.176.94`), el mismo patrón que usan las otras apps del servidor (`wordpress-ukkk.srv1734551.hstgr.cloud`, `n8n-kxsc.srv1734551.hstgr.cloud`). **Desde el 19 de agosto de 2026 hay dominio propio activo**: `FRONTEND_DOMAIN=nexoat.com` y `BACKEND_DOMAIN=api.nexoat.com`, ya cargados en el `.env` de producción del VPS — tal como se anticipaba, el cambio no requirió tocar Traefik ni Let's Encrypt, solo esas dos variables.
 
 ## Cómo descubre Traefik a los contenedores (importante para no romper nada)
 

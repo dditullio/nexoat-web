@@ -66,6 +66,12 @@ const router = createRouter({
       meta: { title: 'Registrarme' },
     },
     {
+      path: '/oauth-callback',
+      name: 'oauth-callback',
+      component: () => import('@/views/OAuthCallbackView.vue'),
+      meta: { title: 'Ingresando…' },
+    },
+    {
       path: '/planes',
       name: 'plans',
       component: () => import('@/views/PlansView.vue'),

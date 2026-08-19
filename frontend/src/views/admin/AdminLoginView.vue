@@ -39,25 +39,7 @@
         </button>
       </form>
 
-      <template v-if="authStore.providers.google || authStore.providers.facebook">
-        <div class="login__divider"><span>o continuá con</span></div>
-        <div class="login__oauth">
-          <a
-            v-if="authStore.providers.google"
-            :href="`${apiUrl}/auth/google`"
-            class="btn btn--ghost"
-          >
-            Google
-          </a>
-          <a
-            v-if="authStore.providers.facebook"
-            :href="`${apiUrl}/auth/facebook`"
-            class="btn btn--ghost"
-          >
-            Facebook
-          </a>
-        </div>
-      </template>
+      <OAuthButtons context="admin" :redirect="redirectTarget()" />
     </div>
   </div>
 </template>
@@ -67,17 +49,23 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/services/http'
+import OAuthButtons from '@/components/auth/OAuthButtons.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const apiUrl = import.meta.env.VITE_API_URL
-
 const email = ref('')
 const password = ref('')
 const isSubmitting = ref(false)
-const errorMessage = ref('')
+// `?error=oauth`: el backend redirige acá cuando el login con Google/Facebook
+// falla (código inválido/expirado, consentimiento negado, etc.) — ver
+// OAuthErrorFilter y docs/features/public-oauth-login.md.
+const errorMessage = ref(
+  route.query.error === 'oauth'
+    ? 'No pudimos completar el ingreso con Google/Facebook. Probá de nuevo.'
+    : ''
+)
 
 onMounted(async () => {
   await authStore.bootstrap()
@@ -200,31 +188,5 @@ async function onSubmit() {
 .login__submit {
   width: 100%;
   margin-top: 6px;
-}
-
-.login__divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 26px 0 18px;
-  font-size: 0.78rem;
-  color: var(--color-ink-faint);
-}
-
-.login__divider::before,
-.login__divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--color-line-light);
-}
-
-.login__oauth {
-  display: flex;
-  gap: 10px;
-}
-
-.login__oauth .btn {
-  flex: 1;
 }
 </style>
