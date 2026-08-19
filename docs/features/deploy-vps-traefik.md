@@ -52,6 +52,15 @@ Si la actualización agrega una migración de Prisma, se aplica sola al arrancar
 
 Si además hay que correr `db:seed` o un script de `backend/scripts/` (como `backfill:tracks`): la imagen de producción solo instala dependencias `--prod`, así que `ts-node` no está disponible ahí. Compilar el script a JS plano localmente (`npx tsc --module commonjs --target ES2021 --esModuleInterop --skipLibCheck --outDir /tmp/salida archivo.ts`) y copiarlo al contenedor con `docker cp`, o instalar devDependencies temporalmente en el contenedor con `pnpm install --filter @nexoat/backend...` (sin `--prod`, se pierde al reiniciar el contenedor). Evaluar en algún momento un target de build separado para esto si se vuelve algo frecuente.
 
+## Pendiente: cerrar el puerto 5432 expuesto a internet
+
+Desde el 19 de agosto de 2026 (commit [`e2fbfdd`](https://github.com/dditullio/nexoat-web/commit/e2fbfdd)), `docker-compose.prod.yml` publica `5432:5432` en el servicio `postgres` — Postgres de producción queda alcanzable desde internet, sin firewall de por medio (el VPS no tiene `ufw` activo ni firewall de Hostinger configurado), protegido solo por la contraseña.
+
+Se hizo así a propósito, por comodidad, para poder revisar datos con DBeaver/similar durante esta etapa inicial de implementación (riesgo aceptado explícitamente por el usuario). **Hay que cerrarlo cuando el proyecto salga de esta fase inicial.** Opciones ya evaluadas:
+
+- Publicar el puerto solo en `127.0.0.1` del VPS (`ports: - '127.0.0.1:5432:5432'`) y acceder por túnel SSH (`ssh -L 5433:localhost:5432 -i ~/.ssh/nexoat_vps_deploy root@2.25.176.94`, apuntando DBeaver a `localhost:5433`) — es la opción recomendada.
+- Sacar el `ports:` del todo y usar solo `docker exec -it nexoat-db psql` por SSH cuando haga falta revisar algo puntual.
+
 ## Plan de verificación
 
 1. `docker compose -f docker-compose.prod.yml --env-file .env config` en el VPS sin errores (interpola bien las labels).
