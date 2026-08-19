@@ -23,6 +23,13 @@ COPY frontend/ ./frontend/
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
+# Analítica (Umami self-hosted) — opcionales; si quedan vacías (dev local)
+# main.ts no inyecta el script de tracking. Ver docs/features/analytics-umami.md.
+ARG VITE_UMAMI_SRC
+ENV VITE_UMAMI_SRC=$VITE_UMAMI_SRC
+ARG VITE_UMAMI_WEBSITE_ID
+ENV VITE_UMAMI_WEBSITE_ID=$VITE_UMAMI_WEBSITE_ID
+
 RUN pnpm --filter @nexoat/frontend build
 
 FROM nginx:alpine AS runner
