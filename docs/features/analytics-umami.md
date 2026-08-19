@@ -39,7 +39,7 @@ VITE_UMAMI_WEBSITE_ID=<se completa después del paso 1 de abajo>
 
 1. `git pull` en el VPS, completar `ANALYTICS_DOMAIN`, `UMAMI_DB_PASSWORD` y `UMAMI_APP_SECRET` en `.env` (dejar `VITE_UMAMI_SRC`/`VITE_UMAMI_WEBSITE_ID` vacías todavía).
 2. `docker compose -f docker-compose.prod.yml --env-file .env up -d --build umami-db umami` — solo esos dos servicios, no hace falta rebuildear el frontend todavía.
-3. Entrar a `https://${ANALYTICS_DOMAIN}`, crear el usuario admin de Umami (primer login) y agregar un sitio nuevo llamado "NexoAT" con el dominio público del sitio (`FRONTEND_DOMAIN`, o el dominio propio cuando se compre). Umami muestra el **website ID** generado.
+3. Entrar a `https://${ANALYTICS_DOMAIN}`. Umami **no** tiene asistente de "crear admin" en el primer arranque — siembra un usuario por defecto (`admin` / `umami`); loguearse con esas credenciales y cambiar la contraseña de inmediato en **Settings → Users** (queda expuesto en internet, no se puede dejar la default). Después, agregar un sitio nuevo llamado "NexoAT" con el dominio público del sitio (`FRONTEND_DOMAIN`, o el dominio propio cuando se compre). Umami muestra el **website ID** generado.
 4. Completar `VITE_UMAMI_SRC=https://${ANALYTICS_DOMAIN}/script.js` y `VITE_UMAMI_WEBSITE_ID=<el ID del paso 3>` en el `.env` del VPS.
 5. `docker compose -f docker-compose.prod.yml --env-file .env up -d --build frontend` — rebuild del frontend con el script ya inlineado.
 
