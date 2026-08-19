@@ -1,9 +1,10 @@
 # Despliegue de producción detrás de Traefik (ya corriendo en el VPS,
 # compartido con otras apps — ver docs/features/, sección deploy).
-# Sin puertos publicados al host: Traefik descubre los contenedores vía el
-# socket de Docker y los enruta por su red interna, igual que el resto de
-# las apps del servidor. TLS automático vía Let's Encrypt (certresolver
-# "letsencrypt", ya configurado en el Traefik del VPS).
+# Backend/frontend sin puertos publicados al host: Traefik descubre los
+# contenedores vía el socket de Docker y los enruta por su red interna,
+# igual que el resto de las apps del servidor. TLS automático vía
+# Let's Encrypt (certresolver "letsencrypt", ya configurado en el Traefik
+# del VPS).
 services:
   postgres:
     image: postgres:16-alpine
@@ -13,6 +14,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-nexoat}
       POSTGRES_USER: ${POSTGRES_USER:-nexoat}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Puerto publicado al host (y por lo tanto a internet, sin firewall de
+    # por medio) a propósito, para acceder con DBeaver/similar durante la
+    # fase inicial de implementación. Riesgo aceptado temporalmente por el
+    # usuario (2026-08-19) — cerrar más adelante (ver docs/features/, o
+    # restringir a localhost + túnel SSH).
+    ports:
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
