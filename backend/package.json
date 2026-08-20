@@ -19,7 +19,8 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
     "import:bulk": "ts-node scripts/bulk-import-articles.ts",
-    "backfill:tracks": "ts-node scripts/backfill-article-tracks.ts"
+    "backfill:tracks": "ts-node scripts/backfill-article-tracks.ts",
+    "update:scopes": "ts-node scripts/update-article-scopes.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
