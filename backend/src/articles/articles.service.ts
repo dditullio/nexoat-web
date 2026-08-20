@@ -60,6 +60,10 @@ export class ArticlesService {
               { title: { contains: filters.query, mode: 'insensitive' } },
               { subtitle: { contains: filters.query, mode: 'insensitive' } },
               { excerpt: { contains: filters.query, mode: 'insensitive' } },
+              { content: { contains: filters.query, mode: 'insensitive' } },
+              {
+                tags: { some: { tag: { name: { contains: filters.query, mode: 'insensitive' } } } },
+              },
             ],
           }
         : {}),

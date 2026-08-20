@@ -34,7 +34,9 @@ export class QueryPublicArticlesDto {
   @IsEnum(ArticleScope)
   scope?: ArticleScope
 
-  @ApiPropertyOptional({ description: 'Búsqueda libre en título/subtítulo/extracto' })
+  @ApiPropertyOptional({
+    description: 'Búsqueda libre en título/subtítulo/extracto/contenido/tags',
+  })
   @IsOptional()
   @IsString()
   query?: string

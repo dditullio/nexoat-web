@@ -34,29 +34,27 @@
 
       <FilterBar class="srch__filters" />
 
-      <!-- Con búsqueda de texto o algún filtro de la barra activo: la lista
-           siempre pasa por filteredArticles, que aplica texto + audiencia +
-           nivel + alcance juntos (antes, sin texto, se listaba
-           store.articles crudo y los filtros de la barra quedaban
-           marcados como activos sin efecto real). -->
+      <!-- Con texto de búsqueda: la lista sale de searchResults (server-side,
+           busca en título/subtítulo/extracto/contenido/tags — ver
+           runSearch() en stores/blog.ts). Sin texto pero con algún filtro de
+           la barra activo (incluido Eje, que antes quedaba afuera de esta
+           condición y no filtraba nada): filteredArticles, client-side
+           sobre el listado ya cargado completo. -->
       <template v-if="hasAnyFilter">
-        <p class="srch__count">
-          <strong>{{ store.filteredArticles.length }}</strong>
-          {{ store.filteredArticles.length === 1 ? 'resultado' : 'resultados' }}
+        <p v-if="isSearchPending" class="srch__count">Buscando…</p>
+        <p v-else class="srch__count">
+          <strong>{{ results.length }}</strong>
+          {{ results.length === 1 ? 'resultado' : 'resultados' }}
           <template v-if="store.filters.query">
             para <em>«{{ store.filters.query }}»</em>
           </template>
         </p>
 
-        <div v-if="store.filteredArticles.length" class="grid-3">
-          <ArticleCard
-            v-for="article in store.filteredArticles"
-            :key="article.slug"
-            :article="article"
-          />
+        <div v-if="!isSearchPending && results.length" class="grid-3">
+          <ArticleCard v-for="article in results" :key="article.slug" :article="article" />
         </div>
 
-        <div v-else class="empty">
+        <div v-else-if="!isSearchPending" class="empty">
           <h2 class="empty__title">Sin coincidencias</h2>
           <p class="empty__desc">
             No encontramos nada con esos filtros. Probá con otra combinación, una palabra más
@@ -108,8 +106,16 @@ const hasAnyFilter = computed(
   () =>
     !!store.filters.query ||
     store.filters.audience !== null ||
+    store.filters.track !== null ||
     store.filters.level !== null ||
     store.filters.scope !== null
+)
+
+// Con texto activo, esperamos a searchResults (server-side); todavía no
+// llegó la primera respuesta apenas se tipea → isSearching + resultado null.
+const isSearchPending = computed(() => !!store.filters.query && store.isSearching)
+const results = computed(() =>
+  store.filters.query ? (store.searchResults ?? []) : store.filteredArticles
 )
 
 onMounted(() => {

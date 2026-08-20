@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { CATEGORY_THEMES } from '@/utils/theme'
 import { http, toQueryString } from '@/services/http'
 import type { Article, Category, CategorySlug, FilterState } from '@/types'
@@ -124,6 +124,32 @@ const CATEGORY_SEED: CategoryMeta[] = [
   },
 ]
 
+/** Tamaño de página al recorrer el listado — el backend clampea a 100 como máximo. */
+const FETCH_PAGE_SIZE = 100
+
+/**
+ * Trae TODAS las páginas de `GET /articles` para un set de query params dado
+ * (sin `page`, se agrega acá). Usado tanto para el listado completo (sin
+ * filtros) como para la búsqueda server-side — antes `fetchArticles()`
+ * pedía una sola página de 100 y se quedaba corto apenas el sitio superaba
+ * esa cantidad de artículos publicados (pasó en la práctica: el import
+ * masivo cargó ~187 en una sola corrida).
+ */
+async function fetchAllArticlePages(params: Record<string, string | undefined> = {}) {
+  const first = await http<Paginated<Article>>(
+    '/articles' + toQueryString({ ...params, pageSize: FETCH_PAGE_SIZE, page: 1 })
+  )
+  const items = [...first.items]
+  const totalPages = Math.ceil(first.total / FETCH_PAGE_SIZE)
+  for (let page = 2; page <= totalPages; page++) {
+    const res = await http<Paginated<Article>>(
+      '/articles' + toQueryString({ ...params, pageSize: FETCH_PAGE_SIZE, page })
+    )
+    items.push(...res.items)
+  }
+  return items
+}
+
 export const useBlogStore = defineStore('blog', () => {
   const articles = ref<Article[]>([])
   const categoriesRaw = ref<CategoryMeta[]>(CATEGORY_SEED)
@@ -137,6 +163,47 @@ export const useBlogStore = defineStore('blog', () => {
     scope: null,
     query: '',
   })
+
+  // Resultado de la búsqueda de texto server-side (título/subtítulo/
+  // extracto/contenido/tags — ver findPublished en el backend). `null`
+  // cuando no hay búsqueda de texto activa: en ese caso las vistas usan
+  // `filteredArticles` (filtro client-side sobre `articles`, ya completo).
+  const searchResults = ref<Article[] | null>(null)
+  const isSearching = ref(false)
+  let searchRequestId = 0
+
+  /** Corre (o limpia) la búsqueda server-side según `filters.query` +
+   * el resto de los filtros de la barra, que el backend también acepta. */
+  async function runSearch() {
+    const query = filters.value.query.trim()
+    if (!query) {
+      searchResults.value = null
+      isSearching.value = false
+      return
+    }
+    const requestId = ++searchRequestId
+    isSearching.value = true
+    try {
+      const items = await fetchAllArticlePages({
+        query,
+        track: filters.value.track ?? undefined,
+        audience: filters.value.audience ?? undefined,
+        level: filters.value.level ?? undefined,
+        scope: filters.value.scope ?? undefined,
+      })
+      // Descarta la respuesta si mientras tanto se disparó una búsqueda más
+      // nueva (el usuario cambió texto/filtro antes de que esta terminara).
+      if (requestId === searchRequestId) searchResults.value = items
+    } finally {
+      if (requestId === searchRequestId) isSearching.value = false
+    }
+  }
+
+  // Cualquier cambio en query o en el resto de los filtros de la barra
+  // re-dispara la búsqueda cuando hay texto activo (el backend combina
+  // todo en el mismo where). Sin texto, no pega a la red — se resuelve con
+  // filteredArticles como siempre.
+  watch(filters, runSearch, { deep: true })
 
   const categories = computed<Category[]>(() =>
     categoriesRaw.value.map((cat) => ({
@@ -155,9 +222,14 @@ export const useBlogStore = defineStore('blog', () => {
       if (filters.value.level && article.level !== filters.value.level) return false
       if (filters.value.scope && article.scope !== filters.value.scope) return false
       if (filters.value.query) {
+        // Fallback client-side (ej. si falló la búsqueda server-side): no
+        // llega a subtítulo/contenido, que solo la API puede buscar — ver
+        // `searchResults`/`runSearch`, que es lo que usa SearchView.vue
+        // cuando hay texto.
         const q = filters.value.query.toLowerCase()
         return (
           article.title.toLowerCase().includes(q) ||
+          article.subtitle.toLowerCase().includes(q) ||
           article.excerpt.toLowerCase().includes(q) ||
           article.keywords.some((k) => k.toLowerCase().includes(q))
         )
@@ -185,14 +257,13 @@ export const useBlogStore = defineStore('blog', () => {
     return categories.value.find((c) => c.slug === slug)
   }
 
-  /** Trae los artículos publicados. pageSize generoso: las vistas públicas
-   * todavía filtran/paginan client-side sobre el array completo, no hay UI
-   * de paginación de servidor todavía. */
+  /** Trae TODOS los artículos publicados (recorre todas las páginas, ver
+   * `fetchAllArticlePages`): las vistas públicas todavía filtran client-side
+   * sobre el array completo, no hay UI de paginación de servidor todavía. */
   async function fetchArticles() {
     isLoading.value = true
     try {
-      const res = await http<Paginated<Article>>('/articles' + toQueryString({ pageSize: 100 }))
-      articles.value = res.items
+      articles.value = await fetchAllArticlePages()
     } finally {
       isLoading.value = false
     }
@@ -217,6 +288,9 @@ export const useBlogStore = defineStore('blog', () => {
     filters,
     categories,
     filteredArticles,
+    searchResults,
+    isSearching,
+    runSearch,
     setFilter,
     clearFilters,
     getCategoryBySlug,
