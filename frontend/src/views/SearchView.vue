@@ -42,6 +42,8 @@
                activo (incluido Eje, que antes no filtraba nada): filteredArticles,
                client-side sobre el listado ya cargado completo. -->
           <template v-if="hasAnyFilter">
+            <ActiveTrackNotice />
+
             <p v-if="isSearchPending" class="srch__count">Buscando…</p>
             <p v-else class="srch__count">
               <strong>{{ results.length }}</strong>
@@ -100,6 +102,7 @@ import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import FilterSidebar from '@/components/blog/FilterSidebar.vue'
+import ActiveTrackNotice from '@/components/blog/ActiveTrackNotice.vue'
 
 const route = useRoute()
 const store = useBlogStore()

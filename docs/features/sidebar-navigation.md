@@ -60,14 +60,30 @@ Fix: `.srch__sidebar`/`.cat-sidebar` suman `max-height: calc(100vh - 96px - 32px
 
 Verificado en vivo: a 1280×800, el sidebar mide 672px visibles (`max-height` calculado) contra 1239px de contenido real, con `overflow-y: auto` activo y `scrollTop` respondiendo — todos los grupos de filtros son alcanzables con scroll propio, sin depender de la longitud de la lista de resultados.
 
+### Corrección: el Eje deja de filtrar y pasa a ordenar
+
+Reportado por el propio usuario (le pasó a él mismo probando el sitio): el Eje elegido en el Home (`TrackSwitch`, persistido en `localStorage` vía `stores/track.ts`) se sincronizaba como filtro duro en `FilterSidebar.vue` al entrar a `/buscar` o `/categoria/:slug` — igual que audiencia/nivel/alcance. Si alguien con "Cuidado de personas mayores" elegido en el Home buscaba un tema que solo existe en el eje de AT, veía "sin resultados" (o una grilla más chica) sin ninguna pista visible de que el Eje elegido meses atrás seguía activo y estaba recortando la búsqueda.
+
+Se evaluó primero solo agregar un aviso visible (`ActiveTrackNotice.vue`, chip arriba de los resultados con el eje activo y un botón para sacarlo) — necesario en cualquier caso para que el estado no sea invisible, pero no resuelve el problema de fondo: seguía ocultando contenido real. La solución completa, decidida por el usuario: **el Eje deja de ser un filtro duro y pasa a ser un criterio de orden** — los artículos del eje elegido aparecen primero, el resto se muestra igual, a continuación, nunca se ocultan. Esto además alinea `filters.track` con el principio ya declarado para `TrackSwitch` en `docs/features/content-tracks.md` ("filtro suave... nunca oculta contenido, solo lo prioriza/atenúa"), que la implementación original de `FilterSidebar.vue` no respetaba.
+
+Implementación (`stores/blog.ts`):
+
+- `sortByTrackPriority(list, track)`: si no hay track activo devuelve la lista tal cual; si hay, hace `[...list].sort(...)` poniendo primero los artículos con `article.tracks.includes(track)` — `Array.prototype.sort` es estable (spec ES2019+), así que dentro de cada grupo el orden original (por fecha) no se altera.
+- `filteredArticles` (listado client-side): ya no descarta artículos por track, solo aplica `sortByTrackPriority` al final.
+- `runSearch()` (búsqueda server-side): **ya no manda `track` como query param al backend** — mandarlo lo convertiría otra vez en un `where` que descarta resultados del lado del servidor. Se sigue pidiendo con el resto de filtros (audiencia/nivel/alcance/query, esos sí duros) y el reordenamiento por track se aplica en el cliente sobre la respuesta completa.
+- El componente `ActiveTrackNotice.vue` se mantiene (ahora dice "Priorizando X — el resto de los temas también aparece, más abajo" en vez de "Mostrando solo X"), porque sigue siendo útil explicar por qué el orden no es estrictamente cronológico.
+
+Verificado en vivo: con "Cuidado de personas mayores" como eje activo, buscar "autismo" (tema casi exclusivo de AT) devuelve **73 resultados** (antes, con filtro duro, devolvía 31 — los mismos 31 que hoy aparecen primero). El artículo #31 de la grilla es el último con track "cuidado-de-mayores" y el #32 ya es de "Acompañamiento Terapéutico" — el corte de prioridad cae exactamente donde debe, sin que se pierda ningún resultado.
+
 ## Dónde vive
 
-| Archivo                                                  | Qué hace                                                                                                                          |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `frontend/src/components/blog/FilterSidebar.vue` (nuevo) | Panel vertical: atajos por persona + 4 grupos de facetas con contador, acordeón en mobile. Reemplaza a `FilterBar.vue` (borrado). |
-| `frontend/src/components/layout/AppHeader.vue`           | Mega-menú desktop y drawer mobile agrupados por Eje (`trackGroups`).                                                              |
-| `frontend/src/views/SearchView.vue`                      | Layout de 2 columnas: `FilterSidebar` + resultados.                                                                               |
-| `frontend/src/views/CategoryView.vue`                    | Layout de 2 columnas: `FilterSidebar` (acotado a la categoría) + grilla.                                                          |
+| Archivo                                                      | Qué hace                                                                                                                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `frontend/src/components/blog/FilterSidebar.vue` (nuevo)     | Panel vertical: atajos por persona + 4 grupos de facetas con contador, acordeón en mobile. Reemplaza a `FilterBar.vue` (borrado).                            |
+| `frontend/src/components/blog/ActiveTrackNotice.vue` (nuevo) | Aviso visible en `/buscar` y `/categoria/:slug` cuando hay un Eje activo (Home o sidebar) — explica que está reordenando resultados, con botón para sacarlo. |
+| `frontend/src/components/layout/AppHeader.vue`               | Mega-menú desktop y drawer mobile agrupados por Eje (`trackGroups`).                                                                                         |
+| `frontend/src/views/SearchView.vue`                          | Layout de 2 columnas: `FilterSidebar` + resultados.                                                                                                          |
+| `frontend/src/views/CategoryView.vue`                        | Layout de 2 columnas: `FilterSidebar` (acotado a la categoría) + grilla.                                                                                     |
 
 No hay cambios de schema ni de endpoints — es 100% frontend, sobre datos que la API ya devolvía.
 

@@ -50,6 +50,8 @@
         <FilterSidebar class="cat-sidebar" :articles="categoryArticlesUnfiltered" />
 
         <div class="cat-results">
+          <ActiveTrackNotice />
+
           <div v-if="categoryArticles.length" class="grid-3">
             <ArticleCard
               v-for="article in categoryArticles"
@@ -83,6 +85,7 @@ import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import FilterSidebar from '@/components/blog/FilterSidebar.vue'
+import ActiveTrackNotice from '@/components/blog/ActiveTrackNotice.vue'
 import type { CategorySlug } from '@/types'
 
 const route = useRoute()

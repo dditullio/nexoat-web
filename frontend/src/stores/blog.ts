@@ -150,6 +150,25 @@ async function fetchAllArticlePages(params: Record<string, string | undefined> =
   return items
 }
 
+/**
+ * El Eje elegido (Home o el grupo "Eje" del sidebar) NUNCA oculta
+ * resultados — a diferencia de audiencia/nivel/alcance, que sí son
+ * filtros duros. Antes `track` filtraba igual que los demás y eso
+ * confundía: alguien buscaba algo fuera de su eje preferido y veía "sin
+ * resultados" (o una grilla más chica) sin ninguna pista de por qué (bug
+ * real reportado por el propio usuario, ver docs/features/sidebar-navigation.md).
+ * Ahora solo reordena: los artículos del eje elegido van primero,
+ * el resto se muestra igual, a continuación. `Array.prototype.sort` es
+ * estable (spec desde ES2019), así que el orden relativo dentro de cada
+ * grupo (ej. por fecha) no se altera.
+ */
+function sortByTrackPriority(list: Article[], track: FilterState['track']): Article[] {
+  if (!track) return list
+  return [...list].sort(
+    (a, b) => Number(!a.tracks.includes(track)) - Number(!b.tracks.includes(track))
+  )
+}
+
 export const useBlogStore = defineStore('blog', () => {
   const articles = ref<Article[]>([])
   const categoriesRaw = ref<CategoryMeta[]>(CATEGORY_SEED)
@@ -184,16 +203,20 @@ export const useBlogStore = defineStore('blog', () => {
     const requestId = ++searchRequestId
     isSearching.value = true
     try {
+      // `track` no se manda al backend: es un orden de prioridad, no un
+      // filtro duro (ver `sortByTrackPriority`) — mandarlo acá lo
+      // convertiría en un where que descarta resultados del servidor.
       const items = await fetchAllArticlePages({
         query,
-        track: filters.value.track ?? undefined,
         audience: filters.value.audience ?? undefined,
         level: filters.value.level ?? undefined,
         scope: filters.value.scope ?? undefined,
       })
       // Descarta la respuesta si mientras tanto se disparó una búsqueda más
       // nueva (el usuario cambió texto/filtro antes de que esta terminara).
-      if (requestId === searchRequestId) searchResults.value = items
+      if (requestId === searchRequestId) {
+        searchResults.value = sortByTrackPriority(items, filters.value.track)
+      }
     } finally {
       if (requestId === searchRequestId) isSearching.value = false
     }
@@ -213,12 +236,11 @@ export const useBlogStore = defineStore('blog', () => {
     }))
   )
 
-  const filteredArticles = computed(() =>
-    articles.value.filter((article) => {
+  const filteredArticles = computed(() => {
+    const filtered = articles.value.filter((article) => {
       if (filters.value.category && !article.categories.includes(filters.value.category))
         return false
       if (filters.value.audience && !article.audience.includes(filters.value.audience)) return false
-      if (filters.value.track && !article.tracks.includes(filters.value.track)) return false
       if (filters.value.level && article.level !== filters.value.level) return false
       if (filters.value.scope && article.scope !== filters.value.scope) return false
       if (filters.value.query) {
@@ -236,7 +258,8 @@ export const useBlogStore = defineStore('blog', () => {
       }
       return true
     })
-  )
+    return sortByTrackPriority(filtered, filters.value.track)
+  })
 
   function setFilter(key: keyof FilterState, value: string | null) {
     ;(filters.value as Record<string, unknown>)[key] = value
