@@ -11,9 +11,9 @@ const STORAGE_KEY = 'nexoat-track'
  * docs/features/content-tracks.md.
  *
  * Distinto de `filters.track` en stores/blog.ts, que es el filtro duro y
- * explícito de una vista puntual (categoría/búsqueda) — FilterBar sincroniza
- * su valor inicial desde acá, pero limpiarlo en esa vista no toca esta
- * preferencia global.
+ * explícito de una vista puntual (categoría/búsqueda) — FilterSidebar.vue
+ * sincroniza su valor inicial desde acá, pero limpiarlo en esa vista no
+ * toca esta preferencia global.
  */
 export const useTrackStore = defineStore('track', () => {
   const activeTrack = ref<ContentTrack | null>(null)

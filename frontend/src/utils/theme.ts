@@ -237,6 +237,44 @@ export const TRACK_CHIPS: Record<ContentTrack, { bg: string; text: string; label
   },
 }
 
+/**
+ * Espejo frontend-only de `CATEGORY_TRACK_MAP` (backend/src/articles/
+ * track.util.ts) — mapeo categoría→eje ya confirmado con el usuario (ver
+ * docs/features/content-tracks.md, "Mapeo categoría → eje"). Se duplica acá
+ * a propósito (mismo criterio que `CATEGORY_SEED`) para agrupar el
+ * mega-menú "Temas" del header (`AppHeader.vue`).
+ *
+ * A propósito NO se deriva de `article.tracks` en runtime: es una decisión
+ * editorial estable para la navegación, y los `tracks` reales por artículo
+ * se solapan mucho entre categorías (ej. casi cualquier categoría tiene
+ * algún artículo con "AT") — derivarlo en vivo vació la columna de
+ * "Cuidado de personas mayores" y desbordó la de AT. El filtrado real de
+ * artículos (`FilterSidebar.vue`, `/buscar`) sigue usando `article.tracks`
+ * tal cual — esto es solo para el menú.
+ *
+ * Las categorías ausentes son intencionalmente "sin eje prioritario" (ej.
+ * "Familia y Vínculos", "Cuidar al Cuidador") — caen en "Otros temas".
+ */
+export const CATEGORY_TRACK_MAP: Partial<Record<CategorySlug, ContentTrack>> = {
+  'acompanamiento-terapeutico': 'acompanamiento-terapeutico',
+  'neurodiversidad-y-discapacidad': 'acompanamiento-terapeutico',
+  'salud-mental': 'acompanamiento-terapeutico',
+  'autismo-y-tea': 'acompanamiento-terapeutico',
+  'discapacidad-intelectual-y-psicosocial': 'acompanamiento-terapeutico',
+
+  'guia-cuidador': 'cuidado-de-mayores',
+  'patologias-en-la-vejez': 'cuidado-de-mayores',
+  'maltrato-y-abuso': 'cuidado-de-mayores',
+  'aspectos-legales-y-derechos': 'cuidado-de-mayores',
+  'herramientas-practicas': 'cuidado-de-mayores',
+
+  'redaccion-clinica-y-objetivos': 'recursos-profesionales-at',
+  'encuadre-honorarios-y-facturacion': 'recursos-profesionales-at',
+  'organizacion-y-salud-ocupacional': 'recursos-profesionales-at',
+  'recursos-y-materiales-de-trabajo': 'recursos-profesionales-at',
+  'equipo-familias-y-capacitacion': 'recursos-profesionales-at',
+}
+
 export function getCategoryTheme(slug: CategorySlug) {
   return CATEGORY_THEMES[slug] ?? CATEGORY_THEMES['acompanamiento-terapeutico']
 }

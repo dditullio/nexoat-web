@@ -24,6 +24,7 @@
 - [`features/content-tracks.md`](features/content-tracks.md) — Eje temático (`ContentTrack`: acompañamiento terapéutico / cuidado de mayores / recursos profesionales AT) como filtro suave y persistente, para que cada público vea menos "ruido" del otro sin ocultarlo. **Estado: implementado y desplegado a producción (19 de agosto de 2026).**
 - [`features/analytics-umami.md`](features/analytics-umami.md) — Analítica propia (Umami self-hosted, sin cookies) en vez de Google Analytics, por la sensibilidad del contenido del sitio. **Estado: implementado y verificado en producción.**
 - [`features/public-oauth-login.md`](features/public-oauth-login.md) — Login con Google/Facebook para lectores públicos en `/ingresar` y `/registrarme` (el cableado de `auth-and-admin-dashboard.md` hasta ahora solo lo usaba el admin); de paso corrigió dos bugs preexistentes de Fastify/Passport que rompían el flujo de OAuth (incluido para el admin). **Estado: implementado y desplegado a producción (19 de agosto de 2026).**
+- [`features/sidebar-navigation.md`](features/sidebar-navigation.md) — Mega-menú del header agrupado por Eje (en vez de lista plana de 20 categorías) + `FilterSidebar.vue`, panel vertical de facetas con contadores y atajos por persona en `/buscar` y `/categoria/:slug` (reemplaza a `FilterBar.vue`). **Estado: implementado.**
 
 ## Referencias relacionadas (fuera de `/docs`)
 

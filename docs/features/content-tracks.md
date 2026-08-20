@@ -57,7 +57,7 @@ Usado para (a) sugerir automáticamente los tracks de un artículo nuevo según 
 
 Un artículo puede tener varias categorías de ejes distintos — su `tracks` backfill es la unión de los ejes de sus categorías (excluyendo las "sin eje prioritario", que no aportan track por sí solas). Si un artículo termina sin ningún track tras el backfill (todas sus categorías son "sin eje prioritario"), queda `tracks: []` — se trata igual que "ambos", visible siempre, sin desambiguar.
 
-Esta tabla vive **una sola vez**, en `backend/src/articles/track.util.ts` (no se duplica en frontend — a diferencia de `CATEGORY_SEED`, que sí está duplicado porque el frontend lo necesita para el fallback estático, el mapeo de tracks solo lo usa el backend: backfill y auto-sugerencia son operaciones de servidor).
+Esta tabla vivía originalmente **una sola vez**, en `backend/src/articles/track.util.ts` (a diferencia de `CATEGORY_SEED`, que sí está duplicado porque el frontend lo necesita para el fallback estático). **Actualización (ver `docs/features/sidebar-navigation.md`):** se sumó un espejo frontend-only en `frontend/src/utils/theme.ts` (`CATEGORY_TRACK_MAP`), porque el mega-menú "Temas" del header necesitaba esta misma agrupación editorial estable — derivarla en vivo de `article.tracks` (que se solapa mucho entre categorías) desbordaba el menú y agrupaba mal. El backfill y la auto-sugerencia al crear un artículo siguen usando exclusivamente la versión del backend; el frontend solo la usa para agrupar el menú de navegación, nunca para filtrar artículos (eso sigue siendo `article.tracks` real).
 
 ### 4. Backend
 

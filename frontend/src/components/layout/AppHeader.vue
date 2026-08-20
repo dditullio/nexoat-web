@@ -36,23 +36,33 @@
           </button>
 
           <Transition name="mega">
+            <!-- Agrupado por Eje (no lista plana de 19 categorías): con
+                 170+ artículos, alguien que recién llega necesita una
+                 primera pista de "por dónde empezar según quién es" antes
+                 de ver el detalle de cada tema. Ver docs/features/
+                 sidebar-navigation.md. -->
             <div v-show="showCats" class="mega">
-              <RouterLink
-                v-for="cat in store.categories"
-                :key="cat.slug"
-                :to="`/categoria/${cat.slug}`"
-                class="mega__item"
-                @click="showCats = false"
-              >
-                <span
-                  class="mega__glyph"
-                  :style="{ background: cat.bg, color: cat.accent }"
-                  aria-hidden="true"
-                  >{{ cat.icon }}</span
+              <div v-for="group in trackGroups" :key="group.label" class="mega__col">
+                <span class="mega__col-label" :style="{ color: group.color }">{{
+                  group.label
+                }}</span>
+                <RouterLink
+                  v-for="cat in group.categories"
+                  :key="cat.slug"
+                  :to="`/categoria/${cat.slug}`"
+                  class="mega__item"
+                  @click="showCats = false"
                 >
-                <span class="mega__name">{{ cat.name }}</span>
-                <span class="mega__count">{{ cat.articleCount }}</span>
-              </RouterLink>
+                  <span
+                    class="mega__glyph"
+                    :style="{ background: cat.bg, color: cat.accent }"
+                    aria-hidden="true"
+                    >{{ cat.icon }}</span
+                  >
+                  <span class="mega__name">{{ cat.name }}</span>
+                  <span class="mega__count">{{ cat.articleCount }}</span>
+                </RouterLink>
+              </div>
             </div>
           </Transition>
         </div>
@@ -145,17 +155,25 @@
             >Buscar</RouterLink
           >
 
-          <span class="eyebrow drawer__section">Temas</span>
-          <RouterLink
-            v-for="cat in store.categories"
-            :key="cat.slug"
-            :to="`/categoria/${cat.slug}`"
-            class="drawer__link drawer__link--sub"
-            @click="menuOpen = false"
-          >
-            <span class="drawer__dot" :style="{ background: cat.accent }" aria-hidden="true"></span>
-            {{ cat.name }}
-          </RouterLink>
+          <template v-for="group in trackGroups" :key="group.label">
+            <span class="eyebrow drawer__section" :style="{ color: group.color }">{{
+              group.label
+            }}</span>
+            <RouterLink
+              v-for="cat in group.categories"
+              :key="cat.slug"
+              :to="`/categoria/${cat.slug}`"
+              class="drawer__link drawer__link--sub"
+              @click="menuOpen = false"
+            >
+              <span
+                class="drawer__dot"
+                :style="{ background: cat.accent }"
+                aria-hidden="true"
+              ></span>
+              {{ cat.name }}
+            </RouterLink>
+          </template>
         </nav>
 
         <div class="drawer__foot">
@@ -189,11 +207,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import { useAuthStore } from '@/stores/auth'
+import { CATEGORY_TRACK_MAP, TRACK_CHIPS } from '@/utils/theme'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 import NewsletterModal from '@/components/blog/NewsletterModal.vue'
+import type { Category, ContentTrack } from '@/types'
 
 const store = useBlogStore()
 const authStore = useAuthStore()
@@ -201,6 +221,60 @@ const showCats = ref(false)
 const menuOpen = ref(false)
 const scrolled = ref(false)
 const showNewsletter = ref(false)
+
+const TRACKS: ContentTrack[] = [
+  'acompanamiento-terapeutico',
+  'cuidado-de-mayores',
+  'recursos-profesionales-at',
+]
+const TRACK_DOT: Record<ContentTrack, string> = {
+  'acompanamiento-terapeutico': 'var(--color-primary-dark)',
+  'cuidado-de-mayores': 'var(--color-accent-dark)',
+  'recursos-profesionales-at': 'var(--color-ochre)',
+}
+
+/**
+ * Agrupa las categorías del menú "Temas" por Eje temático, usando el mapeo
+ * curado `CATEGORY_TRACK_MAP` (no los `tracks` reales de los artículos
+ * cargados — ver el comentario de esa constante en `utils/theme.ts`: los
+ * tracks por artículo se solapan mucho entre categorías y desbordaban el
+ * menú además de agrupar mal). Las categorías ausentes del mapeo (ej.
+ * "Familia y Vínculos", intencionalmente "sin eje prioritario") van a un
+ * grupo "Otros temas".
+ */
+interface TrackGroup {
+  track: ContentTrack | null
+  label: string
+  color: string
+  categories: Category[]
+}
+
+const trackGroups = computed<TrackGroup[]>(() => {
+  const groups: TrackGroup[] = TRACKS.map((track) => ({
+    track,
+    label: TRACK_CHIPS[track].label,
+    color: TRACK_DOT[track],
+    categories: [],
+  }))
+  const otros: Category[] = []
+
+  for (const cat of store.categories) {
+    const track = CATEGORY_TRACK_MAP[cat.slug]
+    const group = groups.find((g) => g.track === track)
+    ;(group?.categories ?? otros).push(cat)
+  }
+
+  if (otros.length) {
+    groups.push({
+      track: null,
+      label: 'Otros temas',
+      color: 'var(--color-ink-faint)',
+      categories: otros,
+    })
+  }
+
+  return groups.filter((g) => g.categories.length)
+})
 
 function onLogout() {
   authStore.logout()
@@ -255,6 +329,12 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   height: 72px;
+  /* Ancla el mega-menú acá (no en `.hdr__drop`, ver esa regla): así su
+     `left: 0` alinea contra el borde del header/container, no contra la
+     posición del botón "Temas" — que no está pegado a ese borde, así que
+     un `left: 0` relativo a él hacía que el menú se saliera por la
+     derecha en ventanas angostas. */
+  position: relative;
 }
 
 /* Logo */
@@ -316,25 +396,66 @@ onBeforeUnmount(() => {
   transform: rotate(180deg);
 }
 
-/* Mega menú */
-.hdr__drop {
-  position: relative;
-}
+/* Mega menú — `.hdr__drop` NO lleva `position: relative`: el ancla de
+   `.mega` es `.hdr__inner` (ver esa regla), a propósito. */
 
 .mega {
   position: absolute;
   top: calc(100% + 10px);
-  left: 0;
+  /* 32px = el `padding-inline` de `.container` (ver main.css) — alinea el
+     borde del menú con el logo/contenido, no con el borde de la ventana.
+     Fijo (no depende del viewport): el ancla es la propia caja de
+     `.hdr__inner`, cuyo padding es ese mismo valor sin importar dónde
+     caiga esa caja en la pantalla. Este menú solo es alcanzable en
+     viewports ≥900px, por encima del breakpoint mobile que baja ese
+     padding a 20px, así que el valor fijo es seguro acá. */
+  left: 32px;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-line-light);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
-  padding: 10px;
-  min-width: 620px;
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 6px;
   z-index: 10;
+  /* 4 columnas × 180px + separadores ≈ 800px, entra sobrado bajo este
+     máximo incluso en el viewport más angosto donde este menú es
+     alcanzable (900px — por debajo pasa a ser el drawer mobile). No hace
+     falta wrap ni scroll: NO usar `flex-wrap`/`overflow-x` acá — con
+     `position: absolute` y ancho automático, `flex-wrap: wrap` colapsa el
+     contenedor a una sola columna por fila en vez de intentar que entren
+     todas (comprobado en vivo: se probó y se descartó). */
+  max-width: calc(100vw - 64px);
+}
+
+.mega__col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 180px;
+  flex-shrink: 0;
+  padding-inline: 6px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  /* Explícito: si solo se declara `overflow-y`, la spec de CSS fuerza
+     `overflow-x` al mismo valor no-visible (acá se veía como una
+     scrollbar horizontal fea por columna) — hay que declarar los dos ejes
+     a mano para que no se acoplen. */
+  overflow-x: hidden;
+}
+
+.mega__col + .mega__col {
+  border-left: 1px solid var(--color-line-faint);
+  margin-left: 6px;
+  padding-left: 16px;
+}
+
+.mega__col-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  padding: 4px 8px 10px;
 }
 
 .mega__item {
@@ -369,6 +490,11 @@ onBeforeUnmount(() => {
 
 .mega__name {
   flex: 1;
+  /* Sin esto, un flex item no se encoge por debajo de su ancho de
+     contenido en una sola línea (min-width:auto por default) y un nombre
+     largo ("Acompañamiento Terapéutico") desborda la columna en vez de
+     hacer wrap — con min-width:0 sí puede achicarse y partir en líneas. */
+  min-width: 0;
   line-height: 1.35;
 }
 

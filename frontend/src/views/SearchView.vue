@@ -32,61 +32,64 @@
         <button type="submit" class="srch__go">Buscar</button>
       </form>
 
-      <FilterBar class="srch__filters" />
+      <div class="srch__layout">
+        <FilterSidebar class="srch__sidebar" />
 
-      <!-- Con texto de búsqueda: la lista sale de searchResults (server-side,
-           busca en título/subtítulo/extracto/contenido/tags — ver
-           runSearch() en stores/blog.ts). Sin texto pero con algún filtro de
-           la barra activo (incluido Eje, que antes quedaba afuera de esta
-           condición y no filtraba nada): filteredArticles, client-side
-           sobre el listado ya cargado completo. -->
-      <template v-if="hasAnyFilter">
-        <p v-if="isSearchPending" class="srch__count">Buscando…</p>
-        <p v-else class="srch__count">
-          <strong>{{ results.length }}</strong>
-          {{ results.length === 1 ? 'resultado' : 'resultados' }}
-          <template v-if="store.filters.query">
-            para <em>«{{ store.filters.query }}»</em>
+        <div class="srch__results">
+          <!-- Con texto de búsqueda: la lista sale de searchResults (server-side,
+               busca en título/subtítulo/extracto/contenido/tags — ver
+               runSearch() en stores/blog.ts). Sin texto pero con algún filtro
+               activo (incluido Eje, que antes no filtraba nada): filteredArticles,
+               client-side sobre el listado ya cargado completo. -->
+          <template v-if="hasAnyFilter">
+            <p v-if="isSearchPending" class="srch__count">Buscando…</p>
+            <p v-else class="srch__count">
+              <strong>{{ results.length }}</strong>
+              {{ results.length === 1 ? 'resultado' : 'resultados' }}
+              <template v-if="store.filters.query">
+                para <em>«{{ store.filters.query }}»</em>
+              </template>
+            </p>
+
+            <div v-if="!isSearchPending && results.length" class="grid-3">
+              <ArticleCard v-for="article in results" :key="article.slug" :article="article" />
+            </div>
+
+            <div v-else-if="!isSearchPending" class="empty">
+              <h2 class="empty__title">Sin coincidencias</h2>
+              <p class="empty__desc">
+                No encontramos nada con esos filtros. Probá con otra combinación, una palabra más
+                general, o entrá por tema.
+              </p>
+              <div class="empty__cats">
+                <RouterLink
+                  v-for="cat in store.categories.slice(0, 6)"
+                  :key="cat.slug"
+                  :to="`/categoria/${cat.slug}`"
+                  class="empty__cat"
+                >
+                  <span class="empty__cat-dot" :style="{ background: cat.accent }"></span>
+                  {{ cat.name }}
+                </RouterLink>
+              </div>
+            </div>
           </template>
-        </p>
 
-        <div v-if="!isSearchPending && results.length" class="grid-3">
-          <ArticleCard v-for="article in results" :key="article.slug" :article="article" />
+          <!-- Estado inicial: sin texto ni filtros -->
+          <template v-else>
+            <div class="srch__browse">
+              <span class="eyebrow">O explorá</span>
+              <div class="grid-3">
+                <ArticleCard
+                  v-for="article in store.articles.slice(0, 6)"
+                  :key="article.slug"
+                  :article="article"
+                />
+              </div>
+            </div>
+          </template>
         </div>
-
-        <div v-else-if="!isSearchPending" class="empty">
-          <h2 class="empty__title">Sin coincidencias</h2>
-          <p class="empty__desc">
-            No encontramos nada con esos filtros. Probá con otra combinación, una palabra más
-            general, o entrá por tema.
-          </p>
-          <div class="empty__cats">
-            <RouterLink
-              v-for="cat in store.categories.slice(0, 6)"
-              :key="cat.slug"
-              :to="`/categoria/${cat.slug}`"
-              class="empty__cat"
-            >
-              <span class="empty__cat-dot" :style="{ background: cat.accent }"></span>
-              {{ cat.name }}
-            </RouterLink>
-          </div>
-        </div>
-      </template>
-
-      <!-- Estado inicial: sin texto ni filtros de la barra -->
-      <template v-else>
-        <div class="srch__browse">
-          <span class="eyebrow">O explorá</span>
-          <div class="grid-3">
-            <ArticleCard
-              v-for="article in store.articles.slice(0, 6)"
-              :key="article.slug"
-              :article="article"
-            />
-          </div>
-        </div>
-      </template>
+      </div>
     </div>
   </div>
 </template>
@@ -96,7 +99,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
-import FilterBar from '@/components/blog/FilterBar.vue'
+import FilterSidebar from '@/components/blog/FilterSidebar.vue'
 
 const route = useRoute()
 const store = useBlogStore()
@@ -217,9 +220,30 @@ function doSearch() {
   background: var(--color-primary-dark);
 }
 
-.srch__filters {
-  align-self: flex-start;
-  max-width: 100%;
+/* Layout de 2 columnas: sidebar de facetas + resultados */
+.srch__layout {
+  display: grid;
+  grid-template-columns: 272px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.srch__sidebar {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 96px - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+.srch__results {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
 }
 
 .srch__count {
@@ -317,6 +341,18 @@ function doSearch() {
 @media (max-width: 1024px) {
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .srch__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .srch__sidebar {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 

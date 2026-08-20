@@ -44,18 +44,28 @@
     </header>
 
     <div class="container cat-body">
-      <FilterBar />
+      <div class="cat-layout">
+        <!-- `articles` acota los contadores de facetas al universo de esta
+             categoría (no al sitio entero) — ver FilterSidebar.vue. -->
+        <FilterSidebar class="cat-sidebar" :articles="categoryArticlesUnfiltered" />
 
-      <div v-if="categoryArticles.length" class="grid-3">
-        <ArticleCard v-for="article in categoryArticles" :key="article.slug" :article="article" />
-      </div>
+        <div class="cat-results">
+          <div v-if="categoryArticles.length" class="grid-3">
+            <ArticleCard
+              v-for="article in categoryArticles"
+              :key="article.slug"
+              :article="article"
+            />
+          </div>
 
-      <div v-else class="empty">
-        <h2 class="empty__title">Nada por acá todavía</h2>
-        <p class="empty__desc">
-          No hay artículos en este tema con los filtros que elegiste. Probá quitándolos.
-        </p>
-        <button class="btn btn--primary" @click="store.clearFilters()">Ver todos</button>
+          <div v-else class="empty">
+            <h2 class="empty__title">Nada por acá todavía</h2>
+            <p class="empty__desc">
+              No hay artículos en este tema con los filtros que elegiste. Probá quitándolos.
+            </p>
+            <button class="btn btn--primary" @click="store.clearFilters()">Ver todos</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -72,7 +82,7 @@ import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
-import FilterBar from '@/components/blog/FilterBar.vue'
+import FilterSidebar from '@/components/blog/FilterSidebar.vue'
 import type { CategorySlug } from '@/types'
 
 const route = useRoute()
@@ -80,6 +90,12 @@ const store = useBlogStore()
 
 const slug = computed(() => route.params.slug as CategorySlug)
 const category = computed(() => store.getCategoryBySlug(slug.value))
+
+// Sin filtros de la barra (solo acotado a la categoría) — es lo que
+// FilterSidebar usa como universo para calcular sus propios contadores.
+const categoryArticlesUnfiltered = computed(() =>
+  store.articles.filter((a) => a.categories.includes(slug.value))
+)
 
 const categoryArticles = computed(() =>
   store.filteredArticles.filter((a) => a.categories.includes(slug.value))
@@ -230,9 +246,28 @@ watch(slug, () => store.clearFilters(), { immediate: true })
 /* Cuerpo */
 .cat-body {
   padding-block: 36px 96px;
-  display: flex;
-  flex-direction: column;
+}
+
+.cat-layout {
+  display: grid;
+  grid-template-columns: 272px 1fr;
   gap: 32px;
+  align-items: start;
+}
+
+.cat-sidebar {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 96px - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+.cat-results {
+  min-width: 0;
 }
 
 .grid-3 {
@@ -275,6 +310,18 @@ watch(slug, () => store.clearFilters(), { immediate: true })
 @media (max-width: 1024px) {
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .cat-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cat-sidebar {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 
