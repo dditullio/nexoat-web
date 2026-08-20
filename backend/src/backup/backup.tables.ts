@@ -58,6 +58,22 @@ export const BACKUP_TABLES: BackupTable[] = [
   },
 ]
 
+/**
+ * Subconjunto de `BACKUP_TABLES` que es "contenido editorial" — lo que
+ * cambia al escribir/reclasificar artículos, no lo que identifica cuentas o
+ * quién hizo qué. Usado por la restauración "solo contenido" del panel
+ * (ver docs/features/database-backups.md, sección "Traer solo el contenido
+ * a local"): deja `users`, `oauth_accounts`, `audit_logs` y
+ * `newsletter_subscribers` intactos.
+ */
+export const CONTENT_TABLE_NAMES = [
+  'categories',
+  'tags',
+  'articles',
+  'article_categories',
+  'article_tags',
+]
+
 /** Versión del formato del zip — un archivo de una versión mayor se rechaza. */
 export const BACKUP_FORMAT_VERSION = 1
 

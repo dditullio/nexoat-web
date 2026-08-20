@@ -120,11 +120,14 @@ export interface BackupSummary {
 
 export interface RestoreResult {
   filename: string
+  /** Solo trae claves de las tablas realmente tocadas (ver `contentOnly`). */
   counts: Record<string, number>
   /** Respaldo automático del estado previo, por si la restauración fue un error. */
   safetyBackup: string
   source: BackupMetadata['source']
   backupCreatedAt: string
+  /** `true` si se restauró solo contenido editorial, sin tocar usuarios/auditoría/suscriptores. */
+  contentOnly: boolean
 }
 
 /** Respuesta de /admin/settings — "publico" no aparece, siempre está visible. */

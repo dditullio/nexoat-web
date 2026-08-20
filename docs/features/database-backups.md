@@ -115,17 +115,33 @@ Node no trae API de zip (`zlib` hace deflate, no el contenedor). `jszip` es depe
 
 `@fastify/multipart` se registra globalmente en `main.ts` con el límite de imágenes (5 MB). Un zip de respaldo puede superarlo, así que la ruta de restauración por subida pasa su propio límite en `req.file({ limits: { fileSize: MAX_BACKUP_UPLOAD_BYTES } })` (50 MB) — las opciones por request pisan a las del plugin (`deepmergeAll` en el plugin, las del request van último). Así el límite de imágenes sigue intacto para el resto de la app.
 
+## Restauración "solo contenido" (traer artículos sin pisar usuarios locales)
+
+El "Restaurar" reemplaza por defecto **todas** las tablas del respaldo, `users` incluida (ver punto 5) — no sirve para el caso de "quiero los artículos reales de producción en mi máquina, pero no quiero perder mis usuarios de prueba locales". Para eso, tanto `POST /admin/backups/:filename/restore` como `POST /admin/backups/restore-upload` aceptan `?contentOnly=true`: restauran **solo** `categories`, `tags`, `articles`, `article_categories`, `article_tags` desde el mismo `.zip` de siempre — `users`, `oauth_accounts`, `audit_logs` y `newsletter_subscribers` quedan completamente intactos.
+
+En el panel (`/nexoat-admin/respaldos`) es un checkbox dentro del diálogo de confirmación de "Restaurar": **"Restaurar solo el contenido"**. El texto de advertencia y el mensaje de éxito cambian según esté marcado o no.
+
+Detalles de implementación:
+
+- `CONTENT_TABLE_NAMES` en `backup.tables.ts` es la única fuente de verdad de qué tablas cuentan como "contenido" — no se duplica el subconjunto en el controller ni en el frontend.
+- El respaldo automático `pre-restore` (red de seguridad) sigue siendo **completo** sin importar el modo elegido — el "volver atrás" nunca queda parcial.
+- El `.zip` se valida entero igual que siempre (tiene que traer las 9 tablas) — `contentOnly` decide qué tablas se **escriben**, no qué tablas tiene que traer el archivo.
+- Como `users` no se toca, el actor que ejecuta una restauración `contentOnly` nunca pierde su sesión (a diferencia de una restauración completa, que si el usuario no está en el respaldo lo desloguea).
+- `RestoreResult.counts` solo trae las claves de las tablas realmente tocadas — el frontend (`summarizeCounts` en `AdminBackupsView.vue`) filtra por eso, para no mostrar "0 usuarios" dando a entender que se vaciaron en vez de que no se tocaron.
+
+Flujo típico: crear un respaldo en producción desde `/nexoat-admin/respaldos`, descargarlo, y en el panel local usar "Restaurar desde un archivo" con el checkbox de "solo contenido" marcado.
+
 ## Endpoints
 
 Todos bajo `@Roles(Role.SUPER_ADMIN)` + `JwtAuthGuard`/`RolesGuard`, con el prefijo de versión `/v1`.
 
-| Método | Ruta                                | Qué hace                                                   |
-| ------ | ----------------------------------- | ---------------------------------------------------------- |
-| `GET`  | `/admin/backups`                    | Lista los respaldos (metadata + tamaño), más nuevo primero |
-| `POST` | `/admin/backups`                    | Crea uno nuevo; body `{ comment?: string }`                |
-| `GET`  | `/admin/backups/:filename/download` | Descarga el zip                                            |
-| `POST` | `/admin/backups/:filename/restore`  | Restaura desde un respaldo de la lista                     |
-| `POST` | `/admin/backups/restore-upload`     | Restaura desde un zip subido (multipart, campo `file`)     |
+| Método | Ruta                                | Qué hace                                                                                 |
+| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `GET`  | `/admin/backups`                    | Lista los respaldos (metadata + tamaño), más nuevo primero                               |
+| `POST` | `/admin/backups`                    | Crea uno nuevo; body `{ comment?: string }`                                              |
+| `GET`  | `/admin/backups/:filename/download` | Descarga el zip                                                                          |
+| `POST` | `/admin/backups/:filename/restore`  | Restaura desde un respaldo de la lista (`?contentOnly=true` para restringir a contenido) |
+| `POST` | `/admin/backups/restore-upload`     | Restaura desde un zip subido (multipart, campo `file`; mismo `?contentOnly=true`)        |
 
 Acciones auditadas: `backup.create` y `backup.restore` (con `filename`, `counts` y el `source` del respaldo en `metadata`).
 
@@ -165,3 +181,4 @@ Acciones auditadas: `backup.create` y `backup.restore` (con `filename`, `counts`
    - restaurar subiendo el zip descargado y confirmar el mismo resultado;
    - comprobar en `/nexoat-admin/auditoria` las entradas `backup.create` y `backup.restore`.
 3. Verificar que un usuario con rol `ADMIN` no ve el ítem en el menú y recibe 403 al llamar los endpoints.
+4. Restauración "solo contenido": con al menos un usuario local que no exista en el respaldo a restaurar, marcar el checkbox, restaurar, y confirmar que los artículos/categorías cambian pero ese usuario local sigue existiendo y la sesión no se cerró.

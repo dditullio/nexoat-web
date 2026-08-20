@@ -28,16 +28,19 @@ export async function downloadBackup(filename: string): Promise<void> {
   URL.revokeObjectURL(url)
 }
 
-export function restoreBackup(filename: string): Promise<RestoreResult> {
-  return http<RestoreResult>(`/admin/backups/${encodeURIComponent(filename)}/restore`, {
+/** `contentOnly`: restaura solo categorías/tags/artículos, sin tocar usuarios/auditoría/suscriptores. */
+export function restoreBackup(filename: string, contentOnly = false): Promise<RestoreResult> {
+  const qs = contentOnly ? '?contentOnly=true' : ''
+  return http<RestoreResult>(`/admin/backups/${encodeURIComponent(filename)}/restore${qs}`, {
     method: 'POST',
   })
 }
 
-export function restoreBackupFromFile(file: File): Promise<RestoreResult> {
+export function restoreBackupFromFile(file: File, contentOnly = false): Promise<RestoreResult> {
   const formData = new FormData()
   formData.append('file', file)
-  return http<RestoreResult>('/admin/backups/restore-upload', {
+  const qs = contentOnly ? '?contentOnly=true' : ''
+  return http<RestoreResult>(`/admin/backups/restore-upload${qs}`, {
     method: 'POST',
     body: formData,
   })

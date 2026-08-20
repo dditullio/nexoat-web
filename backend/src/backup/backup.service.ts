@@ -11,6 +11,7 @@ import { AuditService } from '../audit/audit.service'
 import {
   BACKUP_FORMAT_VERSION,
   BACKUP_TABLES,
+  CONTENT_TABLE_NAMES,
   type BackupDelegate,
   type BackupMetadata,
   type BackupSummary,
@@ -35,10 +36,13 @@ export interface BackupActor {
 
 export interface RestoreResult {
   filename: string
+  /** Solo trae claves de las tablas realmente tocadas (ver `contentOnly`). */
   counts: Record<string, number>
   safetyBackup: string
   source: BackupMetadata['source']
   backupCreatedAt: string
+  /** `true` si se restauró solo contenido editorial, sin tocar usuarios/auditoría/suscriptores. */
+  contentOnly: boolean
 }
 
 @Injectable()
@@ -149,50 +153,88 @@ export class BackupService {
 
   // ─── Restaurar ────────────────────────────────────────────────────────────
 
-  async restoreFromStored(filename: string, actor: BackupActor): Promise<RestoreResult> {
+  async restoreFromStored(
+    filename: string,
+    actor: BackupActor,
+    contentOnly = false
+  ): Promise<RestoreResult> {
     const path = await this.resolveExisting(filename)
-    return this.restore(await readFile(path), filename, actor)
+    return this.restore(await readFile(path), filename, actor, contentOnly)
   }
 
   async restoreFromUpload(
     buffer: Buffer,
     filename: string,
-    actor: BackupActor
+    actor: BackupActor,
+    contentOnly = false
   ): Promise<RestoreResult> {
-    return this.restore(buffer, filename, actor)
+    return this.restore(buffer, filename, actor, contentOnly)
   }
 
   private async restore(
     buffer: Buffer,
     filename: string,
-    actor: BackupActor
+    actor: BackupActor,
+    contentOnly = false
   ): Promise<RestoreResult> {
-    // Se valida TODO el zip antes de abrir la transacción: un archivo
-    // corrupto o ajeno tiene que fallar sin haber borrado ni una fila.
+    // Se valida TODO el zip antes de abrir la transacción (incluso en modo
+    // "solo contenido" — el zip tiene que ser un respaldo completo válido,
+    // simplemente no vamos a tocar todas sus tablas): un archivo corrupto o
+    // ajeno tiene que fallar sin haber borrado ni una fila.
     const { metadata, rowsByTable } = await this.parseBackup(buffer)
 
     // Red de seguridad: si la restauración resultó ser un error, el estado
-    // previo queda en la lista a un clic de distancia.
+    // previo queda en la lista a un clic de distancia. Siempre respalda
+    // TODO (no solo lo que se va a tocar), para que el "volver atrás" sea
+    // completo sin importar el modo elegido.
     const safety = await this.create(
       actor,
       `Copia automática previa a restaurar «${filename}»`,
       'pre-restore'
     )
 
+    // "Solo contenido": deja users/oauth_accounts/audit_logs/
+    // newsletter_subscribers completamente intactos, para traer artículos
+    // de otro entorno sin perder cuentas locales (ver
+    // docs/features/database-backups.md).
+    const tables = contentOnly
+      ? BACKUP_TABLES.filter((t) => CONTENT_TABLE_NAMES.includes(t.name))
+      : BACKUP_TABLES
+
     const counts: Record<string, number> = {}
 
     await this.prisma.$transaction(
       async (tx) => {
-        for (const table of [...BACKUP_TABLES].reverse()) {
+        for (const table of [...tables].reverse()) {
           await this.delegate(tx, table).deleteMany()
         }
-        for (const table of BACKUP_TABLES) {
+
+        // "Solo contenido" no toca `users`, pero `articles.authorId` es una
+        // FK a esa tabla (nullable, onDelete: SetNull) — el respaldo trae
+        // el id del autor tal como existía en el ORIGEN, que casi nunca
+        // coincide con ningún usuario de la base local. En vez de fallar
+        // por la FK, se descarta el `authorId` de los artículos cuyo autor
+        // no existe acá: el artículo entra igual, solo que "sin autor"
+        // (recuperable a mano desde el panel si hace falta).
+        let localUserIds: Set<string> | null = null
+        if (contentOnly) {
+          const localUsers = await tx.user.findMany({ select: { id: true } })
+          localUserIds = new Set(localUsers.map((u) => u.id))
+        }
+
+        for (const table of tables) {
           const rows = rowsByTable[table.name]
           counts[table.name] = rows.length
           if (rows.length) {
-            await this.delegate(tx, table).createMany({
-              data: rows.map((row) => hydrateRow(table, row)),
-            })
+            const hydrated = rows.map((row) => hydrateRow(table, row))
+            if (table.name === 'articles' && localUserIds) {
+              for (const row of hydrated) {
+                if (row.authorId && !localUserIds.has(row.authorId as string)) {
+                  delete row.authorId
+                }
+              }
+            }
+            await this.delegate(tx, table).createMany({ data: hydrated })
           }
         }
       },
@@ -201,7 +243,9 @@ export class BackupService {
       { timeout: 120_000, maxWait: 15_000 }
     )
 
-    this.logger.log(`Restauración completa desde ${filename}`)
+    this.logger.log(
+      `Restauración ${contentOnly ? '(solo contenido) ' : ''}completa desde ${filename}`
+    )
 
     // Después de la transacción, si no la propia restauración borraría este
     // registro. El actor puede no existir en la DB restaurada: en ese caso
@@ -221,6 +265,7 @@ export class BackupService {
         actorEmail: actor.email,
         source: metadata.source,
         backupCreatedAt: metadata.createdAt,
+        contentOnly,
       },
     })
 
@@ -230,6 +275,7 @@ export class BackupService {
       safetyBackup: safety.filename,
       source: metadata.source,
       backupCreatedAt: metadata.createdAt,
+      contentOnly,
     }
   }
 

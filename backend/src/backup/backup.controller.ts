@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   Res,
   StreamableFile,
@@ -59,18 +60,30 @@ export class BackupController {
 
   @Post(':filename/restore')
   @ApiOperation({
-    summary: 'Restaura la base desde un respaldo de la lista — REEMPLAZA todo el contenido actual',
+    summary:
+      'Restaura la base desde un respaldo de la lista — REEMPLAZA todo el contenido actual ' +
+      '(o solo categorías/tags/artículos si ?contentOnly=true)',
   })
-  restore(@Param('filename') filename: string, @CurrentUser() actor: User) {
-    return this.backups.restoreFromStored(filename, toActor(actor))
+  restore(
+    @Param('filename') filename: string,
+    @Query('contentOnly') contentOnly: string | undefined,
+    @CurrentUser() actor: User
+  ) {
+    return this.backups.restoreFromStored(filename, toActor(actor), contentOnly === 'true')
   }
 
   @Post('restore-upload')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Restaura la base desde un zip subido (campo "file") — REEMPLAZA todo el contenido',
+    summary:
+      'Restaura la base desde un zip subido (campo "file") — REEMPLAZA todo el contenido ' +
+      '(o solo categorías/tags/artículos si ?contentOnly=true)',
   })
-  async restoreUpload(@Req() req: FastifyRequest, @CurrentUser() actor: User) {
+  async restoreUpload(
+    @Req() req: FastifyRequest,
+    @Query('contentOnly') contentOnly: string | undefined,
+    @CurrentUser() actor: User
+  ) {
     // El límite global de @fastify/multipart es el de las imágenes (5MB,
     // ver main.ts); las opciones por request lo pisan solo para esta ruta.
     const file = await req.file({ limits: { fileSize: MAX_BACKUP_UPLOAD_BYTES } })
@@ -86,7 +99,12 @@ export class BackupController {
       )
     }
 
-    return this.backups.restoreFromUpload(buffer, file.filename, toActor(actor))
+    return this.backups.restoreFromUpload(
+      buffer,
+      file.filename,
+      toActor(actor),
+      contentOnly === 'true'
+    )
   }
 }
 

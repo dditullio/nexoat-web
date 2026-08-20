@@ -137,17 +137,34 @@
       @cancel="closeDialogs"
       @confirm="onRestore"
     >
-      <p>
+      <label class="bk__field bk__field--check">
+        <input v-model="restoreContentOnly" type="checkbox" />
+        <span>
+          <strong>Restaurar solo el contenido</strong>
+          <small
+            >Categorías, tags y artículos. No toca usuarios, auditoría ni suscriptores — útil para
+            traer el contenido de otro entorno sin perder las cuentas de este.</small
+          >
+        </span>
+      </label>
+
+      <p v-if="restoreContentOnly">
+        Vas a reemplazar <strong>categorías, tags y artículos</strong> por los de
+        <strong>{{ restoreLabel }}</strong
+        >. Los usuarios, la auditoría y los suscriptores de esta base <strong>no se tocan</strong> —
+        tu sesión sigue activa.
+      </p>
+      <p v-else>
         Vas a reemplazar <strong>todo el contenido actual</strong> por el de
         <strong>{{ restoreLabel }}</strong
         >. Los artículos, categorías, usuarios y suscriptores que existan hoy y no estén en ese
         respaldo se pierden.
       </p>
       <p>
-        Antes de tocar nada se guarda automáticamente una copia del estado actual, así que se puede
-        volver atrás desde esta misma lista.
+        Antes de tocar nada se guarda automáticamente una copia completa del estado actual, así que
+        se puede volver atrás desde esta misma lista.
       </p>
-      <p>
+      <p v-if="!restoreContentOnly">
         La restauración cierra todas las sesiones abiertas: si tu usuario no está en el respaldo,
         vas a tener que volver a ingresar.
       </p>
@@ -193,6 +210,7 @@ const restoreDialog = ref(false)
 /** Respaldo de la lista a restaurar, o archivo subido — nunca los dos a la vez. */
 const restoreTarget = ref<BackupSummary | null>(null)
 const restoreUploadFile = ref<File | null>(null)
+const restoreContentOnly = ref(false)
 const restoreLabel = computed(
   () => restoreUploadFile.value?.name ?? restoreTarget.value?.filename ?? ''
 )
@@ -223,6 +241,7 @@ function closeDialogs() {
   restoreDialog.value = false
   restoreTarget.value = null
   restoreUploadFile.value = null
+  restoreContentOnly.value = false
   dialogError.value = ''
 }
 
@@ -300,15 +319,19 @@ async function onRestore() {
   const target = restoreTarget.value
 
   try {
+    const contentOnly = restoreContentOnly.value
     const result: RestoreResult = file
-      ? await restoreBackupFromFile(file)
-      : await restoreBackup(target!.filename)
+      ? await restoreBackupFromFile(file, contentOnly)
+      : await restoreBackup(target!.filename, contentOnly)
 
     closeDialogs()
-    successMessage.value =
-      `Restauración completa desde ${result.filename} — ` +
-      `${summarizeCounts(result.counts)}. ` +
-      `El estado anterior quedó guardado en ${result.safetyBackup}.`
+    successMessage.value = result.contentOnly
+      ? `Contenido restaurado desde ${result.filename} — ${summarizeCounts(result.counts)}. ` +
+        `Usuarios, auditoría y suscriptores no se tocaron. ` +
+        `El estado anterior quedó guardado en ${result.safetyBackup}.`
+      : `Restauración completa desde ${result.filename} — ` +
+        `${summarizeCounts(result.counts)}. ` +
+        `El estado anterior quedó guardado en ${result.safetyBackup}.`
     await loadBackups()
   } catch (err) {
     dialogError.value = err instanceof ApiError ? err.message : 'No pudimos restaurar el respaldo.'
@@ -318,8 +341,12 @@ async function onRestore() {
 }
 
 // ── Formato ──
+/** Solo muestra las tablas presentes en `counts` — una restauración "solo
+ * contenido" no incluye `users`/`newsletter_subscribers`/`audit_logs`, y
+ * mostrarlas en "0" daría a entender que se vaciaron en vez de que no se
+ * tocaron. */
 function summarizeCounts(counts: Record<string, number>) {
-  const parts = COUNT_LABELS.map(([key, singular, plural]) => {
+  const parts = COUNT_LABELS.filter(([key]) => key in counts).map(([key, singular, plural]) => {
     const n = counts[key] ?? 0
     return `${n} ${n === 1 ? singular : plural}`
   })
@@ -560,5 +587,43 @@ onMounted(loadBackups)
 .bk__field textarea:focus {
   outline: none;
   border-color: var(--color-primary);
+}
+
+.bk__field--check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 11px;
+  background: var(--color-canvas-alt);
+  border: 1px solid var(--color-line-light);
+  border-radius: var(--radius-lg);
+  padding: 13px 15px;
+  cursor: pointer;
+}
+
+.bk__field--check input {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.bk__field--check span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bk__field--check strong {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.bk__field--check small {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-ink-muted);
+  line-height: 1.5;
 }
 </style>

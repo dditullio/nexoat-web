@@ -10,10 +10,21 @@ import type { AuditService } from '../audit/audit.service'
 
 const ACTOR: BackupActor = { id: 'user-1', email: 'admin@nexoat.test', name: 'Admin' }
 
-/** Prisma falso: cada delegate devuelve las filas que se le carguen acá. */
-function fakePrisma(rows: Record<string, Record<string, unknown>[]> = {}) {
+/**
+ * Prisma falso: cada delegate devuelve las filas que se le carguen acá.
+ * `rows.users` sirve doble propósito según el test — contenido a volcar al
+ * crear un respaldo, o "usuarios que ya existen en la base destino" cuando
+ * `restore()` llama `tx.user.findMany()` para resolver `authorId` huérfanos
+ * (ver test de `restore` más abajo).
+ *
+ * Devuelve el objeto crudo (no el `PrismaService` casteado) para poder
+ * inspeccionar las llamadas a los mocks desde el test.
+ */
+function fakePrismaClient(rows: Record<string, Record<string, unknown>[]> = {}) {
   const client: Record<string, unknown> = {
-    user: { findUnique: jest.fn().mockResolvedValue({ id: ACTOR.id }) },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ id: ACTOR.id }),
+    },
   }
   for (const table of BACKUP_TABLES) {
     const existing = (client[table.delegate as string] as object) ?? {}
@@ -24,7 +35,16 @@ function fakePrisma(rows: Record<string, Record<string, unknown>[]> = {}) {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     }
   }
-  return client as unknown as PrismaService
+  // Transacción interactiva falsa: corre el callback pasándole el mismo
+  // cliente (no hay aislamiento real de transacción en los tests, no hace falta).
+  client.$transaction = jest.fn((arg: unknown) =>
+    typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(client) : Promise.all(arg as [])
+  )
+  return client
+}
+
+function fakePrisma(rows?: Record<string, Record<string, unknown>[]>) {
+  return fakePrismaClient(rows) as unknown as PrismaService
 }
 
 const fakeAudit = () =>
@@ -207,6 +227,79 @@ describe('BackupService', () => {
       await expect(
         service.parseBackup(await zip.generateAsync({ type: 'nodebuffer' }))
       ).rejects.toThrow(/articles\.jsonl: la línea 2/)
+    })
+  })
+
+  describe('restore', () => {
+    it(
+      'modo "solo contenido": descarta el authorId de artículos cuyo autor no existe en la base ' +
+        'destino, en vez de fallar por la FK (bug real: un respaldo de otro entorno trae ids de ' +
+        'usuario que la base local nunca tuvo)',
+      async () => {
+        const client = fakePrismaClient({
+          // Este usuario SÍ existe en la base "destino" — el otro autor, no.
+          users: [{ id: 'local-user-1' }],
+          articles: [
+            {
+              id: 'a1',
+              slug: 'a1',
+              title: 'Uno',
+              content: 'contenido',
+              level: 'basico',
+              audience: [],
+              tracks: [],
+              authorId: 'usuario-del-otro-entorno',
+            },
+          ],
+        })
+        service = new BackupService(client as unknown as PrismaService, fakeAudit())
+        const backup = await service.create(ACTOR, null)
+        const buffer = await readFile(join(dir, backup.filename))
+
+        const result = await service.restoreFromUpload(buffer, backup.filename, ACTOR, true)
+
+        expect(result.contentOnly).toBe(true)
+        const articleDelegate = client.article as { createMany: jest.Mock }
+        const restoreCall = articleDelegate.createMany.mock.calls.at(-1)![0]
+        expect(restoreCall.data[0]).not.toHaveProperty('authorId')
+        expect(restoreCall.data[0].title).toBe('Uno')
+
+        // Modo "solo contenido": la tabla de usuarios ni se lee para borrar/insertar.
+        const userDelegate = client.user as { deleteMany: jest.Mock; createMany: jest.Mock }
+        expect(userDelegate.deleteMany).not.toHaveBeenCalled()
+        expect(userDelegate.createMany).not.toHaveBeenCalled()
+      }
+    )
+
+    it('modo completo: restaura también usuarios y no toca authorId', async () => {
+      const client = fakePrismaClient({
+        users: [{ id: 'local-user-1' }],
+        articles: [
+          {
+            id: 'a1',
+            slug: 'a1',
+            title: 'Uno',
+            content: 'contenido',
+            level: 'basico',
+            audience: [],
+            tracks: [],
+            authorId: 'local-user-1',
+          },
+        ],
+      })
+      service = new BackupService(client as unknown as PrismaService, fakeAudit())
+      const backup = await service.create(ACTOR, null)
+      const buffer = await readFile(join(dir, backup.filename))
+
+      const result = await service.restoreFromUpload(buffer, backup.filename, ACTOR, false)
+
+      expect(result.contentOnly).toBe(false)
+      const articleDelegate = client.article as { createMany: jest.Mock }
+      const restoreCall = articleDelegate.createMany.mock.calls.at(-1)![0]
+      expect(restoreCall.data[0].authorId).toBe('local-user-1')
+
+      const userDelegate = client.user as { deleteMany: jest.Mock; createMany: jest.Mock }
+      expect(userDelegate.deleteMany).toHaveBeenCalled()
     })
   })
 
