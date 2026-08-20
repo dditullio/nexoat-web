@@ -129,11 +129,17 @@ const baseList = computed<Article[]>(
 
 /** Coincide con la lógica de `filteredArticles` en stores/blog.ts, pero
  * puede excluir una faceta puntual (para contar sus propias opciones sin
- * que el valor ya elegido en esa misma faceta se autoexcluya del resto). */
+ * que el valor ya elegido en esa misma faceta se autoexcluya del resto).
+ *
+ * `track` (Eje) queda afuera a propósito: desde el fix de
+ * docs/features/sidebar-navigation.md ("el Eje deja de filtrar y pasa a
+ * ordenar") nunca oculta artículos en ningún lado — tratarlo acá como
+ * filtro duro hacía que, con un Eje activo, los contadores de las demás
+ * facetas (audiencia/nivel/alcance) dieran 0 para artículos que sí
+ * aparecen en los resultados, porque pertenecían a otro eje. */
 function matchesFacets(article: Article, filters: FilterState, exclude?: keyof FilterState) {
   if (exclude !== 'audience' && filters.audience && !article.audience.includes(filters.audience))
     return false
-  if (exclude !== 'track' && filters.track && !article.tracks.includes(filters.track)) return false
   if (exclude !== 'level' && filters.level && article.level !== filters.level) return false
   if (exclude !== 'scope' && filters.scope && article.scope !== filters.scope) return false
   return true

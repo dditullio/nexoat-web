@@ -75,6 +75,14 @@ Implementación (`stores/blog.ts`):
 
 Verificado en vivo: con "Cuidado de personas mayores" como eje activo, buscar "autismo" (tema casi exclusivo de AT) devuelve **73 resultados** (antes, con filtro duro, devolvía 31 — los mismos 31 que hoy aparecen primero). El artículo #31 de la grilla es el último con track "cuidado-de-mayores" y el #32 ya es de "Acompañamiento Terapéutico" — el corte de prioridad cae exactamente donde debe, sin que se pierda ningún resultado.
 
+#### Seguimiento: los contadores de las otras facetas seguían tratando el Eje como filtro duro
+
+Reportado por el usuario: con un Eje activo, un artículo que sí aparecía en los resultados (ej. clasificado en "Acompañamiento terapéutico", con audiencia Familias + Profesionales + Mixto) mostraba **0** en los contadores de "Para quién" del sidebar, para las tres audiencias.
+
+Causa: la corrección de arriba tocó `filteredArticles`/`runSearch` en `stores/blog.ts`, pero `FilterSidebar.vue` calcula los contadores de cada faceta con su propia copia de la lógica de filtrado (`matchesFacets`, necesaria para poder excluir la faceta que se está contando sin que se autoexcluya). Esa copia no se actualizó en el fix anterior y seguía excluyendo por `track` como filtro duro — así que al calcular el contador de "Familias"/"Profesionales" con un Eje distinto al del artículo activo, `matchesFacets` lo descartaba antes de contarlo, aunque el artículo sí estuviera en la lista de resultados mostrada.
+
+Fix: se saca `track` de `matchesFacets` por completo (no solo de sus propias opciones) — nunca filtra, en ningún grupo, consistente con que ya no es un filtro duro en ningún otro lugar de la app.
+
 ## Dónde vive
 
 | Archivo                                                      | Qué hace                                                                                                                                                     |
