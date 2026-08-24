@@ -20,6 +20,7 @@
     "db:seed": "ts-node prisma/seed.ts",
     "import:bulk": "ts-node scripts/bulk-import-articles.ts",
     "backfill:tracks": "ts-node scripts/backfill-article-tracks.ts",
+    "backfill:resend-contacts": "ts-node scripts/backfill-resend-contacts.ts",
     "update:scopes": "ts-node scripts/update-article-scopes.ts"
   },
   "prisma": {

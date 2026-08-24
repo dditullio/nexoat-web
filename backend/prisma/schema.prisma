@@ -338,12 +338,17 @@ model AuditLog {
 }
 
 model NewsletterSubscriber {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  isActive       Boolean   @default(true)
-  source         String? // ej: "homepage-hero", "footer"
-  subscribedAt   DateTime  @default(now())
-  unsubscribedAt DateTime?
+  id              String    @id @default(cuid())
+  email           String    @unique
+  isActive        Boolean   @default(true)
+  source          String? // ej: "homepage-hero", "footer"
+  subscribedAt    DateTime  @default(now())
+  unsubscribedAt  DateTime?
+  // Id del contacto en la audiencia de Resend — permite actualizar/dar de
+  // baja sin re-buscar por email. Null si Resend no está configurado o si
+  // la sincronización falló (nunca bloquea el alta/baja local). Ver
+  // docs/features/email-provider-resend.md, fase 3.
+  resendContactId String?
 
   @@map("newsletter_subscribers")
 }
