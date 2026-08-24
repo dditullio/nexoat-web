@@ -1,6 +1,6 @@
 # Regalo de bienvenida (ebook a elección) al terminar el onboarding
 
-**Estado:** implementado y verificado (backend + frontend + seed de desarrollo). No hay PDFs definitivos todavía — la tabla arranca vacía en producción y el paso queda invisible hasta que se carguen desde `/nexoat-admin/regalo-bienvenida` (ver "Semilla de desarrollo"). Este documento queda como referencia de diseño; ver "Notas de implementación" al final para los puntos donde el código difiere de lo especificado.
+**Estado:** Fase 1 (elegir entre PDFs subidos a mano) implementada y verificada. Fase 2 (generación al vuelo desde Markdown, con dedicatoria personalizada) documentada más abajo, **pendiente de implementar**. No hay contenido definitivo todavía — la tabla arranca vacía en producción y el paso queda invisible hasta que se carguen títulos reales desde `/nexoat-admin/regalo-bienvenida`. Ver "Notas de implementación" al final de la Fase 1 para los puntos donde ese código difiere de lo que describía la especificación original.
 
 ## Contexto
 
@@ -144,3 +144,79 @@ Puntos donde el código terminó distinto de lo que dice la especificación de a
 - **`docker-compose.prod.yml` gana un volumen `backend_storage`** que no tenía (ni siquiera para `storage/backups`, que hasta ahora no persistía entre rebuilds). No estaba en el alcance original de este documento, pero era necesario para que el PDF sobreviva a un deploy — y de paso corrige la misma falta para los respaldos.
 - **`GiftPicker.vue`** (`frontend/src/components/gifts/`) no estaba en la lista de archivos a crear — se extrajo como componente compartido entre `OnboardingView.vue` y `ProfileGiftView.vue` en vez de duplicar el markup de las tarjetas de selección en los dos lugares.
 - **Orden de pasos del onboarding dinámico, no fijo.** `OnboardingView.vue` pasó de `step: 1 | 2 | 3` a un `stepOrder` computado (`['role', 'terms', 'professional'?, 'gift'?]`) porque tanto el paso profesional como el de regalo son condicionales de forma independiente — con números de paso fijos, agregar el regalo como "paso 4" rompía el caso de un rol sin perfil profesional (que antes terminaba en el paso 2, no en el 3).
+
+---
+
+## Fase 2: generación al vuelo con dedicatoria personalizada (Gotenberg)
+
+**Estado:** documentado, pendiente de implementar. Motivada por: en vez de subir un PDF terminado a mano, cargar el contenido en Markdown (mismo pipeline que ya usan los artículos) y armar el PDF en el momento en que el usuario reclama su regalo — con una dedicatoria a su nombre. El mismo contenido queda listo para reusarse el día que exista una tienda de ebooks (ver "Reuso futuro: tienda de ebooks" más abajo).
+
+### Decisiones acordadas con el usuario
+
+3. **Motor de render: Gotenberg, no Puppeteer embebido ni pdf-lib.** Gotenberg es un servicio HTTP aparte (Chromium headless por detrás) que convierte HTML→PDF — permite reusar el CSS del sitio (tipografía, `.prose`) para la portada/dedicatoria/contenido sin escribir maquetación a mano (la alternativa de `pdf-lib`), y sin sumarle Chromium a la imagen Docker del propio backend (la alternativa de Puppeteer embebido). Corre como contenedor propio (`gotenberg/gotenberg:8`), sin estado — no necesita volumen.
+4. **Ambos modos de carga conviven.** Un `WelcomeEbook` tiene **o** `content` (Markdown, se genera con dedicatoria al reclamar) **o** `fileKey` (PDF subido a mano de la Fase 1, se sirve tal cual — sin personalizar). Da flexibilidad si algún título ya viene terminado de otro lado y no vale la pena pasarlo a Markdown.
+5. **El QR a la tienda queda con el layout listo pero apagado hasta que la tienda exista.** Un QR a una página que todavía no existe es peor que no tener QR, en un PDF que la persona se guarda. Se arma el diseño (última página del libro) desde el principio, pero solo se activa cuando `WelcomeEbook.storeUrl` esté seteado — visibilidad por datos, mismo criterio que el resto de la funcionalidad.
+
+### Flujo (reemplaza el paso 3 de la Fase 1 cuando el ebook tiene `content`)
+
+1. Al reclamar (`POST /gifts/claim`), si `ebook.content` no es null: se arma un HTML (portada con `coverImage`, página de dedicatoria con el nombre/email del usuario, el contenido renderizado con `marked`+`dompurify` con la clase `.prose`, y — si `ebook.storeUrl` está seteado — una página final con QR hacia esa URL) y se lo manda a Gotenberg. El PDF resultante se guarda en `storage/ebooks/generated/{claimId}.pdf` y se referencia desde `EbookClaim.generatedFileKey`/`generatedFileName`.
+2. Si `ebook.content` es null pero tiene `fileKey` (ebook cargado a la manera de la Fase 1): no se genera nada, el claim queda sin `generatedFileKey` — la descarga cae al PDF subido tal cual, sin dedicatoria.
+3. `GET /gifts/download` sirve `claim.generatedFileKey` si existe; si no, cae a `claim.ebook.fileKey` (mismo comportamiento que hoy). Un ebook `content`-based nunca deja al usuario sin archivo: si Gotenberg falla al momento del claim, el claim igual se crea (no bloquea el regalo) pero sin `generatedFileKey` — hay que reintentar la generación (acción de admin, ver más abajo) antes de que la descarga funcione.
+4. La generación es **una vez por claim**, no en cada descarga — la dedicatoria es fija por usuario, no tiene sentido pagar el costo de Chromium en cada `GET /gifts/download`.
+
+### Cambios de schema
+
+```prisma
+model WelcomeEbook {
+  // ...campos existentes de la Fase 1 sin cambios...
+  content   String? // Markdown del ebook — si está seteado, se genera al vuelo con dedicatoria (ver Fase 2)
+  storeUrl  String? // link a la ficha de compra en la futura tienda — null = sin QR en la última página
+}
+
+model EbookClaim {
+  // ...campos existentes sin cambios...
+  generatedFileKey  String? // PDF personalizado en storage/ebooks/generated/ — null hasta que se genere (o si el ebook usa fileKey en vez de content)
+  generatedFileName String?
+}
+```
+
+Un `WelcomeEbook` con `content` Y `fileKey` a la vez no es un estado inválido de por sí, pero `content` manda: si está seteado, se genera; `fileKey` queda de respaldo solo si `content` es null. El admin no debería cargar los dos a propósito — la UI lo deja claro (ver más abajo) pero no lo impide con una validación dura, para no bloquear un caso legítimo (ej. migrar de uno a otro sin borrar el anterior todavía).
+
+### Backend — nuevo: `PdfRenderService` (o dentro de `gifts/`)
+
+- `render(html: string): Promise<Buffer>` — `POST` multipart a `${GOTENBERG_URL}/forms/chromium/convert/html` con un `index.html`, devuelve el buffer del PDF. Sin lógica de negocio — no sabe nada de ebooks, dedicatorias ni claims; eso vive en `GiftsService`.
+- `GiftsService.claim()` cambia: si `ebook.content`, arma el HTML (plantilla nueva `mail/templates/` no aplica acá — sería algo como `gifts/ebook-pdf.template.ts`, HTML standalone con `<style>` embebido, no reusa las plantillas de email) y llama a `PdfRenderService.render()`. Si Gotenberg no responde, se loguea el error y el claim se crea igual (mismo criterio de "nunca bloquear por un proveedor externo" que ya usa `MailService`).
+- **Fuentes:** Gotenberg no tiene acceso a Google Fonts sin salir a internet (y no queremos esa dependencia en el momento de generar) — hay que embeber Fraunces/Karla como `@font-face` con los archivos en base64 dentro del `<style>`, o resignarse a una fuente del sistema del contenedor de Gotenberg para el PDF (más simple, pero rompe la identidad visual). A decidir al implementar; probablemente valga la pena embeberlas una sola vez como constante.
+- **QR:** paquete `qrcode` (Node, sin red) genera un data URI PNG/SVG a partir de `storeUrl` — se embebe directo en el `<img>` del HTML, Gotenberg no necesita salir a buscar nada.
+- **Reintentar una generación fallida:** `POST /admin/gifts/claims/:claimId/regenerate` (o similar) — regenera el PDF de un claim puntual, para el caso de que Gotenberg haya fallado al momento del claim original. No se dispara solo; hace falta que un admin lo vea (ej. un filtro "sin archivo generado" en una futura vista de claims) y lo dispare a mano.
+- **`storage/ebooks/generated/`** se suma al mismo volumen `backend_storage` que ya existe (Docker) — no hace falta un volumen nuevo, es un subdirectorio del mismo `storage/`.
+
+### Docker
+
+Nuevo servicio, sin volumen (stateless):
+
+```yaml
+gotenberg:
+  image: gotenberg/gotenberg:8
+  restart: unless-stopped
+  # sin puerto publicado al host — solo el backend le habla por la red interna
+```
+
+`GOTENBERG_URL=http://gotenberg:3000` en `docker-compose.prod.yml`/`.dev.yml`; en desarrollo local sin Docker, apuntar a un Gotenberg corriendo aparte o directamente no setear la variable — `GiftsService` debería tratar `GOTENBERG_URL` ausente igual que `MailService` trata `RESEND_API_KEY` ausente: no explota, loguea que la generación está desactivada, y el ebook queda como si no tuviera `content` (cae al `fileKey` si lo tiene, o no aparece disponible si no tiene ninguno de los dos).
+
+### Frontend — `AdminGiftsView.vue`
+
+Se agrega una sección "Contenido (Markdown)" por ebook: textarea + preview en vivo con `marked`+`dompurify` y la clase `.prose` (mismo componente/patrón que `AdminArticleFormView.vue`), y un campo `storeUrl` (opcional, con nota de que activa el QR de la última página). La sección de subida de PDF de la Fase 1 se mantiene tal cual, debajo, como alternativa.
+
+### Reuso futuro: tienda de ebooks
+
+Cuando exista la venta: mismo `WelcomeEbook` (quizás renombrado o con un modelo hermano que comparta `content`/`coverImage`/render) más `priceCents`/`isForSale`. Una compra generaría su propio `EbookClaim`-como (o un modelo `EbookPurchase` separado, a decidir cuando llegue) con su propio PDF personalizado — mismo `PdfRenderService`, mismo pipeline de dedicatoria (ahí sí tendría sentido, "Comprado por ‹nombre›" en vez de "Regalo de bienvenida para ‹nombre›"). No se diseña en detalle acá porque depende de decisiones que todavía no están tomadas (pasarela de pago, si el catálogo es el mismo modelo o uno nuevo) — se deja como nota para no perder el hilo cuando llegue esa etapa.
+
+### Plan de verificación (al implementar)
+
+1. Levantar Gotenberg local (`docker run --rm -p 3002:3000 gotenberg/gotenberg:8` o vía `docker-compose.dev.yml`) y confirmar `GET http://localhost:3002/health` (o el healthcheck que exponga esa versión).
+2. Cargar un `WelcomeEbook` de prueba con `content` Markdown corto desde el admin, sin `fileKey`.
+3. Reclamarlo con un usuario de prueba → confirmar que `EbookClaim.generatedFileKey` queda seteado y que `GET /gifts/download` devuelve un PDF real (no el placeholder de texto) con la dedicatoria (nombre/email correctos) y el contenido renderizado.
+4. Apagar Gotenberg a propósito y reclamar con otro usuario → confirmar que el claim se crea igual, sin `generatedFileKey`, y que se loguea el error sin tirar abajo el request.
+5. Setear `storeUrl` en un ebook y confirmar que el PDF generado trae la página final con el QR apuntando ahí; sin `storeUrl`, confirmar que esa página no aparece.
+6. Confirmar que un ebook con `fileKey` (sin `content`) sigue funcionando exactamente como en la Fase 1 — sin esta fase tocarle el comportamiento.
