@@ -601,7 +601,11 @@ h4 {
 }
 
 .section {
-  padding-block: clamp(4rem, 9vw, 7.5rem);
+  /* Antes escalaba con 9vw hasta 7.5rem (120px) de cada lado -- entre dos
+     secciones consecutivas eso sumaba ~240px de hueco. Se acorta el rango
+     para que el sitio se sienta continuo en vez de una serie de bloques
+     separados por franjas vacías. */
+  padding-block: clamp(2.5rem, 5vw, 4.5rem);
 }
 
 /* Botones */

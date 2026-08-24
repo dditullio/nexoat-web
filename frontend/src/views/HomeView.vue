@@ -421,7 +421,7 @@ function goToSearch() {
      pantallas anchas dejaba un espacio muerto grande entre el header y el
      texto antes de tocar su tope. Se achica el rango: sigue respirando en
      mobile pero no se dispara en desktop. */
-  padding: clamp(2rem, 4vw, 3.25rem) 0 clamp(4rem, 9vw, 7rem);
+  padding: clamp(2rem, 2vw, 3.25rem) 0 clamp(2.5rem, 5vw, 4.5rem);
   background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-canvas-alt) 100%);
 }
 
@@ -825,7 +825,7 @@ function goToSearch() {
 .aud-sec {
   position: relative;
   background: var(--color-deep);
-  padding: clamp(4rem, 9vw, 7rem) 0;
+  padding: clamp(2.5rem, 5vw, 4.5rem) 0;
   overflow: hidden;
   isolation: isolate;
 }
