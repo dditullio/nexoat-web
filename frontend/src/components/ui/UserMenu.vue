@@ -51,11 +51,29 @@
             <span class="um__label">Mi perfil</span>
           </RouterLink>
 
-          <!-- Mockeados: estas pantallas todavía no existen (ver
-               docs/features/reader-profile.md — "Mi perfil" ya sí está
-               cableado arriba). Se muestran ya para fijar la forma del
-               menú; cada una se irá cableando a su vista a medida que se
-               implemente. -->
+          <RouterLink
+            to="/mi-cuenta/guardados"
+            class="um__item"
+            role="menuitem"
+            @click="open = false"
+          >
+            <span class="um__glyph" aria-hidden="true">🔖</span>
+            <span class="um__label">Artículos guardados</span>
+          </RouterLink>
+
+          <RouterLink
+            to="/mi-cuenta/historial"
+            class="um__item"
+            role="menuitem"
+            @click="open = false"
+          >
+            <span class="um__glyph" aria-hidden="true">🕮</span>
+            <span class="um__label">Historial de lectura</span>
+          </RouterLink>
+
+          <!-- Mockeado: esta pantalla todavía no existe (ver
+               docs/features/reader-profile.md — el resto del menú ya está
+               cableado). -->
           <button
             v-for="item in mockItems"
             :key="item.label"
@@ -130,11 +148,7 @@ const tierLabel = computed(() => TIER_LABEL[user.value?.subscriptionTier ?? 'gra
 
 const isStaff = computed(() => authStore.hasRole('SUPER_ADMIN', 'ADMIN', 'EDITOR'))
 
-const mockItems = [
-  { label: 'Artículos guardados', icon: '🔖' },
-  { label: 'Historial de lectura', icon: '🕮' },
-  { label: 'Preferencias de correo', icon: '✉' },
-]
+const mockItems = [{ label: 'Preferencias de correo', icon: '✉' }]
 
 // Inerte a propósito: el ítem existe para fijar la forma del menú, la
 // vista real todavía no está construida.

@@ -15,6 +15,7 @@ import { MediaModule } from './media/media.module'
 import { BackupModule } from './backup/backup.module'
 import { SettingsModule } from './settings/settings.module'
 import { ProfileModule } from './profile/profile.module'
+import { ReaderLibraryModule } from './reader-library/reader-library.module'
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ProfileModule } from './profile/profile.module'
     BackupModule,
     SettingsModule,
     ProfileModule,
+    ReaderLibraryModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

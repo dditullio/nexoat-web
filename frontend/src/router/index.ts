@@ -102,6 +102,18 @@ const router = createRouter({
       meta: { title: 'Mi perfil', requiresAuth: true },
     },
     {
+      path: '/mi-cuenta/historial',
+      name: 'reading-history',
+      component: () => import('@/views/ReadingHistoryView.vue'),
+      meta: { title: 'Historial de lectura', requiresAuth: true },
+    },
+    {
+      path: '/mi-cuenta/guardados',
+      name: 'saved-articles',
+      component: () => import('@/views/SavedArticlesView.vue'),
+      meta: { title: 'Artículos guardados', requiresAuth: true },
+    },
+    {
       path: '/nexoat-admin',
       meta: { layout: 'admin' },
       children: [

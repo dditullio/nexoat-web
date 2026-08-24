@@ -1,6 +1,10 @@
 <template>
-  <!-- <dialog> nativo: atrapa el foco, cierra con Esc y bloquea el fondo sin
-       que haya que implementar nada de eso a mano. -->
+  <!-- Diálogo de confirmación genérico y parametrizable — usarlo para
+       cualquier acción que necesite confirmación en el sitio (no solo
+       admin): título, contenido libre por slot, tono primary/danger,
+       estado "busy" mientras se procesa, y mensaje de error opcional si
+       falla. <dialog> nativo: atrapa el foco, cierra con Esc y bloquea el
+       fondo sin que haya que implementar nada de eso a mano. -->
   <dialog ref="dialogEl" class="cdlg" @cancel.prevent="onCancel">
     <form class="cdlg__form" method="dialog" @submit.prevent="emit('confirm')">
       <h2 class="cdlg__title">{{ title }}</h2>

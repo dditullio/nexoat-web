@@ -2,12 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { ArticleStatus, Prisma, type User } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { SettingsService } from '../settings/settings.service'
+import { ReadingHistoryService } from '../reader-library/reading-history.service'
 import { slugify } from '../common/slugify'
 import {
   ARTICLE_INCLUDE,
@@ -30,10 +32,13 @@ function paginate(page?: number, pageSize?: number, maxPageSize = 100, defaultPa
 
 @Injectable()
 export class ArticlesService {
+  private readonly logger = new Logger(ArticlesService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly settings: SettingsService
+    private readonly settings: SettingsService,
+    private readonly readingHistory: ReadingHistoryService
   ) {}
 
   // ─── Público ────────────────────────────────────────────────────────────
@@ -96,6 +101,16 @@ export class ArticlesService {
     const visibleScopes = await this.settings.getVisiblePublicScopes()
     if (!visibleScopes.includes(article.scope)) {
       throw new NotFoundException('Artículo no encontrado')
+    }
+
+    // "Lo visitaste" es independiente de si tuviste acceso al contenido
+    // completo — se registra tanto en artículos abiertos como recortados
+    // por paywall. Nunca debe tirar abajo la respuesta al lector: si falla,
+    // se loguea y se sigue. Ver docs/features/reader-history-and-saved-articles.md.
+    if (viewer) {
+      this.readingHistory.record(viewer.id, article.id).catch((error: unknown) => {
+        this.logger.warn(`No se pudo registrar el historial de lectura: ${String(error)}`)
+      })
     }
 
     return toPublicArticleFullFor(article, viewer)

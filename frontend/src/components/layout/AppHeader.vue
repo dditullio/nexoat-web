@@ -184,8 +184,24 @@
               <span class="drawer__glyph" aria-hidden="true">👤</span>
               Mi perfil
             </RouterLink>
-            <!-- Mockeados igual que en `UserMenu` (desktop): estas vistas
-                 todavía no existen ("Mi perfil" arriba ya sí está cableado). -->
+            <RouterLink
+              to="/mi-cuenta/guardados"
+              class="drawer__link drawer__link--sub"
+              @click="menuOpen = false"
+            >
+              <span class="drawer__glyph" aria-hidden="true">🔖</span>
+              Artículos guardados
+            </RouterLink>
+            <RouterLink
+              to="/mi-cuenta/historial"
+              class="drawer__link drawer__link--sub"
+              @click="menuOpen = false"
+            >
+              <span class="drawer__glyph" aria-hidden="true">🕮</span>
+              Historial de lectura
+            </RouterLink>
+            <!-- Mockeado igual que en `UserMenu` (desktop): esta vista
+                 todavía no existe (el resto del menú ya está cableado). -->
             <button
               v-for="item in accountItems"
               :key="item.label"
@@ -304,11 +320,7 @@ const trackGroups = computed<TrackGroup[]>(() => {
 const isStaff = computed(() => authStore.hasRole('SUPER_ADMIN', 'ADMIN', 'EDITOR'))
 
 // Mismo set mockeado que `UserMenu` (ver ese componente).
-const accountItems = [
-  { label: 'Artículos guardados', icon: '🔖' },
-  { label: 'Historial de lectura', icon: '🕮' },
-  { label: 'Preferencias de correo', icon: '✉' },
-]
+const accountItems = [{ label: 'Preferencias de correo', icon: '✉' }]
 
 // Inerte a propósito, igual que en `UserMenu`.
 function onAccountMock() {

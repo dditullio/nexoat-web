@@ -174,7 +174,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import {
   createBackup,
   downloadBackup,

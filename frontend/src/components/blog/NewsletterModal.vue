@@ -1,6 +1,6 @@
 <template>
   <!-- <dialog> nativo: atrapa el foco y cierra con Esc sin implementarlo a
-       mano (mismo patrón que ConfirmDialog.vue, en admin). -->
+       mano (mismo patrón que components/ui/ConfirmDialog.vue). -->
   <dialog ref="dialogEl" class="nm" @cancel.prevent="close" @click="onBackdropClick">
     <div class="nm__panel" @click.stop>
       <button type="button" class="nm__close" aria-label="Cerrar" @click="close">

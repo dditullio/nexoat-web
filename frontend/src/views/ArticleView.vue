@@ -46,6 +46,31 @@
             :bordered="false"
             class="art-head__share"
           />
+          <button
+            v-if="authStore.isAuthenticated"
+            type="button"
+            class="art-head__save"
+            :class="{ 'is-saved': isSaved }"
+            :disabled="isSaving"
+            :aria-label="isSaved ? 'Quitar de guardados' : 'Guardar artículo'"
+            :title="isSaved ? 'Quitar de guardados' : 'Guardar artículo'"
+            @click="onToggleSaved"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              :fill="isSaved ? 'currentColor' : 'none'"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 2.5h8a.5.5 0 01.5.5v10.3a.4.4 0 01-.63.33L8 10.6l-3.87 3.02A.4.4 0 013.5 13.3V3a.5.5 0 01.5-.5z"
+              />
+            </svg>
+          </button>
         </div>
 
         <div v-if="article.isTruncated" class="art-head__notice">
@@ -218,15 +243,18 @@
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
+import { useAuthStore } from '@/stores/auth'
 import { getCategoryTheme, SCOPE_CHIPS } from '@/utils/theme'
 import { http } from '@/services/http'
 import { renderMarkdown } from '@/utils/markdown'
+import { getSavedStatus, saveArticle, unsaveArticle } from '@/services/saved-articles.api'
 import AppChip from '@/components/ui/AppChip.vue'
 import ArticleShare from '@/components/blog/ArticleShare.vue'
 import type { ArticleFull } from '@/types'
 
 const route = useRoute()
 const store = useBlogStore()
+const authStore = useAuthStore()
 
 // Se pide directo por slug (no se deriva de store.articles): trae el
 // contenido completo, que la lista pública no incluye, y no depende de que
@@ -236,12 +264,23 @@ const isLoading = ref(true)
 
 const contentHtml = computed(() => (article.value ? renderMarkdown(article.value.content) : ''))
 
+const isSaved = ref(false)
+const isSaving = ref(false)
+
 watchEffect(async () => {
   const slug = route.params.slug
   if (typeof slug !== 'string') return
   isLoading.value = true
+  isSaved.value = false
   try {
     article.value = await http<ArticleFull>(`/articles/${slug}`, { skipAuthRetry: true })
+    if (authStore.isAuthenticated) {
+      // No bloquea el render del artículo: el botón arranca sin marcar y
+      // se actualiza apenas resuelve.
+      getSavedStatus(slug)
+        .then((res) => (isSaved.value = res.saved))
+        .catch(() => undefined)
+    }
   } catch {
     article.value = null
   } finally {
@@ -286,6 +325,25 @@ const levelLabel = computed(
 // Todavía es solo clasificación (sin recorte real de contenido), ver
 // docs/features/article-scope-filters.md.
 const scopeLabel = computed(() => article.value && SCOPE_CHIPS[article.value.scope]?.label)
+
+async function onToggleSaved() {
+  const slug = article.value?.slug
+  if (!slug || isSaving.value) return
+  isSaving.value = true
+  const wasSaved = isSaved.value
+  try {
+    if (wasSaved) {
+      await unsaveArticle(slug)
+    } else {
+      await saveArticle(slug)
+    }
+    isSaved.value = !wasSaved
+  } catch {
+    // sin cambio visual si falla — el botón queda en el estado previo
+  } finally {
+    isSaving.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -384,6 +442,41 @@ const scopeLabel = computed(() => article.value && SCOPE_CHIPS[article.value.sco
    flex-wrap de .art-head__meta. */
 .art-head__share {
   margin-left: auto;
+}
+
+/* Cuando hay botón de guardar, el margin-left:auto vive en el share pero el
+   guardar queda pegado a él (no otra vez a la derecha del todo) — por eso
+   no repite margin-left:auto acá. */
+.art-head__save {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-muted);
+  border: 1px solid var(--color-line-light);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.art-head__save:hover {
+  background: var(--color-hover-bg);
+  color: var(--color-ink);
+}
+
+.art-head__save.is-saved {
+  color: var(--color-primary-dark);
+  background: var(--color-primary-tint);
+  border-color: var(--color-primary);
+}
+
+.art-head__save:disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 /* Aviso de vista previa (artículo recortado para el nivel del viewer) —

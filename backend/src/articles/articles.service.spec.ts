@@ -5,6 +5,7 @@ import { ArticlesService } from './articles.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { SettingsService } from '../settings/settings.service'
+import { ReadingHistoryService } from '../reader-library/reading-history.service'
 import type { CreateArticleDto } from './dto/create-article.dto'
 
 type MockPrisma = {
@@ -27,6 +28,7 @@ describe('ArticlesService', () => {
   let prisma: MockPrisma
   let audit: { record: jest.Mock }
   let settings: { getVisiblePublicScopes: jest.Mock }
+  let readingHistory: { record: jest.Mock }
 
   const actor = { id: 'author-1' } as User
 
@@ -67,6 +69,7 @@ describe('ArticlesService', () => {
           ArticleScope.suscriptores_nivel_3,
         ]),
     }
+    readingHistory = { record: jest.fn().mockResolvedValue(undefined) }
 
     const module = await Test.createTestingModule({
       providers: [
@@ -74,6 +77,7 @@ describe('ArticlesService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: audit },
         { provide: SettingsService, useValue: settings },
+        { provide: ReadingHistoryService, useValue: readingHistory },
       ],
     }).compile()
 
@@ -294,6 +298,33 @@ describe('ArticlesService', () => {
       await expect(service.findPublishedBySlug('un-articulo-restringido')).rejects.toThrow(
         NotFoundException
       )
+    })
+
+    it('registra la visita en el historial de lectura cuando hay viewer', async () => {
+      prisma.article.findFirst.mockResolvedValue(restrictedArticle)
+      const viewer = { id: 'viewer-1', role: Role.USER, subscriptionTier: 'gratuito' } as User
+
+      await service.findPublishedBySlug('un-articulo-restringido', viewer)
+
+      expect(readingHistory.record).toHaveBeenCalledWith('viewer-1', 'art-1')
+    })
+
+    it('no registra nada en el historial si no hay viewer (anónimo)', async () => {
+      prisma.article.findFirst.mockResolvedValue(restrictedArticle)
+
+      await service.findPublishedBySlug('un-articulo-restringido')
+
+      expect(readingHistory.record).not.toHaveBeenCalled()
+    })
+
+    it('no tira abajo la respuesta si falla el registro del historial', async () => {
+      prisma.article.findFirst.mockResolvedValue(restrictedArticle)
+      readingHistory.record.mockRejectedValue(new Error('DB caída'))
+      const viewer = { id: 'viewer-1', role: Role.USER, subscriptionTier: 'gratuito' } as User
+
+      const result = await service.findPublishedBySlug('un-articulo-restringido', viewer)
+
+      expect(result.isTruncated).toBe(false)
     })
   })
 
