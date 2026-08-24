@@ -1,6 +1,6 @@
 # Perfil de lector — foto, tipo de usuario y mini-currículum profesional
 
-**Estado:** planificado, pendiente de confirmación antes de implementar.
+**Estado:** implementado y verificado.
 
 ## Contexto
 
