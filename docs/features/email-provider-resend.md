@@ -1,6 +1,6 @@
 # Proveedor de email: Resend (transaccional + newsletter)
 
-**Estado:** planificado, pendiente de implementar por fases.
+**Estado:** fase 1 implementada y verificada. Fases 2-4 pendientes.
 
 ## Contexto
 
@@ -20,12 +20,14 @@ Se evaluaron Hostinger Reach, Resend, Brevo, Listmonk autohospedado y Mailchimp 
 
 ## Fases (se implementan y verifican por separado, no todo junto)
 
-### Fase 1 — `MailService` real + primer email transaccional
+### Fase 1 — `MailService` real + primer email transaccional ✅ implementado
 
-- `backend/src/mail/mail.service.ts`: reemplaza el no-op por el SDK `resend`, config vía `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (nuevas en `.env.example`).
-- Mantiene la misma firma pública (`send(to, subject, body)`) — ningún consumidor futuro necesita saber que cambió el proveedor por debajo.
-- Primer uso real: email de bienvenida al registrarse (`AuthService.register`) — el caso más simple para probar la integración de punta a punta antes de construir flujos más sensibles (verificación, reset).
-- Verifica dominio propio en Resend (`nexoat.com`, ver `project-domain-nexoat-com.md`) con los registros SPF/DKIM que pide — sin esto, Resend manda desde un dominio compartido con peor entregabilidad.
+- `backend/src/mail/mail.service.ts`: reemplaza el no-op por el SDK `resend`, config vía `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (nuevas en `.env`/`.env.example`). Sin `RESEND_API_KEY`, sigue cayendo al no-op original — no rompe el dev local de quien no tiene cuenta propia.
+- Mantiene la misma firma pública (`send(to, subject, body)`, `body` = HTML) — ningún consumidor futuro necesita saber que cambió el proveedor por debajo. `send` nunca lanza: un fallo se loguea como error y sigue.
+- Primer uso real: email de bienvenida al registrarse (`AuthService.register`, y también al crear cuenta nueva por OAuth en `validateOAuthLogin`) — plantilla en `mail/templates/welcome.template.ts`. Envío fire-and-forget: un fallo de Resend nunca bloquea el alta de la cuenta.
+- Tests: `mail/mail.service.spec.ts` (SDK mockeado — no-op sin API key, envío real con key, nunca lanza ni con error del SDK ni con la promesa rechazada) y casos nuevos en `auth/auth.service.spec.ts`.
+- **Verificado en vivo** con la cuenta real de Resend: registrar una cuenta con un email ajeno a la cuenta de Resend logueó el error esperado de Resend ("solo se puede mandar a tu propio email sin dominio verificado, mandá a `hola.nexoat@gmail.com`") sin romper el registro; registrar con `hola.nexoat@gmail.com` (la casilla dueña de la cuenta Resend) entregó el email de bienvenida real.
+- **Pendiente, no bloqueante:** verificar el dominio `nexoat.com` en el dashboard de Resend (agregar los registros SPF/DKIM que pida en el DNS de Hostinger) y cambiar `RESEND_FROM_EMAIL` de `onboarding@resend.dev` a `notificaciones@nexoat.com` — hasta entonces, en producción Resend solo va a poder mandarle a la casilla dueña de la cuenta (`hola.nexoat@gmail.com`), no a lectores reales.
 
 ### Fase 2 — Verificación de cuenta y reset de contraseña
 

@@ -1,17 +1,68 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { Resend } from 'resend'
+
+// El SDK de Resend a veces rechaza con un objeto plano, no con una
+// instancia de Error — mismo motivo/patrón que MediaService.
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message: unknown }).message)
+  }
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
+}
 
 /**
- * Única implementación por ahora: no-op que loguea en vez de enviar de
- * verdad. Punto de extensión para cuando haya proveedor de email (SES,
- * Resend, etc.) — verificación de cuenta y reset de contraseña por correo
- * quedan explícitamente fuera de alcance hasta entonces (ver
- * docs/features/auth-and-admin-dashboard.md).
+ * Envío de email vía Resend — ver docs/features/email-provider-resend.md.
+ * Sin `RESEND_API_KEY` configurada, cae de vuelta al no-op original
+ * (loguea en vez de enviar): no rompe el desarrollo local de quien no tiene
+ * cuenta de Resend propia, y evita que un típo o un .env incompleto tire
+ * abajo el arranque del backend.
+ *
+ * `send` nunca lanza — un email que falla se loguea como error y sigue
+ * (ningún flujo del sitio, ni siquiera uno futuro de verificación/reset,
+ * debería quedar bloqueado porque el proveedor de email tuvo un hipo).
  */
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name)
+  private readonly resend: Resend | null
+  private readonly from: string
 
+  constructor() {
+    const apiKey = process.env.RESEND_API_KEY
+    this.resend = apiKey ? new Resend(apiKey) : null
+    this.from = process.env.RESEND_FROM_EMAIL || 'NexoAT <onboarding@resend.dev>'
+
+    if (!this.resend) {
+      this.logger.warn(
+        'RESEND_API_KEY no configurada — los emails se van a loguear en vez de enviarse de verdad'
+      )
+    }
+  }
+
+  /** `body` es HTML — los callers arman el contenido con las plantillas de mail/templates/. */
   async send(to: string, subject: string, body: string): Promise<void> {
-    this.logger.log(`[mail no-op] para=${to} asunto="${subject}"\n${body}`)
+    if (!this.resend) {
+      this.logger.log(`[mail no-op] para=${to} asunto="${subject}"\n${body}`)
+      return
+    }
+
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.from,
+        to,
+        subject,
+        html: body,
+      })
+      if (error) {
+        this.logger.error(`No se pudo enviar el email a ${to}: ${error.message}`)
+      }
+    } catch (error) {
+      this.logger.error(`No se pudo enviar el email a ${to}: ${describeError(error)}`)
+    }
   }
 }

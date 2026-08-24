@@ -1,9 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common'
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
 import { Role, type AuthProvider, type RefreshToken, type User } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import { MailService } from '../mail/mail.service'
+import { welcomeEmailHtml } from '../mail/templates/welcome.template'
 import type { RegisterDto } from './dto/register.dto'
 import type { JwtPayload } from './types/jwt-payload.interface'
 
@@ -19,9 +21,12 @@ export interface OAuthProfile {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly mail: MailService
   ) {}
 
   async register(dto: RegisterDto): Promise<User> {
@@ -29,9 +34,12 @@ export class AuthService {
     if (existing) throw new ConflictException('Ya existe una cuenta con ese email')
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS)
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: { email: dto.email, passwordHash, name: dto.name, role: Role.USER },
     })
+
+    this.sendWelcomeEmail(user)
+    return user
   }
 
   /** Usado por `LocalStrategy`. Devuelve `null` en cualquier credencial inválida (sin distinguir el motivo, para no filtrar qué emails existen). */
@@ -68,12 +76,24 @@ export class AuthService {
           emailVerified: new Date(), // el proveedor OAuth ya lo verificó
         },
       })
+      this.sendWelcomeEmail(user)
     } else if (!user.isActive) {
       throw new UnauthorizedException('Cuenta desactivada')
     }
 
     await this.prisma.oAuthAccount.create({ data: { provider, providerUserId, userId: user.id } })
     return user
+  }
+
+  // Fire-and-forget: un email de bienvenida que falla nunca debe tirar
+  // abajo el alta de la cuenta (mismo criterio que
+  // ArticlesService.findPublishedBySlug con el historial de lectura).
+  private sendWelcomeEmail(user: User): void {
+    this.mail
+      .send(user.email, '¡Bienvenido/a a NexoAT!', welcomeEmailHtml(user.name ?? undefined))
+      .catch((error: unknown) => {
+        this.logger.warn(`No se pudo enviar el email de bienvenida: ${String(error)}`)
+      })
   }
 
   private signAccessToken(user: User): string {

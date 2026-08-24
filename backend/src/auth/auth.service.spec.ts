@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs'
 import { Role, type User } from '@prisma/client'
 import { AuthService } from './auth.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { MailService } from '../mail/mail.service'
 
 type MockPrisma = {
   user: { findUnique: jest.Mock; create: jest.Mock }
@@ -20,6 +21,7 @@ type MockPrisma = {
 describe('AuthService', () => {
   let service: AuthService
   let prisma: MockPrisma
+  let mail: { send: jest.Mock }
 
   beforeEach(async () => {
     process.env.JWT_ACCESS_SECRET = 'test-secret'
@@ -34,10 +36,15 @@ describe('AuthService', () => {
       },
       oAuthAccount: { findUnique: jest.fn(), create: jest.fn() },
     }
+    mail = { send: jest.fn().mockResolvedValue(undefined) }
 
     const module = await Test.createTestingModule({
       imports: [JwtModule.register({})],
-      providers: [AuthService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MailService, useValue: mail },
+      ],
     }).compile()
 
     service = module.get(AuthService)
@@ -64,6 +71,35 @@ describe('AuthService', () => {
       expect(user.role).toBe(Role.USER)
       expect(user.passwordHash).not.toBe('12345678')
       expect(await bcrypt.compare('12345678', user.passwordHash!)).toBe(true)
+    })
+
+    it('dispara el email de bienvenida sin bloquear el alta', async () => {
+      prisma.user.findUnique.mockResolvedValue(null)
+      prisma.user.create.mockImplementation(({ data }: { data: Partial<User> }) => ({
+        id: '1',
+        ...data,
+      }))
+
+      await service.register({ email: 'x@x.com', password: '12345678' })
+
+      expect(mail.send).toHaveBeenCalledWith(
+        'x@x.com',
+        expect.stringContaining('Bienvenido'),
+        expect.any(String)
+      )
+    })
+
+    it('el alta no falla aunque el email de bienvenida falle', async () => {
+      prisma.user.findUnique.mockResolvedValue(null)
+      prisma.user.create.mockImplementation(({ data }: { data: Partial<User> }) => ({
+        id: '1',
+        ...data,
+      }))
+      mail.send.mockRejectedValue(new Error('Resend caído'))
+
+      await expect(
+        service.register({ email: 'x@x.com', password: '12345678' })
+      ).resolves.toBeDefined()
     })
   })
 
