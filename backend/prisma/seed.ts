@@ -1,11 +1,51 @@
 import { loadEnv } from '../src/common/load-env'
 loadEnv(__dirname)
 
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { PrismaClient, Role } from '@prisma/client'
 import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 const BCRYPT_ROUNDS = 10
+
+// Mismo criterio de carpeta que GiftsService — ver docs/features/welcome-ebook-gift.md.
+const EBOOKS_DIR = process.env.EBOOKS_DIR
+  ? resolve(process.env.EBOOKS_DIR)
+  : resolve(__dirname, '..', 'storage', 'ebooks')
+
+// Datos ficticios pero realistas — alcanza para probar que la tarjeta se
+// lee bien en el onboarding, no solo que el campo existe. `topic` es una
+// etiqueta libre corta (ver WelcomeEbook.topic en el schema).
+const WELCOME_EBOOKS = [
+  {
+    slug: 'primeros-pasos-en-el-at',
+    title: 'Primeros pasos en el Acompañamiento Terapéutico',
+    subtitle: 'Guía práctica para tu primer año de trabajo',
+    topic: 'Primeros pasos en AT',
+    summary:
+      'Una introducción concreta al rol del AT: encuadre, vínculo con el paciente y con el ' +
+      'equipo tratante, y los errores más comunes al arrancar.',
+  },
+  {
+    slug: 'cuidar-sin-agotarse',
+    title: 'Cuidar sin agotarse',
+    subtitle: 'Herramientas concretas para cuidadores familiares',
+    topic: 'Cuidado de mayores',
+    summary:
+      'Técnicas de organización, autocuidado y límites emocionales para sostener el cuidado ' +
+      'de un familiar mayor sin que el cuidador termine agotado.',
+  },
+  {
+    slug: 'neurodiversidad-en-el-dia-a-dia',
+    title: 'Neurodiversidad en el día a día',
+    subtitle: 'Cómo acompañar sin patologizar',
+    topic: 'Neurodiversidad',
+    summary:
+      'Ideas prácticas para acompañar a personas con TEA o TDAH en la vida cotidiana, desde ' +
+      'una mirada que respeta la diversidad en vez de "corregirla".',
+  },
+]
 
 // Mismos slug/name/description que frontend/src/stores/blog.ts (array
 // CATEGORIES) — si se desalinean, el selector de categoría del admin y el
@@ -166,9 +206,58 @@ async function seedCategories() {
   console.log(`✔ ${CATEGORIES.length} categorías sembradas`)
 }
 
+// Sin PDFs definitivos todavía (ver docs/features/welcome-ebook-gift.md):
+// en desarrollo siempre se siembran 3 títulos de prueba con un PDF
+// placeholder, para poder probar el flujo completo (onboarding → claim →
+// descarga) sin depender de tener contenido real. En producción NO corre
+// salvo que se setee SEED_WELCOME_EBOOKS=true explícito — la tabla arranca
+// vacía y el paso de regalo queda invisible hasta que subas los PDFs
+// reales desde el admin.
+async function seedWelcomeEbooks() {
+  const isProd = process.env.NODE_ENV === 'production'
+  if (isProd && process.env.SEED_WELCOME_EBOOKS !== 'true') {
+    console.log('… SEED_WELCOME_EBOOKS no está en "true" en producción — se omite (esperado).')
+    return
+  }
+
+  await mkdir(EBOOKS_DIR, { recursive: true })
+
+  for (const ebook of WELCOME_EBOOKS) {
+    const created = await prisma.welcomeEbook.upsert({
+      where: { slug: ebook.slug },
+      update: {
+        title: ebook.title,
+        subtitle: ebook.subtitle,
+        topic: ebook.topic,
+        summary: ebook.summary,
+      },
+      create: { ...ebook, active: true },
+    })
+
+    // PDF placeholder: un párrafo de texto plano con extensión .pdf.
+    // Alcanza para probar la descarga real (stream + Content-Disposition)
+    // sin depender de tener el contenido definitivo.
+    const fileKey = `${created.id}.pdf`
+    await writeFile(
+      join(EBOOKS_DIR, fileKey),
+      `${ebook.title}\n\n(Este es un PDF de prueba generado por el seed — reemplazar por el ` +
+        `archivo definitivo desde /nexoat-admin/regalo-bienvenida.)`
+    )
+    await prisma.welcomeEbook.update({
+      where: { id: created.id },
+      data: { fileKey, fileName: `${ebook.slug}.pdf` },
+    })
+  }
+
+  console.log(
+    `✔ ${WELCOME_EBOOKS.length} ebooks de regalo de bienvenida sembrados (con PDF de prueba)`
+  )
+}
+
 async function main() {
   await seedAdmin()
   await seedCategories()
+  await seedWelcomeEbooks()
 }
 
 main()

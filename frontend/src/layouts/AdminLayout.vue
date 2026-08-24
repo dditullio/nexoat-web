@@ -63,6 +63,16 @@
         </RouterLink>
 
         <RouterLink
+          v-if="authStore.hasRole('ADMIN', 'SUPER_ADMIN')"
+          to="/nexoat-admin/regalo-bienvenida"
+          class="admin__link"
+          :class="{ 'is-active': $route.path === '/nexoat-admin/regalo-bienvenida' }"
+        >
+          <IconGift />
+          Regalo de bienvenida
+        </RouterLink>
+
+        <RouterLink
           v-if="authStore.hasRole('SUPER_ADMIN')"
           to="/nexoat-admin/respaldos"
           class="admin__link"
@@ -122,6 +132,7 @@ import IconUsers from '@/components/admin/icons/IconUsers.vue'
 import IconClock from '@/components/admin/icons/IconClock.vue'
 import IconMail from '@/components/admin/icons/IconMail.vue'
 import IconArchive from '@/components/admin/icons/IconArchive.vue'
+import IconGift from '@/components/admin/icons/IconGift.vue'
 import IconSettings from '@/components/admin/icons/IconSettings.vue'
 import IconExternal from '@/components/admin/icons/IconExternal.vue'
 

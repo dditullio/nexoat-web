@@ -156,6 +156,12 @@ const router = createRouter({
       meta: { title: 'Preferencias de correo', requiresAuth: true },
     },
     {
+      path: '/mi-cuenta/regalo',
+      name: 'welcome-gift',
+      component: () => import('@/views/ProfileGiftView.vue'),
+      meta: { title: 'Tu regalo de bienvenida', requiresAuth: true },
+    },
+    {
       path: '/nexoat-admin',
       meta: { layout: 'admin' },
       children: [
@@ -222,6 +228,12 @@ const router = createRouter({
               name: 'admin-subscribers',
               component: () => import('@/views/admin/AdminSubscribersView.vue'),
               meta: { title: 'Suscripciones', minRole: ['ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
+              path: 'regalo-bienvenida',
+              name: 'admin-gifts',
+              component: () => import('@/views/admin/AdminGiftsView.vue'),
+              meta: { title: 'Regalo de bienvenida', minRole: ['ADMIN', 'SUPER_ADMIN'] },
             },
             {
               path: 'respaldos',

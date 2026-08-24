@@ -5,7 +5,7 @@ export interface UploadedMedia {
   publicId: string
 }
 
-export type MediaFolder = 'articles' | 'categories'
+export type MediaFolder = 'articles' | 'categories' | 'ebook-covers'
 
 export function uploadMedia(file: File, folder: MediaFolder = 'articles'): Promise<UploadedMedia> {
   const formData = new FormData()

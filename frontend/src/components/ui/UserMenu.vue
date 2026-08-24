@@ -80,6 +80,17 @@
             <span class="um__glyph" aria-hidden="true">✉</span>
             <span class="um__label">Preferencias de correo</span>
           </RouterLink>
+
+          <RouterLink
+            v-if="showGiftItem"
+            to="/mi-cuenta/regalo"
+            class="um__item"
+            role="menuitem"
+            @click="open = false"
+          >
+            <span class="um__glyph" aria-hidden="true">🎁</span>
+            <span class="um__label">Tu regalo de bienvenida</span>
+          </RouterLink>
         </div>
 
         <div class="um__sep" />
@@ -116,6 +127,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { getAvailableGifts, getMyGiftClaim } from '@/services/gifts.api'
 import type { SubscriptionTier } from '@/types/auth'
 
 const emit = defineEmits<{ (e: 'navigate'): void }>()
@@ -168,9 +180,21 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') open.value = false
 }
 
+// Visibilidad por datos, mismo criterio que el paso de onboarding: si no
+// hay ningún ebook disponible NI un regalo ya elegido, el ítem no aparece
+// (evita un link muerto mientras no se cargue ningún PDF en producción).
+// Ver docs/features/welcome-ebook-gift.md.
+const showGiftItem = ref(false)
+
 onMounted(() => {
   document.addEventListener('click', onDocClick)
   document.addEventListener('keydown', onKey)
+
+  Promise.all([getMyGiftClaim().catch(() => null), getAvailableGifts().catch(() => [])]).then(
+    ([claim, available]) => {
+      showGiftItem.value = !!claim || available.length > 0
+    }
+  )
 })
 
 onBeforeUnmount(() => {

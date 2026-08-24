@@ -45,6 +45,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Persiste storage/ (backups y, desde welcome-ebook-gift.md, los PDF del
+    # regalo de bienvenida) entre rebuilds — sin esto el directorio vive en
+    # la capa del contenedor y se pierde en cada deploy.
+    volumes:
+      - backend_storage:/app/storage
     labels:
       - traefik.enable=true
       - traefik.http.routers.nexoat-api.entrypoints=websecure
@@ -121,3 +126,4 @@ services:
 volumes:
   postgres_data:
   umami_db_data:
+  backend_storage:

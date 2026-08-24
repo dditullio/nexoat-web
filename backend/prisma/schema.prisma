@@ -223,6 +223,7 @@ model User {
   readingHistory        ReadingHistoryEntry[]
   savedArticles         SavedArticle[]
   verificationTokens    VerificationToken[]
+  ebookClaim            EbookClaim?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -378,4 +379,46 @@ model SiteSettings {
   updatedAt            DateTime       @updatedAt
 
   @@map("site_settings")
+}
+
+// Regalo de bienvenida ofrecido al terminar el onboarding — ver
+// docs/features/welcome-ebook-gift.md. fileKey null = título cargado pero
+// sin PDF todavía; no cuenta como "disponible" para el paso de onboarding
+// ni para el ítem del menú de usuario (visibilidad por datos, no por
+// entorno).
+model WelcomeEbook {
+  id                 String       @id @default(cuid())
+  title              String
+  subtitle           String?
+  slug               String       @unique
+  topic              String // etiqueta libre corta, ej. "Primeros pasos en AT" — no un enum, para no migrar cada vez que se sume una temática
+  // Resumen breve — es lo que lee el usuario en la tarjeta para decidir
+  // antes de elegir, no una nota interna de catálogo.
+  summary            String
+  coverImage         String? // Cloudinary, carpeta "ebook-covers" — mismo mecanismo que coverImage de Category/Article
+  coverImagePublicId String?
+  fileKey            String? // nombre de archivo dentro de storage/ebooks
+  fileName           String? // nombre original, para el header Content-Disposition de la descarga
+  active             Boolean      @default(true)
+  claims             EbookClaim[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("welcome_ebooks")
+}
+
+// Un usuario reclama un solo ebook de regalo (@@unique en userId) — es un
+// regalo de bienvenida, no un catálogo de descargas. onDelete: Restrict en
+// ebook para que no se pueda borrar un título ya reclamado por alguien (el
+// admin lo desactiva, no lo elimina, si ya tuvo reclamos).
+model EbookClaim {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ebookId   String
+  ebook     WelcomeEbook @relation(fields: [ebookId], references: [id], onDelete: Restrict)
+  claimedAt DateTime     @default(now())
+
+  @@index([ebookId])
+  @@map("ebook_claims")
 }

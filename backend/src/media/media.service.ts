@@ -11,7 +11,7 @@ export interface UploadedMedia {
 // cuenta (avatares, directorio de acompañantes, etc.) y permite borrar con
 // confianza sabiendo de qué feature viene cada publicId.
 const ROOT_FOLDER = 'nexoat'
-export const MEDIA_FOLDERS = ['articles', 'categories', 'avatars'] as const
+export const MEDIA_FOLDERS = ['articles', 'categories', 'avatars', 'ebook-covers'] as const
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number]
 
 export const ALLOWED_IMAGE_MIME_TYPES = new Set([
@@ -33,6 +33,9 @@ const WIDTH_LIMIT_BY_FOLDER: Record<MediaFolder, number> = {
   articles: 1920,
   categories: 1920,
   avatars: 512,
+  // Tapa de ebook: se muestra como mucho del tamaño de una tarjeta en el
+  // onboarding/perfil, nunca a pantalla completa — mismo criterio que avatars.
+  'ebook-covers': 640,
 }
 
 function optimizedTransformation(folder: MediaFolder) {

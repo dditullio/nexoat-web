@@ -4,7 +4,7 @@
       <p class="onboarding__step-label">Paso {{ step }} de {{ totalSteps }}</p>
 
       <!-- Paso 1: tipo de usuario -->
-      <template v-if="step === 1">
+      <template v-if="currentKind === 'role'">
         <h1 class="onboarding__title">¿Cómo te describirías?</h1>
         <p class="onboarding__lead">Nos ayuda a mostrarte lo más útil primero.</p>
 
@@ -24,14 +24,14 @@
           type="button"
           class="btn btn--primary onboarding__submit"
           :disabled="!profileRoleDraft"
-          @click="step = 2"
+          @click="step++"
         >
           Continuar
         </button>
       </template>
 
       <!-- Paso 2: términos + newsletter -->
-      <template v-else-if="step === 2">
+      <template v-else-if="currentKind === 'terms'">
         <h1 class="onboarding__title">Ya casi</h1>
         <p class="onboarding__lead">Dos cositas más y terminamos.</p>
 
@@ -59,20 +59,20 @@
         </p>
 
         <div class="onboarding__actions">
-          <button type="button" class="btn btn--ghost" @click="step = 1">Atrás</button>
+          <button type="button" class="btn btn--ghost" @click="step--">Atrás</button>
           <button
             type="button"
             class="btn btn--primary onboarding__submit"
             :disabled="isSubmitting"
             @click="onFinishStep2"
           >
-            {{ isSubmitting ? 'Guardando…' : 'Finalizar' }}
+            {{ isSubmitting ? 'Guardando…' : totalSteps > step ? 'Continuar' : 'Finalizar' }}
           </button>
         </div>
       </template>
 
       <!-- Paso 3: perfil profesional, opcional, solo AT/Cuidador -->
-      <template v-else>
+      <template v-else-if="currentKind === 'professional'">
         <h1 class="onboarding__title">Perfil profesional</h1>
         <p class="onboarding__lead">
           Opcional — un mini-currículum breve: en qué te especializás y tu trayectoria. Podés
@@ -124,7 +124,7 @@
             type="button"
             class="btn btn--ghost"
             :disabled="isSavingProfessional"
-            @click="onFinish"
+            @click="advanceOrFinish"
           >
             Hacerlo más tarde
           </button>
@@ -138,17 +138,47 @@
           </button>
         </div>
       </template>
+
+      <!-- Paso 4: regalo de bienvenida — solo si hay al menos un ebook activo con PDF cargado -->
+      <template v-else-if="currentKind === 'gift'">
+        <h1 class="onboarding__title">Elegí tu regalo de bienvenida 🎁</h1>
+        <p class="onboarding__lead">
+          Un ebook a elección, de yapa por sumarte. Podés descargarlo ahora o más tarde desde tu
+          cuenta.
+        </p>
+
+        <GiftPicker v-model="giftSelectedId" :ebooks="availableGifts" :disabled="isClaimingGift" />
+
+        <p v-if="giftError" class="onboarding__error" role="alert">{{ giftError }}</p>
+
+        <div class="onboarding__actions">
+          <button type="button" class="btn btn--ghost" :disabled="isClaimingGift" @click="onFinish">
+            Ahora no
+          </button>
+          <button
+            type="button"
+            class="btn btn--primary onboarding__submit"
+            :disabled="!giftSelectedId || isClaimingGift"
+            @click="onClaimGiftAndFinish"
+          >
+            {{ isClaimingGift ? 'Guardando…' : 'Elegir y finalizar' }}
+          </button>
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { completeOnboarding } from '@/services/onboarding.api'
 import { upsertProfessionalProfile } from '@/services/profile.api'
+import { claimGift, getAvailableGifts } from '@/services/gifts.api'
+import GiftPicker from '@/components/gifts/GiftPicker.vue'
 import { PROFESSIONAL_PROFILE_ROLES, PROFILE_ROLE_LABEL, type ProfileRole } from '@/types/auth'
+import type { WelcomeEbook } from '@/types/gifts'
 
 const route = useRoute()
 const router = useRouter()
@@ -159,13 +189,44 @@ const profileRoleOptions = (Object.keys(PROFILE_ROLE_LABEL) as ProfileRole[]).ma
   label: PROFILE_ROLE_LABEL[value],
 }))
 
-const step = ref<1 | 2 | 3>(1)
+const step = ref(1)
 const profileRoleDraft = ref<ProfileRole | null>(null)
 const showsStep3 = computed(
   () =>
     profileRoleDraft.value !== null && PROFESSIONAL_PROFILE_ROLES.includes(profileRoleDraft.value)
 )
-const totalSteps = computed(() => (showsStep3.value ? 3 : 2))
+
+// Regalo de bienvenida (ver docs/features/welcome-ebook-gift.md) — se
+// consulta apenas se monta la vista (no hace falta esperar al paso 3/4
+// para saberlo) para que totalSteps sea correcto desde el principio. Si no
+// hay ningún ebook disponible, el paso ni se arma — visibilidad por datos.
+const availableGifts = ref<WelcomeEbook[]>([])
+const showsGiftStep = computed(() => availableGifts.value.length > 0)
+
+// Orden dinámico de pasos: el perfil profesional y el regalo son
+// opcionales según el rol elegido / si hay ebooks cargados — el número de
+// paso que ve el usuario depende de cuáles apliquen.
+type StepKind = 'role' | 'terms' | 'professional' | 'gift'
+const stepOrder = computed<StepKind[]>(() => {
+  const order: StepKind[] = ['role', 'terms']
+  if (showsStep3.value) order.push('professional')
+  if (showsGiftStep.value) order.push('gift')
+  return order
+})
+const totalSteps = computed(() => stepOrder.value.length)
+const currentKind = computed<StepKind>(() => stepOrder.value[step.value - 1] ?? 'role')
+
+function advanceOrFinish() {
+  if (step.value < totalSteps.value) {
+    step.value++
+  } else {
+    onFinish()
+  }
+}
+
+onMounted(async () => {
+  availableGifts.value = await getAvailableGifts().catch(() => [])
+})
 
 // Paso 2
 const acceptedTerms = ref(false)
@@ -194,11 +255,7 @@ async function onFinishStep2() {
       subscribeNewsletter: subscribeNewsletter.value,
     })
     authStore.updateLocalUser(updated)
-    if (showsStep3.value) {
-      step.value = 3
-    } else {
-      onFinish()
-    }
+    advanceOrFinish()
   } catch {
     errorMessage.value = 'No pudimos guardar. Probá de nuevo.'
   } finally {
@@ -224,11 +281,30 @@ async function onSaveProfessionalAndFinish() {
       bio: bioDraft.value || undefined,
     })
     authStore.updateLocalUser(updated)
-    onFinish()
+    advanceOrFinish()
   } catch {
     professionalError.value = 'No pudimos guardar tu perfil profesional. Podés cargarlo más tarde.'
   } finally {
     isSavingProfessional.value = false
+  }
+}
+
+// Paso 4
+const giftSelectedId = ref<string | null>(null)
+const isClaimingGift = ref(false)
+const giftError = ref('')
+
+async function onClaimGiftAndFinish() {
+  if (!giftSelectedId.value) return
+  isClaimingGift.value = true
+  giftError.value = ''
+  try {
+    await claimGift(giftSelectedId.value)
+    onFinish()
+  } catch {
+    giftError.value = 'No pudimos guardar tu elección. Probá de nuevo.'
+  } finally {
+    isClaimingGift.value = false
   }
 }
 

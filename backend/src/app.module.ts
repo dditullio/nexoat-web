@@ -17,6 +17,7 @@ import { SettingsModule } from './settings/settings.module'
 import { ProfileModule } from './profile/profile.module'
 import { ReaderLibraryModule } from './reader-library/reader-library.module'
 import { OnboardingModule } from './onboarding/onboarding.module'
+import { GiftsModule } from './gifts/gifts.module'
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { OnboardingModule } from './onboarding/onboarding.module'
     ProfileModule,
     ReaderLibraryModule,
     OnboardingModule,
+    GiftsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
