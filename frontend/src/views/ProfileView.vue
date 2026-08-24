@@ -10,7 +10,12 @@
       <!-- Avatar -->
       <section class="card profile__card profile__card--avatar">
         <span class="profile__avatar" :class="{ 'is-uploading': isUploadingAvatar }">
-          <img v-if="user?.avatarUrl" :src="user.avatarUrl" alt="" />
+          <img
+            v-if="showAvatarImg"
+            :src="user!.avatarUrl!"
+            alt=""
+            @error="avatarImgFailed = true"
+          />
           <span v-else class="profile__initials">{{ initials }}</span>
         </span>
 
@@ -178,6 +183,16 @@ const profileRoleOptions = (Object.keys(PROFILE_ROLE_LABEL) as ProfileRole[]).ma
 // Avatar
 const isUploadingAvatar = ref(false)
 const avatarError = ref('')
+// Si la URL de la foto (típicamente de Google/Facebook) no carga, cae a las
+// iniciales en vez del ícono de imagen rota del navegador.
+const avatarImgFailed = ref(false)
+const showAvatarImg = computed(() => !!user.value?.avatarUrl && !avatarImgFailed.value)
+watch(
+  () => user.value?.avatarUrl,
+  () => {
+    avatarImgFailed.value = false
+  }
+)
 
 async function onAvatarSelected(event: Event) {
   const input = event.target as HTMLInputElement

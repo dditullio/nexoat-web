@@ -10,7 +10,7 @@
       @click="open = !open"
     >
       <span class="um__avatar" aria-hidden="true">
-        <img v-if="user?.avatarUrl" :src="user.avatarUrl" alt="" />
+        <img v-if="showAvatarImg" :src="user!.avatarUrl!" alt="" @error="avatarError = true" />
         <span v-else class="um__initials">{{ initials }}</span>
       </span>
       <svg
@@ -33,7 +33,7 @@
       <div v-show="open" class="um__panel" role="menu">
         <div class="um__head">
           <span class="um__avatar um__avatar--lg" aria-hidden="true">
-            <img v-if="user?.avatarUrl" :src="user.avatarUrl" alt="" />
+            <img v-if="showAvatarImg" :src="user!.avatarUrl!" alt="" @error="avatarError = true" />
             <span v-else class="um__initials">{{ initials }}</span>
           </span>
           <div class="um__id">
@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import type { SubscriptionTier } from '@/types/auth'
 
@@ -124,6 +124,18 @@ const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)
+
+// Algunas cuentas de Google/Facebook devuelven una URL de foto que no carga
+// (privada, vencida, etc.) — sin esto, el navegador muestra el ícono de
+// imagen rota en vez de caer a las iniciales.
+const avatarError = ref(false)
+const showAvatarImg = computed(() => !!user.value?.avatarUrl && !avatarError.value)
+watch(
+  () => user.value?.avatarUrl,
+  () => {
+    avatarError.value = false
+  }
+)
 
 const displayName = computed(() => user.value?.name || user.value?.email || 'Mi cuenta')
 
