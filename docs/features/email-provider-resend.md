@@ -1,6 +1,6 @@
 # Proveedor de email: Resend (transaccional + newsletter)
 
-**Estado:** fases 1 y 2 implementadas y verificadas. Fases 3-4 pendientes.
+**Estado:** fases 1-3 implementadas y verificadas. Fase 4 pendiente.
 
 ## Contexto
 
