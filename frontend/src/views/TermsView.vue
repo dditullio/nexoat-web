@@ -2,11 +2,11 @@
   <div class="container terms">
     <p class="eyebrow terms__eyebrow">Legal</p>
     <h1 class="terms__title">Términos de uso y Política de privacidad</h1>
-    <p class="terms__draft-notice">
-      <strong>Borrador.</strong> Este texto describe honestamente qué datos junta NexoAT hoy y para
-      qué los usa, pero todavía no pasó por una revisión legal formal. Se va a actualizar a medida
-      que el sitio crezca.
-    </p>
+    <!-- <p class="terms__draft-notice">
+      <strong>Borrador.</strong> Este texto describe honestamente qué datos
+      junta NexoAT hoy y para qué los usa, pero todavía no pasó por una revisión
+      legal formal. Se va a actualizar a medida que el sitio crezca.
+    </p> -->
 
     <div class="terms__body">
       <section class="terms__section">
