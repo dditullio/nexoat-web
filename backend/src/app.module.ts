@@ -16,6 +16,7 @@ import { BackupModule } from './backup/backup.module'
 import { SettingsModule } from './settings/settings.module'
 import { ProfileModule } from './profile/profile.module'
 import { ReaderLibraryModule } from './reader-library/reader-library.module'
+import { OnboardingModule } from './onboarding/onboarding.module'
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ReaderLibraryModule } from './reader-library/reader-library.module'
     SettingsModule,
     ProfileModule,
     ReaderLibraryModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

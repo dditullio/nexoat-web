@@ -77,8 +77,7 @@
 
         <div class="ftr__col">
           <h4 class="ftr__title">Legal</h4>
-          <a href="#" class="ftr__link">Política de privacidad</a>
-          <a href="#" class="ftr__link">Aviso legal</a>
+          <RouterLink to="/terminos" class="ftr__link">Términos y privacidad</RouterLink>
         </div>
       </div>
 

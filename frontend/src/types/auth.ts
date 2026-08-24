@@ -46,6 +46,11 @@ export interface AuthUser {
   professionalProfile?: ProfessionalProfile | null
   isActive: boolean
   emailVerified: string | null
+  // `null` = todavía no aceptó (cuentas de antes de este campo, a
+  // propósito) o = todavía tiene que pasar por /bienvenida. Ver
+  // docs/features/email-first-signup-and-onboarding.md.
+  termsAcceptedAt: string | null
+  onboardingCompletedAt: string | null
   createdAt: string
   updatedAt: string
 }

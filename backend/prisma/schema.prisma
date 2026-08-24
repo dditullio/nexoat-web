@@ -190,31 +190,41 @@ model ArticleTag {
 }
 
 model User {
-  id                  String                @id @default(cuid())
-  email               String                @unique
-  emailVerified       DateTime?
-  name                String?
-  avatarUrl           String?
+  id                    String                @id @default(cuid())
+  email                 String                @unique
+  emailVerified         DateTime?
+  name                  String?
+  avatarUrl             String?
   // ID de Cloudinary del avatar (carpeta "avatars") — mismo rol que
   // Article.coverImagePublicId: permite borrar el asset viejo al
   // reemplazar/quitar la foto. Null en avatares que vienen de OAuth (esos
   // son una URL externa de Google/Facebook, no un asset propio).
-  avatarPublicId      String?
-  passwordHash        String? // null si es cuenta 100% OAuth
-  role                Role                  @default(USER)
-  subscriptionTier    SubscriptionTier      @default(gratuito)
-  profileRole         ProfileRole?
-  professionalProfile ProfessionalProfile?
-  isActive            Boolean               @default(true)
-  accounts            OAuthAccount[]
-  refreshTokens       RefreshToken[]
-  articles            Article[]             @relation("ArticleAuthor")
-  auditLogs           AuditLog[]            @relation("AuditActor")
-  readingHistory      ReadingHistoryEntry[]
-  savedArticles       SavedArticle[]
-  verificationTokens  VerificationToken[]
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  avatarPublicId        String?
+  // null = cuenta pendiente de activación (alta por email todavía sin
+  // confirmar) o 100% OAuth. Mismo guard de validateLocalUser cubre los
+  // dos casos: sin passwordHash, no se puede loguear con contraseña.
+  passwordHash          String?
+  role                  Role                  @default(USER)
+  subscriptionTier      SubscriptionTier      @default(gratuito)
+  profileRole           ProfileRole?
+  professionalProfile   ProfessionalProfile?
+  // null = nunca aceptó (cuentas de antes de este campo, a propósito no se
+  // simula que sí) — ver docs/features/email-first-signup-and-onboarding.md.
+  termsAcceptedAt       DateTime?
+  // null = todavía tiene que pasar por /bienvenida. Campo propio, no
+  // derivado de profileRole (que se puede volver a "sin elegir" desde
+  // /mi-cuenta/perfil sin que eso deba reabrir el onboarding).
+  onboardingCompletedAt DateTime?
+  isActive              Boolean               @default(true)
+  accounts              OAuthAccount[]
+  refreshTokens         RefreshToken[]
+  articles              Article[]             @relation("ArticleAuthor")
+  auditLogs             AuditLog[]            @relation("AuditActor")
+  readingHistory        ReadingHistoryEntry[]
+  savedArticles         SavedArticle[]
+  verificationTokens    VerificationToken[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   @@map("users")
 }
@@ -241,6 +251,9 @@ model ProfessionalProfile {
 enum VerificationTokenType {
   email_verification
   password_reset
+  // Confirma que el email existe antes de dejar completar el registro por
+  // email/contraseña — ver docs/features/email-first-signup-and-onboarding.md.
+  account_activation
 }
 
 // Token de un solo uso con expiración, mandado por email — un mismo modelo

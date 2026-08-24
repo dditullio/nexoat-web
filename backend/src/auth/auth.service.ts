@@ -1,11 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common'
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
 import {
@@ -20,17 +14,25 @@ import { MailService } from '../mail/mail.service'
 import { welcomeEmailHtml } from '../mail/templates/welcome.template'
 import { verifyEmailHtml } from '../mail/templates/verify-email.template'
 import { resetPasswordEmailHtml } from '../mail/templates/reset-password.template'
-import type { RegisterDto } from './dto/register.dto'
+import {
+  activateAccountEmailHtml,
+  activateAccountEmailText,
+} from '../mail/templates/activate-account.template'
+import { alreadyRegisteredEmailHtml } from '../mail/templates/already-registered.template'
+import type { RequestSignupDto } from './dto/request-signup.dto'
+import type { CompleteSignupDto } from './dto/complete-signup.dto'
 import type { JwtPayload } from './types/jwt-payload.interface'
 
 const ACCESS_TOKEN_TTL = '15m'
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const BCRYPT_ROUNDS = 10
 
-// Verificación: 24h, es de baja urgencia — reset de contraseña: 1h, ventana
-// corta porque es una acción sensible. Ver
-// docs/features/email-verification-and-password-reset.md.
+// Verificación/activación: 24h, son de baja urgencia — reset de contraseña:
+// 1h, ventana corta porque es una acción sensible. Ver
+// docs/features/email-verification-and-password-reset.md y
+// docs/features/email-first-signup-and-onboarding.md.
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
+const ACCOUNT_ACTIVATION_TTL_MS = 24 * 60 * 60 * 1000
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 
 function frontendUrl(): string {
@@ -53,22 +55,85 @@ export class AuthService {
     private readonly mail: MailService
   ) {}
 
-  async register(dto: RegisterDto): Promise<User> {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } })
-    if (existing) throw new ConflictException('Ya existe una cuenta con ese email')
+  // ─── Registro en dos pasos (email → activar) ────────────────────────────
+  // Ver docs/features/email-first-signup-and-onboarding.md.
 
+  /**
+   * Nunca revela si el email ya tiene cuenta (anti-enumeración, mismo
+   * criterio que `requestPasswordReset`): el caller siempre responde
+   * `{ ok: true }`. Tres casos, todos silenciosos desde afuera:
+   * - Email nuevo → crea la cuenta pendiente (`passwordHash: null`) y manda
+   *   la activación.
+   * - Cuenta pendiente ya existente (alguien pidió el alta y no la
+   *   completó) → reenvía una activación nueva, idempotente.
+   * - Cuenta ya completa (`passwordHash` seteado) → manda el aviso de "ya
+   *   tenés cuenta" en vez de una activación.
+   */
+  async requestSignup(dto: RequestSignupDto): Promise<void> {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } })
+
+    if (existing?.passwordHash) {
+      await this.sendAlreadyRegisteredEmail(existing.email)
+      return
+    }
+
+    const user =
+      existing ?? (await this.prisma.user.create({ data: { email: dto.email, role: Role.USER } }))
+
+    const token = await this.createVerificationToken(
+      user.id,
+      VerificationTokenType.account_activation,
+      ACCOUNT_ACTIVATION_TTL_MS
+    )
+    await this.sendActivationEmail(user.email, token)
+  }
+
+  /** Consume el token, activa la cuenta (contraseña + nombre + email verificado) y abre sesión — mismo mecanismo que login/register antes. */
+  async completeSignup(dto: CompleteSignupDto): Promise<User> {
+    if (dto.password !== dto.passwordConfirm) {
+      throw new BadRequestException('Las contraseñas no coinciden')
+    }
+
+    const pending = await this.consumeVerificationToken(
+      dto.token,
+      VerificationTokenType.account_activation
+    )
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS)
-    const user = await this.prisma.user.create({
-      data: { email: dto.email, passwordHash, name: dto.name, role: Role.USER },
+    const user = await this.prisma.user.update({
+      where: { id: pending.id },
+      data: { passwordHash, name: dto.name, emailVerified: new Date() },
     })
 
-    const verifyToken = await this.createVerificationToken(
-      user.id,
-      VerificationTokenType.email_verification,
-      EMAIL_VERIFICATION_TTL_MS
-    )
-    this.sendWelcomeEmail(user, verifyToken)
+    this.sendWelcomeEmail(user)
     return user
+  }
+
+  private async sendActivationEmail(email: string, token: string): Promise<void> {
+    const activateUrl = `${frontendUrl()}/completar-registro?token=${token}`
+    await this.mail
+      .send(
+        email,
+        'Confirmá tu cuenta en NexoAT',
+        activateAccountEmailHtml(activateUrl),
+        activateAccountEmailText(activateUrl)
+      )
+      .catch((error: unknown) => {
+        this.logger.warn(`No se pudo enviar el email de activación: ${String(error)}`)
+      })
+  }
+
+  private async sendAlreadyRegisteredEmail(email: string): Promise<void> {
+    const loginUrl = `${frontendUrl()}/ingresar/correo`
+    const forgotPasswordUrl = `${frontendUrl()}/recuperar-contrasena`
+    await this.mail
+      .send(
+        email,
+        'Ya tenés una cuenta en NexoAT',
+        alreadyRegisteredEmailHtml(loginUrl, forgotPasswordUrl)
+      )
+      .catch((error: unknown) => {
+        this.logger.warn(`No se pudo enviar el aviso de "ya tenés cuenta": ${String(error)}`)
+      })
   }
 
   /** Usado por `LocalStrategy`. Devuelve `null` en cualquier credencial inválida (sin distinguir el motivo, para no filtrar qué emails existen). */
@@ -116,19 +181,13 @@ export class AuthService {
 
   // Fire-and-forget: un email de bienvenida que falla nunca debe tirar
   // abajo el alta de la cuenta (mismo criterio que
-  // ArticlesService.findPublishedBySlug con el historial de lectura).
-  // `verifyToken` solo llega en altas por email/contraseña — las de OAuth
-  // llaman sin token (ya vienen con emailVerified seteado).
-  private sendWelcomeEmail(user: User, verifyToken?: string): void {
-    const verifyUrl = verifyToken
-      ? `${frontendUrl()}/verificar-correo?token=${verifyToken}`
-      : undefined
+  // ArticlesService.findPublishedBySlug con el historial de lectura). Se
+  // manda siempre a un usuario ya verificado (OAuth lo verifica el
+  // proveedor; email lo verifica completeSignup en el mismo paso) — no
+  // lleva botón de "confirmá tu email" como llegó a tener en su momento.
+  private sendWelcomeEmail(user: User): void {
     this.mail
-      .send(
-        user.email,
-        '¡Bienvenido/a a NexoAT!',
-        welcomeEmailHtml(user.name ?? undefined, verifyUrl)
-      )
+      .send(user.email, '¡Bienvenido/a a NexoAT!', welcomeEmailHtml(user.name ?? undefined))
       .catch((error: unknown) => {
         this.logger.warn(`No se pudo enviar el email de bienvenida: ${String(error)}`)
       })

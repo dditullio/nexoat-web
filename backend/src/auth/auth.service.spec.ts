@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing'
 import { JwtModule } from '@nestjs/jwt'
-import { BadRequestException, ConflictException } from '@nestjs/common'
+import { BadRequestException } from '@nestjs/common'
 import * as bcrypt from 'bcryptjs'
 import { Role, VerificationTokenType, type User } from '@prisma/client'
 import { AuthService } from './auth.service'
@@ -52,46 +52,55 @@ describe('AuthService', () => {
     service = module.get(AuthService)
   })
 
-  describe('register', () => {
-    it('lanza ConflictException si el email ya existe', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: '1' })
-
-      await expect(service.register({ email: 'x@x.com', password: '12345678' })).rejects.toThrow(
-        ConflictException
-      )
-    })
-
-    it('crea el usuario con la contraseña hasheada y rol USER', async () => {
+  describe('requestSignup', () => {
+    it('crea una cuenta pendiente (sin passwordHash) y manda la activación', async () => {
       prisma.user.findUnique.mockResolvedValue(null)
       prisma.user.create.mockImplementation(({ data }: { data: Partial<User> }) => ({
         id: '1',
         ...data,
       }))
 
-      const user = await service.register({ email: 'x@x.com', password: '12345678' })
+      await service.requestSignup({ email: 'x@x.com' })
 
-      expect(user.role).toBe(Role.USER)
-      expect(user.passwordHash).not.toBe('12345678')
-      expect(await bcrypt.compare('12345678', user.passwordHash!)).toBe(true)
-    })
-
-    it('dispara el email de bienvenida sin bloquear el alta', async () => {
-      prisma.user.findUnique.mockResolvedValue(null)
-      prisma.user.create.mockImplementation(({ data }: { data: Partial<User> }) => ({
-        id: '1',
-        ...data,
-      }))
-
-      await service.register({ email: 'x@x.com', password: '12345678' })
-
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: { email: 'x@x.com', role: Role.USER },
+      })
       expect(mail.send).toHaveBeenCalledWith(
         'x@x.com',
-        expect.stringContaining('Bienvenido'),
+        expect.stringContaining('Confirmá'),
+        expect.any(String),
         expect.any(String)
       )
     })
 
-    it('el alta no falla aunque el email de bienvenida falle', async () => {
+    it('con una cuenta pendiente ya existente, reenvía la activación sin crear otra cuenta', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: '1', email: 'x@x.com', passwordHash: null })
+
+      await service.requestSignup({ email: 'x@x.com' })
+
+      expect(prisma.user.create).not.toHaveBeenCalled()
+      expect(mail.send).toHaveBeenCalledWith(
+        'x@x.com',
+        expect.stringContaining('Confirmá'),
+        expect.any(String),
+        expect.any(String)
+      )
+    })
+
+    it('con una cuenta ya completa, manda el aviso de "ya tenés cuenta" en vez de una activación', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: '1', email: 'x@x.com', passwordHash: 'hash' })
+
+      await service.requestSignup({ email: 'x@x.com' })
+
+      expect(prisma.user.create).not.toHaveBeenCalled()
+      expect(mail.send).toHaveBeenCalledWith(
+        'x@x.com',
+        expect.stringContaining('Ya tenés'),
+        expect.any(String)
+      )
+    })
+
+    it('no rompe si el email falla (fire-and-forget con catch interno)', async () => {
       prisma.user.findUnique.mockResolvedValue(null)
       prisma.user.create.mockImplementation(({ data }: { data: Partial<User> }) => ({
         id: '1',
@@ -99,9 +108,84 @@ describe('AuthService', () => {
       }))
       mail.send.mockRejectedValue(new Error('Resend caído'))
 
+      await expect(service.requestSignup({ email: 'x@x.com' })).resolves.toBeUndefined()
+    })
+  })
+
+  describe('completeSignup', () => {
+    it('rechaza si las contraseñas no coinciden, sin tocar ningún token', async () => {
       await expect(
-        service.register({ email: 'x@x.com', password: '12345678' })
-      ).resolves.toBeDefined()
+        service.completeSignup({
+          token: 'raw',
+          name: 'X',
+          password: 'a12345678',
+          passwordConfirm: 'b12345678',
+        })
+      ).rejects.toThrow(BadRequestException)
+      expect(prisma.verificationToken.findUnique).not.toHaveBeenCalled()
+    })
+
+    it('rechaza un token inválido/vencido', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue(null)
+
+      await expect(
+        service.completeSignup({
+          token: 'raw',
+          name: 'X',
+          password: '12345678',
+          passwordConfirm: '12345678',
+        })
+      ).rejects.toThrow(BadRequestException)
+    })
+
+    it('activa la cuenta: setea contraseña, nombre y emailVerified, y devuelve sesión', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue({
+        id: 't1',
+        type: VerificationTokenType.account_activation,
+        usedAt: null,
+        expiresAt: new Date(Date.now() + 10_000),
+        user: { id: 'u1', email: 'x@x.com' },
+      })
+      prisma.user.update.mockImplementation(({ data }: { data: Partial<User> }) => ({
+        id: 'u1',
+        email: 'x@x.com',
+        ...data,
+      }))
+
+      const user = await service.completeSignup({
+        token: 'raw',
+        name: 'María',
+        password: '12345678',
+        passwordConfirm: '12345678',
+      })
+
+      expect(user.name).toBe('María')
+      expect(user.emailVerified).toBeInstanceOf(Date)
+      expect(await bcrypt.compare('12345678', user.passwordHash!)).toBe(true)
+      expect(mail.send).toHaveBeenCalledWith(
+        'x@x.com',
+        expect.stringContaining('Bienvenido'),
+        expect.any(String)
+      )
+    })
+
+    it('rechaza un token de otro tipo (ej. reset de contraseña) usado acá', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue({
+        id: 't1',
+        type: VerificationTokenType.password_reset,
+        usedAt: null,
+        expiresAt: new Date(Date.now() + 10_000),
+        user: { id: 'u1', email: 'x@x.com' },
+      })
+
+      await expect(
+        service.completeSignup({
+          token: 'raw',
+          name: 'X',
+          password: '12345678',
+          passwordConfirm: '12345678',
+        })
+      ).rejects.toThrow(BadRequestException)
     })
   })
 

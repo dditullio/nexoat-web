@@ -38,11 +38,25 @@ export const useAuthStore = defineStore('auth', () => {
     setSession(session)
   }
 
-  /** Alta pública por email — crea la cuenta (rol USER, nivel "gratuito") y abre sesión de una. */
-  async function register(email: string, password: string, name?: string) {
-    const session = await http<SessionResponse>('/auth/register', {
+  /**
+   * Paso 1 del alta por email — solo pide el email, manda un link de
+   * activación. Siempre resuelve (ni siquiera revela si el email ya tiene
+   * cuenta) — ver docs/features/email-first-signup-and-onboarding.md.
+   */
+  async function requestSignup(email: string) {
+    await http('/auth/signup', { method: 'POST', body: { email }, skipAuthRetry: true })
+  }
+
+  /** Paso 2: consume el token de activación, crea contraseña/nombre y abre sesión de una. */
+  async function completeSignup(
+    token: string,
+    name: string,
+    password: string,
+    passwordConfirm: string
+  ) {
+    const session = await http<SessionResponse>('/auth/signup/complete', {
       method: 'POST',
-      body: { email, password, name },
+      body: { token, name, password, passwordConfirm },
       skipAuthRetry: true,
     })
     setSession(session)
@@ -141,7 +155,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     hasRole,
     login,
-    register,
+    requestSignup,
+    completeSignup,
     logout,
     fetchMe,
     refresh,

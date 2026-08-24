@@ -44,10 +44,17 @@ export class MailService {
     }
   }
 
-  /** `body` es HTML — los callers arman el contenido con las plantillas de mail/templates/. */
-  async send(to: string, subject: string, body: string): Promise<void> {
+  /**
+   * `html` — los callers arman el contenido con las plantillas de
+   * mail/templates/. `text` es opcional: una alternativa en texto plano
+   * mejora cómo tratan el email varios filtros de spam (multipart real, no
+   * solo HTML) — se usa en los envíos donde más importa la entrega (ej.
+   * activación de cuenta). Sin `text`, Resend arma el email solo con HTML,
+   * como hacía antes.
+   */
+  async send(to: string, subject: string, html: string, text?: string): Promise<void> {
     if (!this.resend) {
-      this.logger.log(`[mail no-op] para=${to} asunto="${subject}"\n${body}`)
+      this.logger.log(`[mail no-op] para=${to} asunto="${subject}"\n${html}`)
       return
     }
 
@@ -56,7 +63,8 @@ export class MailService {
         from: this.from,
         to,
         subject,
-        html: body,
+        html,
+        ...(text ? { text } : {}),
       })
       if (error) {
         this.logger.error(`No se pudo enviar el email a ${to}: ${error.message}`)

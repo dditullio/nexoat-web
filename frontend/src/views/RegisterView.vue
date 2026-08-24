@@ -1,69 +1,62 @@
 <template>
   <div class="container auth">
     <div class="auth__card">
-      <p class="eyebrow auth__eyebrow">Cuenta de lector</p>
-      <h1 class="auth__title">Registrate gratis</h1>
-      <p class="auth__lead">
-        Creá tu cuenta para acceder a los artículos de nivel registrado sin costo.
-      </p>
+      <template v-if="sent">
+        <p class="eyebrow auth__eyebrow">Cuenta de lector</p>
+        <h1 class="auth__title">Revisá tu correo</h1>
+        <p class="auth__lead">
+          Te mandamos un link a <strong>{{ email }}</strong> para confirmar tu cuenta. Puede tardar
+          unos minutos en llegar.
+        </p>
+        <p class="auth__spam">
+          <strong>¿No lo ves?</strong> Revisá también la carpeta de spam o promociones — a veces el
+          primer correo de un remitente nuevo cae ahí.
+        </p>
+        <RouterLink to="/ingresar/correo" class="btn btn--ghost auth__submit">
+          Volver a ingresar
+        </RouterLink>
+      </template>
 
-      <form class="auth__form" @submit.prevent="onSubmit">
-        <label class="auth__field">
-          <span class="auth__label">Nombre</span>
-          <input
-            v-model="name"
-            type="text"
-            autocomplete="name"
-            class="auth__input"
-            :disabled="isSubmitting"
-          />
-        </label>
+      <template v-else>
+        <p class="eyebrow auth__eyebrow">Cuenta de lector</p>
+        <h1 class="auth__title">Registrate gratis</h1>
+        <p class="auth__lead">
+          Ingresá tu email y te mandamos un link para confirmar tu cuenta y elegir tu contraseña.
+        </p>
 
-        <label class="auth__field">
-          <span class="auth__label">Email</span>
-          <input
-            v-model="email"
-            type="email"
-            autocomplete="email"
-            required
-            class="auth__input"
-            :disabled="isSubmitting"
-          />
-        </label>
+        <form class="auth__form" @submit.prevent="onSubmit">
+          <label class="auth__field">
+            <span class="auth__label">Email</span>
+            <input
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              required
+              class="auth__input"
+              :disabled="isSubmitting"
+            />
+          </label>
 
-        <label class="auth__field">
-          <span class="auth__label">Contraseña</span>
-          <input
-            v-model="password"
-            type="password"
-            autocomplete="new-password"
-            required
-            minlength="8"
-            class="auth__input"
-            :disabled="isSubmitting"
-          />
-          <span class="auth__hint">Mínimo 8 caracteres.</span>
-        </label>
+          <p v-if="errorMessage" class="auth__error" role="alert">{{ errorMessage }}</p>
 
-        <p v-if="errorMessage" class="auth__error" role="alert">{{ errorMessage }}</p>
+          <button type="submit" class="btn btn--primary auth__submit" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Enviando…' : 'Continuar' }}
+          </button>
+        </form>
 
-        <button type="submit" class="btn btn--primary auth__submit" :disabled="isSubmitting">
-          {{ isSubmitting ? 'Creando cuenta…' : 'Crear cuenta' }}
-        </button>
-      </form>
+        <RouterLink
+          v-if="oauthLabel"
+          :to="{ name: 'register', query: route.query }"
+          class="auth__oauth-link"
+        >
+          o registrate con {{ oauthLabel }}
+        </RouterLink>
 
-      <RouterLink
-        v-if="oauthLabel"
-        :to="{ name: 'register', query: route.query }"
-        class="auth__oauth-link"
-      >
-        o registrate con {{ oauthLabel }}
-      </RouterLink>
-
-      <p class="auth__switch">
-        ¿Ya tenés cuenta?
-        <RouterLink :to="{ name: 'login', query: route.query }">Ingresá</RouterLink>
-      </p>
+        <p class="auth__switch">
+          ¿Ya tenés cuenta?
+          <RouterLink :to="{ name: 'login', query: route.query }">Ingresá</RouterLink>
+        </p>
+      </template>
     </div>
   </div>
 </template>
@@ -72,17 +65,15 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { ApiError } from '@/services/http'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const name = ref('')
 const email = ref('')
-const password = ref('')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const sent = ref(false)
 
 // Vuelve a la landing "OAuth primero" (AuthEntryView) — el label lista solo
 // los proveedores que el backend reporta configurados, así nunca ofrece
@@ -109,15 +100,13 @@ async function onSubmit() {
   isSubmitting.value = true
   errorMessage.value = ''
   try {
-    await authStore.register(email.value, password.value, name.value || undefined)
-    router.push(redirectTarget())
-  } catch (err) {
-    errorMessage.value =
-      err instanceof ApiError && err.status === 409
-        ? 'Ya existe una cuenta con ese email.'
-        : err instanceof ApiError && err.status === 400
-          ? err.message
-          : 'No pudimos crear la cuenta. Probá de nuevo.'
+    // Siempre resuelve, exista o no el email ya con cuenta — el backend
+    // nunca lo revela (evita enumeración). El mensaje "revisá tu correo" es
+    // el mismo en los dos casos, lo que cambia es qué email real llega.
+    await authStore.requestSignup(email.value)
+    sent.value = true
+  } catch {
+    errorMessage.value = 'No pudimos procesar el pedido. Probá de nuevo.'
   } finally {
     isSubmitting.value = false
   }
@@ -157,6 +146,16 @@ async function onSubmit() {
   color: var(--color-ink-secondary);
   line-height: 1.6;
   margin-bottom: 28px;
+}
+
+.auth__spam {
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--color-ink-secondary);
+  background: var(--color-ochre-soft);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 24px;
 }
 
 .auth__form {

@@ -84,6 +84,12 @@ const router = createRouter({
       meta: { title: 'Registrarme con correo' },
     },
     {
+      path: '/completar-registro',
+      name: 'complete-signup',
+      component: () => import('@/views/CompleteSignupView.vue'),
+      meta: { title: 'Terminar de crear tu cuenta' },
+    },
+    {
       path: '/oauth-callback',
       name: 'oauth-callback',
       component: () => import('@/views/OAuthCallbackView.vue'),
@@ -112,6 +118,18 @@ const router = createRouter({
       name: 'plans',
       component: () => import('@/views/PlansView.vue'),
       meta: { title: 'Planes de suscripción' },
+    },
+    {
+      path: '/terminos',
+      name: 'terms',
+      component: () => import('@/views/TermsView.vue'),
+      meta: { title: 'Términos y privacidad' },
+    },
+    {
+      path: '/bienvenida',
+      name: 'onboarding',
+      component: () => import('@/views/OnboardingView.vue'),
+      meta: { title: 'Bienvenido/a', requiresAuth: true },
     },
     {
       path: '/mi-cuenta/perfil',
@@ -232,10 +250,27 @@ const router = createRouter({
   ],
 })
 
+// Rutas del propio flujo de auth/onboarding — exentas del gate de
+// onboarding obligatorio de más abajo (si no, alguien navegando /ingresar
+// con sesión y onboarding incompleto rebotaría de un lado a otro). Ver
+// docs/features/email-first-signup-and-onboarding.md, decisión 6.
+const ONBOARDING_EXEMPT_ROUTE_NAMES = new Set([
+  'login',
+  'login-email',
+  'register',
+  'register-email',
+  'complete-signup',
+  'oauth-callback',
+  'verify-email',
+  'forgot-password',
+  'reset-password',
+  'onboarding',
+  'terms',
+])
+
 router.beforeEach(async (to) => {
-  // Ramas separadas para el layout admin y para rutas públicas que igual
-  // exigen sesión (ej. "Mi perfil") — distinto destino de login en cada
-  // caso, así que no conviene fusionarlas en una sola condición.
+  // Rama aparte para el layout admin — distinto destino de login, y el
+  // gate de onboarding de lectores no le aplica en absoluto.
   if (to.meta.layout === 'admin') {
     if (to.meta.public) return true
 
@@ -253,13 +288,22 @@ router.beforeEach(async (to) => {
     return true
   }
 
-  if (to.meta.requiresAuth) {
-    const authStore = useAuthStore()
-    await authStore.bootstrap()
+  const authStore = useAuthStore()
+  await authStore.bootstrap()
 
-    if (!authStore.isAuthenticated) {
-      return { name: 'login', query: { redirect: to.fullPath } }
-    }
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // Onboarding obligatorio (pasos 1+2, ver OnboardingView.vue) — aplica a
+  // cualquier página pública, no solo a las que ya exigían sesión, mientras
+  // `onboardingCompletedAt` siga en null.
+  if (
+    authStore.isAuthenticated &&
+    !authStore.user?.onboardingCompletedAt &&
+    !ONBOARDING_EXEMPT_ROUTE_NAMES.has(String(to.name))
+  ) {
+    return { name: 'onboarding', query: { redirect: to.fullPath } }
   }
 
   return true
