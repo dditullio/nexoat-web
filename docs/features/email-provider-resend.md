@@ -93,6 +93,15 @@ Aunque `POST /broadcasts` existe y funciona, redactar el contenido de un envío 
 - Pantalla `/mi-cuenta/preferencias`: un solo toggle "Novedades por correo" — es la única categoría de correo opcional que existe hoy (bienvenida/verificación/reset son necesarios, no opcionales). Si en el futuro se suma otro tipo de aviso opcional, se separa en una lista de toggles recién ahí.
 - **Verificado en vivo:** togglear desde la pantalla real → el contacto aparece/se marca `unsubscribed` en la audiencia de Resend real, y `NewsletterSubscriber.isActive`/`source: 'preferencias-de-correo'` quedan correctos en la DB; el estado persiste al recargar (viene del backend, no de memoria); sin sesión, la ruta redirige a `/ingresar`.
 
+#### Adenda — punto de entrada visible en el header
+
+`/mi-cuenta/preferencias` resolvía la baja/alta para quien ya sabía que existía, pero no había ningún acceso visible salvo cavar en el menú de usuario — y para alguien **sin cuenta**, el único formulario de alta (`NewsletterForm.vue`) vivía solo al pie del home, invisible desde cualquier otra página. Se agregó un ícono de sobre en `.hdr__actions` (y su equivalente en el drawer mobile), visible en **todo el sitio**, para todo el mundo:
+
+- **Sin sesión:** abre `NewsletterModal.vue` — que ya existía en el repo pero había quedado sin ningún caller desde que se armó el menú de usuario (`reader-profile.md`). Formulario público, no pide cuenta.
+- **Con sesión:** togglea directo (`/me/newsletter/subscribe|unsubscribe`, mismo mecanismo que la pantalla de preferencias) — sin formulario, un solo clic, el ícono refleja el estado actual (relleno + fondo primario cuando está suscripto).
+
+`/mi-cuenta/preferencias` sigue existiendo para quien quiera el contexto completo (la descripción de qué implica cada categoría de correo); el ícono del header es el atajo rápido.
+
 ## Fuera de alcance (de todo el documento)
 
 - Automatizar el envío del newsletter al publicar un artículo (sigue siendo manual vía el dashboard de Resend, ver Fase 3).

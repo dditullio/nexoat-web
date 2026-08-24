@@ -94,6 +94,30 @@
           </svg>
         </RouterLink>
 
+        <button
+          type="button"
+          class="hdr__icon"
+          :class="{ 'is-subscribed': isNewsletterSubscribed }"
+          :disabled="isTogglingNewsletter"
+          :aria-label="newsletterButtonLabel"
+          :title="newsletterButtonLabel"
+          @click="onNewsletterClick"
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 18 18"
+            :fill="isNewsletterSubscribed ? 'currentColor' : 'none'"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="2" y="4" width="14" height="10.5" rx="2" />
+            <path d="M2.5 5L9 10.5 15.5 5" />
+          </svg>
+        </button>
+
         <UserMenu v-if="authStore.isAuthenticated" />
         <RouterLink v-else to="/ingresar" class="btn btn--primary hdr__cta">Ingresar</RouterLink>
       </div>
@@ -147,6 +171,21 @@
           <RouterLink to="/buscar" class="drawer__link" @click="menuOpen = false"
             >Buscar</RouterLink
           >
+          <button
+            type="button"
+            class="drawer__link"
+            :disabled="isTogglingNewsletter"
+            @click="onNewsletterClick"
+          >
+            <span class="drawer__glyph" aria-hidden="true">{{
+              isNewsletterSubscribed ? '✓' : '✉'
+            }}</span>
+            {{
+              isNewsletterSubscribed
+                ? 'Recibiendo novedades por correo'
+                : 'Recibir novedades por correo'
+            }}
+          </button>
 
           <template v-for="group in trackGroups" :key="group.label">
             <span class="eyebrow drawer__section" :style="{ color: group.color }">{{
@@ -241,6 +280,8 @@
       </aside>
     </Transition>
   </Teleport>
+
+  <NewsletterModal v-model:open="showNewsletterModal" />
 </template>
 
 <script setup lang="ts">
@@ -248,8 +289,14 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useBlogStore } from '@/stores/blog'
 import { useAuthStore } from '@/stores/auth'
 import { CATEGORY_TRACK_MAP, TRACK_CHIPS } from '@/utils/theme'
+import {
+  getNewsletterStatus,
+  subscribeToNewsletter,
+  unsubscribeFromNewsletter,
+} from '@/services/me-newsletter.api'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 import UserMenu from '@/components/ui/UserMenu.vue'
+import NewsletterModal from '@/components/blog/NewsletterModal.vue'
 import type { Category, ContentTrack } from '@/types'
 
 const store = useBlogStore()
@@ -257,6 +304,55 @@ const authStore = useAuthStore()
 const showCats = ref(false)
 const menuOpen = ref(false)
 const scrolled = ref(false)
+
+// Botón de "Recibir novedades" en el header — mismo control para todo el
+// sitio (antes solo existía el formulario al pie del home, sin punto de
+// entrada visible desde el resto de las páginas). Con sesión, togglea
+// directo (mismo mecanismo que /mi-cuenta/preferencias); sin sesión, abre
+// NewsletterModal (formulario público, sin necesitar cuenta).
+const showNewsletterModal = ref(false)
+const isNewsletterSubscribed = ref(false)
+const isTogglingNewsletter = ref(false)
+const newsletterButtonLabel = computed(() =>
+  isNewsletterSubscribed.value ? 'Recibiendo novedades por correo' : 'Recibir novedades por correo'
+)
+
+async function refreshNewsletterStatus() {
+  if (!authStore.isAuthenticated) {
+    isNewsletterSubscribed.value = false
+    return
+  }
+  try {
+    const res = await getNewsletterStatus()
+    isNewsletterSubscribed.value = res.subscribed
+  } catch {
+    // sin cambio visual si falla — el botón queda en el último estado conocido
+  }
+}
+
+async function onNewsletterClick() {
+  if (!authStore.isAuthenticated) {
+    menuOpen.value = false
+    showNewsletterModal.value = true
+    return
+  }
+
+  isTogglingNewsletter.value = true
+  try {
+    if (isNewsletterSubscribed.value) {
+      await unsubscribeFromNewsletter()
+    } else {
+      await subscribeToNewsletter()
+    }
+    isNewsletterSubscribed.value = !isNewsletterSubscribed.value
+  } catch {
+    // sin cambio visual si falla — el botón queda en el estado previo
+  } finally {
+    isTogglingNewsletter.value = false
+  }
+}
+
+watch(() => authStore.isAuthenticated, refreshNewsletterStatus, { immediate: true })
 
 const TRACKS: ContentTrack[] = [
   'acompanamiento-terapeutico',
@@ -575,6 +671,16 @@ onBeforeUnmount(() => {
 .hdr__icon:hover {
   background: var(--color-hover-bg);
   color: var(--color-ink);
+}
+
+.hdr__icon.is-subscribed {
+  color: var(--color-primary-dark);
+  background: var(--color-primary-tint);
+}
+
+.hdr__icon:disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .hdr__cta {
