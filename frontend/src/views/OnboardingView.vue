@@ -49,19 +49,21 @@
         <label class="onboarding__check">
           <input v-model="subscribeNewsletter" type="checkbox" />
           <span
-            >Quiero recibir novedades del sitio por correo (podés darte de baja cuando
-            quieras).</span
+            >Quiero recibir nuevos artículos y otras novedades del sitio por correo (podés darte de
+            baja cuando quieras).</span
           >
         </label>
 
-        <p v-if="errorMessage" class="onboarding__error" role="alert">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="onboarding__error" role="alert">
+          {{ errorMessage }}
+        </p>
 
         <div class="onboarding__actions">
           <button type="button" class="btn btn--ghost" @click="step = 1">Atrás</button>
           <button
             type="button"
             class="btn btn--primary onboarding__submit"
-            :disabled="!acceptedTerms || isSubmitting"
+            :disabled="isSubmitting"
             @click="onFinishStep2"
           >
             {{ isSubmitting ? 'Guardando…' : 'Finalizar' }}
@@ -141,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { completeOnboarding } from '@/services/onboarding.api'
@@ -170,9 +172,19 @@ const acceptedTerms = ref(false)
 const subscribeNewsletter = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+// Saca el aviso apenas tilda el checkbox, para no dejarlo pegado si ya
+// resolvió lo que lo disparó.
+watch(acceptedTerms, (accepted) => {
+  if (accepted) errorMessage.value = ''
+})
 
 async function onFinishStep2() {
-  if (!profileRoleDraft.value || !acceptedTerms.value) return
+  if (!profileRoleDraft.value) return
+  if (!acceptedTerms.value) {
+    errorMessage.value =
+      'Tenés que aceptar los Términos de uso y la Política de privacidad para continuar.'
+    return
+  }
   isSubmitting.value = true
   errorMessage.value = ''
   try {

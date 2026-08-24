@@ -116,6 +116,7 @@
             <rect x="2" y="4" width="14" height="10.5" rx="2" />
             <path d="M2.5 5L9 10.5 15.5 5" />
           </svg>
+          <span v-if="isNewsletterSubscribed" class="hdr__icon-badge" aria-hidden="true">✓</span>
         </button>
 
         <UserMenu v-if="authStore.isAuthenticated" />
@@ -282,6 +283,22 @@
   </Teleport>
 
   <NewsletterModal v-model:open="showNewsletterModal" />
+
+  <ConfirmDialog
+    :open="pendingUnsubscribe"
+    title="¿Dejar de recibir novedades?"
+    confirm-label="Dejar de recibir"
+    busy-label="Guardando…"
+    :busy="isTogglingNewsletter"
+    tone="danger"
+    @confirm="onConfirmUnsubscribe"
+    @cancel="pendingUnsubscribe = false"
+  >
+    <p>
+      No vas a recibir más artículos nuevos ni otras novedades de NexoAT por correo. Podés volver a
+      suscribirte cuando quieras.
+    </p>
+  </ConfirmDialog>
 </template>
 
 <script setup lang="ts">
@@ -297,6 +314,7 @@ import {
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 import UserMenu from '@/components/ui/UserMenu.vue'
 import NewsletterModal from '@/components/blog/NewsletterModal.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import type { Category, ContentTrack } from '@/types'
 
 const store = useBlogStore()
@@ -313,9 +331,18 @@ const scrolled = ref(false)
 const showNewsletterModal = ref(false)
 const isNewsletterSubscribed = ref(false)
 const isTogglingNewsletter = ref(false)
+// El botón alterna suscripción, pero el label deja explícito qué hace un
+// click desde cada estado (el ícono solo no alcanza — ver comentario más
+// abajo sobre por qué dar de baja pasa por un confirm).
 const newsletterButtonLabel = computed(() =>
-  isNewsletterSubscribed.value ? 'Recibiendo novedades por correo' : 'Recibir novedades por correo'
+  isNewsletterSubscribed.value
+    ? 'Estás suscripto a las novedades por correo. Tocá para darte de baja.'
+    : 'Tocá para suscribirte a las novedades de NexoAT por correo.'
 )
+// Ítem candidato a dar de baja mientras se confirma — separado de
+// `isTogglingNewsletter` (que solo está activo durante el request en sí,
+// para el estado "busy" del diálogo).
+const pendingUnsubscribe = ref(false)
 
 async function refreshNewsletterStatus() {
   if (!authStore.isAuthenticated) {
@@ -330,6 +357,9 @@ async function refreshNewsletterStatus() {
   }
 }
 
+// Dar de baja es la acción "destructiva" (deja de recibir contenido) y
+// además la más probable de tocar por error/curiosidad, así que pasa por
+// confirmación explícita. Suscribirse no tiene ese costo — se hace directo.
 async function onNewsletterClick() {
   if (!authStore.isAuthenticated) {
     menuOpen.value = false
@@ -337,16 +367,30 @@ async function onNewsletterClick() {
     return
   }
 
+  if (isNewsletterSubscribed.value) {
+    pendingUnsubscribe.value = true
+    return
+  }
+
   isTogglingNewsletter.value = true
   try {
-    if (isNewsletterSubscribed.value) {
-      await unsubscribeFromNewsletter()
-    } else {
-      await subscribeToNewsletter()
-    }
-    isNewsletterSubscribed.value = !isNewsletterSubscribed.value
+    await subscribeToNewsletter()
+    isNewsletterSubscribed.value = true
   } catch {
     // sin cambio visual si falla — el botón queda en el estado previo
+  } finally {
+    isTogglingNewsletter.value = false
+  }
+}
+
+async function onConfirmUnsubscribe() {
+  isTogglingNewsletter.value = true
+  try {
+    await unsubscribeFromNewsletter()
+    isNewsletterSubscribed.value = false
+    pendingUnsubscribe.value = false
+  } catch {
+    // deja el diálogo abierto para que el usuario reintente o cancele
   } finally {
     isTogglingNewsletter.value = false
   }
@@ -656,6 +700,7 @@ onBeforeUnmount(() => {
 }
 
 .hdr__icon {
+  position: relative;
   width: 38px;
   height: 38px;
   border-radius: var(--radius-full);
@@ -666,6 +711,26 @@ onBeforeUnmount(() => {
   transition:
     background 0.2s ease,
     color 0.2s ease;
+}
+
+/* Insignia de "suscripto" — el color de fondo solo (is-subscribed) no era
+   lo bastante evidente sin pasar el mouse por el título. */
+.hdr__icon-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 15px;
+  height: 15px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-dark);
+  color: var(--color-surface);
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-surface);
 }
 
 .hdr__icon:hover {
