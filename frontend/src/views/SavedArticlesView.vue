@@ -18,9 +18,25 @@
         :timestamp-label="`Guardado ${formatDate(entry.savedAt)}`"
         remove-label="Quitar de guardados"
         :removing="removingId === entry.id"
-        @remove="onRemove(entry.article.slug, entry.id)"
+        @remove="pendingRemoval = entry"
       />
     </div>
+
+    <ConfirmDialog
+      :open="!!pendingRemoval"
+      title="¿Quitar de guardados?"
+      confirm-label="Quitar"
+      busy-label="Quitando…"
+      :busy="!!removingId"
+      tone="danger"
+      @confirm="onConfirmRemove"
+      @cancel="pendingRemoval = null"
+    >
+      <p>
+        Vas a quitar «{{ pendingRemoval?.article.title }}» de tus artículos guardados. Si querés
+        volver a leerlo más tarde, vas a tener que guardarlo de nuevo.
+      </p>
+    </ConfirmDialog>
   </div>
 </template>
 
@@ -28,11 +44,16 @@
 import { onMounted, ref } from 'vue'
 import { getSavedArticles, unsaveArticle } from '@/services/saved-articles.api'
 import LibraryArticleRow from '@/components/blog/LibraryArticleRow.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import type { SavedArticleEntry } from '@/types/reader-library'
 
 const entries = ref<SavedArticleEntry[]>([])
 const isLoading = ref(true)
 const removingId = ref<string | null>(null)
+// Ítem candidato a borrar mientras se confirma — distinto de `removingId`
+// (que solo está seteado durante el request en curso, para el estado
+// "busy" del diálogo).
+const pendingRemoval = ref<SavedArticleEntry | null>(null)
 
 async function load() {
   isLoading.value = true
@@ -44,11 +65,14 @@ async function load() {
   }
 }
 
-async function onRemove(slug: string, entryId: string) {
-  removingId.value = entryId
+async function onConfirmRemove() {
+  const entry = pendingRemoval.value
+  if (!entry) return
+  removingId.value = entry.id
   try {
-    await unsaveArticle(slug)
-    entries.value = entries.value.filter((e) => e.id !== entryId)
+    await unsaveArticle(entry.article.slug)
+    entries.value = entries.value.filter((e) => e.id !== entry.id)
+    pendingRemoval.value = null
   } finally {
     removingId.value = null
   }

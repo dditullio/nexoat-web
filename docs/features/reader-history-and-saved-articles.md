@@ -20,9 +20,9 @@ Igual que cualquier historial de navegación: visitar `GET /articles/:slug` ya a
 
 A diferencia del historial, "guardar" es un toggle que el lector dispara a mano — se agrega un botón en `ArticleView.vue` (junto a `ArticleShare`). Identificado por `slug` en la API (no por un id de entrada), porque es el dato que la vista de artículo ya tiene a mano: `POST/DELETE /me/saved-articles/:slug`, más `GET /me/saved-articles/:slug/status` para que el botón sepa su estado inicial al cargar la página.
 
-### 4. Confirmación solo para "limpiar todo", no para remover un ítem individual
+### 4. Confirmación: vaciar historial completo, y quitar un guardado puntual
 
-Sacar un artículo puntual del historial o de guardados es una acción de bajo costo y fácilmente reversible (releer o volver a guardar) — se ejecuta directo, sin diálogo. **"Vaciar historial completo" sí pide confirmación**, por ser irreversible y afectar todo de una vez — usa el `ConfirmDialog.vue` reusable (ver punto 5). Guardados no tiene una acción de "vaciar todo" (no la pidió el alcance de este documento); si hace falta más adelante, reusa el mismo componente.
+**"Vaciar historial completo" pide confirmación**, por ser irreversible y afectar todo de una vez. Quitar una entrada puntual del **historial** no se confirma — es de bajo costo (releer el artículo lo vuelve a dejar ahí) y perderla sin querer no tiene consecuencia real. Quitar un **guardado**, en cambio, **sí pide confirmación** — a diferencia del historial (un efecto secundario de navegar), un artículo guardado es una decisión activa del lector ("quiero volver a esto"); perderlo sin querer sí importa, porque puede no recordar cuál era ni cómo encontrarlo de nuevo. Las dos confirmaciones (vaciar historial, quitar un guardado) usan el mismo `ConfirmDialog.vue` reusable (ver punto 5). Guardados no tiene una acción de "vaciar todo" (no la pidió el alcance de este documento); si hace falta más adelante, reusa el mismo componente.
 
 ### 5. `ConfirmDialog.vue` deja de ser exclusivo del admin
 
@@ -102,5 +102,5 @@ Mismo criterio que `profile/`: rutas bajo `/me`, sin `RolesGuard`, todo colgado 
 2. Test de backend: `save()` en un slug inexistente/no publicado → 404, sin crear fila.
 3. Test de backend: `save()` dos veces sobre el mismo artículo → idempotente, sigue siendo una fila.
 4. Manual: visitar 2-3 artículos con sesión iniciada → aparecen en `/mi-cuenta/historial`, más reciente primero; visitar un tercer artículo → se remueve un ítem individual y **no** desaparece el resto; "Vaciar historial" pide confirmación vía `ConfirmDialog` y, tras confirmar, la lista queda vacía.
-5. Manual: guardar un artículo desde `ArticleView.vue` → aparece en `/mi-cuenta/guardados`; quitar el guardado desde ahí y desde el propio artículo (el botón refleja el estado en ambos lugares tras recargar).
+5. Manual: guardar un artículo desde `ArticleView.vue` → aparece en `/mi-cuenta/guardados`; quitar el guardado desde `/mi-cuenta/guardados` pide confirmación (`ConfirmDialog`) y recién borra al confirmar; quitarlo directo desde el propio artículo (el botón toggle) no confirma; en ambos casos el estado del botón de `ArticleView.vue` refleja el cambio tras recargar.
 6. Manual: sin sesión, visitar un artículo no deja rastro en el historial de nadie; los endpoints `/me/history` y `/me/saved-articles` devuelven 401.
