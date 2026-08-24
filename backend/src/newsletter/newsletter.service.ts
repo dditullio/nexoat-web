@@ -57,6 +57,12 @@ export class NewsletterService {
     await this.resendAudience.markUnsubscribed(subscriber.email, subscriber.resendContactId)
   }
 
+  /** Usado por GET /me/newsletter (pantalla "Preferencias de correo") — `false` si nunca se suscribió, no solo si se dio de baja. */
+  async getStatus(email: string): Promise<{ subscribed: boolean }> {
+    const subscriber = await this.prisma.newsletterSubscriber.findUnique({ where: { email } })
+    return { subscribed: subscriber?.isActive ?? false }
+  }
+
   async findAll(filters: QuerySubscribersDto) {
     const page = filters.page && filters.page > 0 ? filters.page : 1
     const pageSize = filters.pageSize && filters.pageSize > 0 ? Math.min(filters.pageSize, 100) : 25

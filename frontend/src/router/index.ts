@@ -132,6 +132,12 @@ const router = createRouter({
       meta: { title: 'Artículos guardados', requiresAuth: true },
     },
     {
+      path: '/mi-cuenta/preferencias',
+      name: 'preferences',
+      component: () => import('@/views/PreferencesView.vue'),
+      meta: { title: 'Preferencias de correo', requiresAuth: true },
+    },
+    {
       path: '/nexoat-admin',
       meta: { layout: 'admin' },
       children: [

@@ -118,4 +118,21 @@ describe('NewsletterService', () => {
       expect(resendAudience.markUnsubscribed).toHaveBeenCalledWith('x@x.com', 'contact-1')
     })
   })
+
+  describe('getStatus', () => {
+    it('devuelve subscribed:false si el email nunca se suscribió', async () => {
+      prisma.newsletterSubscriber.findUnique.mockResolvedValue(null)
+      await expect(service.getStatus('nadie@x.com')).resolves.toEqual({ subscribed: false })
+    })
+
+    it('devuelve subscribed:false si se dio de baja', async () => {
+      prisma.newsletterSubscriber.findUnique.mockResolvedValue({ isActive: false })
+      await expect(service.getStatus('x@x.com')).resolves.toEqual({ subscribed: false })
+    })
+
+    it('devuelve subscribed:true si está activo', async () => {
+      prisma.newsletterSubscriber.findUnique.mockResolvedValue({ isActive: true })
+      await expect(service.getStatus('x@x.com')).resolves.toEqual({ subscribed: true })
+    })
+  })
 })

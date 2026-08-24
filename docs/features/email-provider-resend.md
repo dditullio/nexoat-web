@@ -1,6 +1,6 @@
 # Proveedor de email: Resend (transaccional + newsletter)
 
-**Estado:** fases 1-3 implementadas y verificadas. Fase 4 pendiente.
+**Estado:** las 4 fases implementadas y verificadas.
 
 ## Contexto
 
@@ -85,10 +85,13 @@ Aunque `POST /broadcasts` existe y funciona, redactar el contenido de un envío 
 6. Manual: `POST /newsletter/unsubscribe` → el contacto en Resend pasó a `unsubscribed: true` (confirmado con `GET /contacts/:id`); con un email inexistente, misma respuesta `{ ok: true }`, sin filtrar nada. ✅
 7. Manual: correr el script de backfill sobre los 3 suscriptores que ya existían en la DB de desarrollo (de pruebas anteriores) → los 3 terminaron con `resendContactId` y aparecen en la audiencia; correrlo una segunda vez no volvió a tocar nada (0 sincronizados, confirmado idempotente). ✅
 
-### Fase 4 — "Preferencias de correo" (el ítem mockeado del menú)
+### Fase 4 — "Preferencias de correo" (el ítem mockeado del menú) ✅ implementado
 
-- Ahora sí tiene sentido: pantalla `/mi-cuenta/preferencias` con un toggle "Recibir novedades por correo", que llama a `subscribe`/`unsubscribe` de `NewsletterService` usando el email de la cuenta logueada — mismo mecanismo que ya usa el formulario público, ahora expuesto también desde la cuenta.
-- Un solo toggle alcanza hoy: es la única categoría de correo opcional que existe. Si en el futuro se suma otro tipo de aviso opcional (ej. "cuando se habiliten los niveles pagos"), se separa en una lista de toggles recién ahí.
+Último ítem mockeado del menú de usuario desde `reader-profile.md` — ya cerrado, el menú no tiene ningún "Pronto" pendiente.
+
+- Módulo nuevo `backend/src/newsletter/me-newsletter.controller.ts` (`@Controller('me/newsletter')`, `JwtAuthGuard` sin `RolesGuard`, mismo criterio que `ProfileController`/`ReadingHistoryController`): `GET /me/newsletter` (estado), `POST /me/newsletter/subscribe`/`unsubscribe`, todos atados al email del usuario del token — nunca a uno pasado a mano. Reusa `NewsletterService.subscribe`/`unsubscribe` (ya sincronizados con Resend desde la fase 3) sin duplicar lógica; `NewsletterService.getStatus(email)` es lo único nuevo ahí.
+- Pantalla `/mi-cuenta/preferencias`: un solo toggle "Novedades por correo" — es la única categoría de correo opcional que existe hoy (bienvenida/verificación/reset son necesarios, no opcionales). Si en el futuro se suma otro tipo de aviso opcional, se separa en una lista de toggles recién ahí.
+- **Verificado en vivo:** togglear desde la pantalla real → el contacto aparece/se marca `unsubscribed` en la audiencia de Resend real, y `NewsletterSubscriber.isActive`/`source: 'preferencias-de-correo'` quedan correctos en la DB; el estado persiste al recargar (viene del backend, no de memoria); sin sesión, la ruta redirige a `/ingresar`.
 
 ## Fuera de alcance (de todo el documento)
 

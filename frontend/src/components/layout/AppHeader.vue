@@ -200,19 +200,14 @@
               <span class="drawer__glyph" aria-hidden="true">🕮</span>
               Historial de lectura
             </RouterLink>
-            <!-- Mockeado igual que en `UserMenu` (desktop): esta vista
-                 todavía no existe (el resto del menú ya está cableado). -->
-            <button
-              v-for="item in accountItems"
-              :key="item.label"
-              type="button"
+            <RouterLink
+              to="/mi-cuenta/preferencias"
               class="drawer__link drawer__link--sub"
-              @click="onAccountMock()"
+              @click="menuOpen = false"
             >
-              <span class="drawer__glyph" aria-hidden="true">{{ item.icon }}</span>
-              {{ item.label }}
-              <span class="drawer__soon">Pronto</span>
-            </button>
+              <span class="drawer__glyph" aria-hidden="true">✉</span>
+              Preferencias de correo
+            </RouterLink>
             <RouterLink
               to="/planes"
               class="drawer__link drawer__link--sub"
@@ -318,14 +313,6 @@ const trackGroups = computed<TrackGroup[]>(() => {
 })
 
 const isStaff = computed(() => authStore.hasRole('SUPER_ADMIN', 'ADMIN', 'EDITOR'))
-
-// Mismo set mockeado que `UserMenu` (ver ese componente).
-const accountItems = [{ label: 'Preferencias de correo', icon: '✉' }]
-
-// Inerte a propósito, igual que en `UserMenu`.
-function onAccountMock() {
-  menuOpen.value = false
-}
 
 function onLogout() {
   menuOpen.value = false
@@ -736,18 +723,6 @@ onBeforeUnmount(() => {
   width: 20px;
   text-align: center;
   flex-shrink: 0;
-}
-
-.drawer__soon {
-  margin-left: auto;
-  font-size: 0.62rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--color-ink-faint);
-  border: 1px solid var(--color-line-light);
-  border-radius: var(--radius-full);
-  padding: 2px 7px;
 }
 
 .drawer__logout {

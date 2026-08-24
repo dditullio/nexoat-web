@@ -71,21 +71,15 @@
             <span class="um__label">Historial de lectura</span>
           </RouterLink>
 
-          <!-- Mockeado: esta pantalla todavía no existe (ver
-               docs/features/reader-profile.md — el resto del menú ya está
-               cableado). -->
-          <button
-            v-for="item in mockItems"
-            :key="item.label"
-            type="button"
+          <RouterLink
+            to="/mi-cuenta/preferencias"
             class="um__item"
             role="menuitem"
-            @click="onMock()"
+            @click="open = false"
           >
-            <span class="um__glyph" aria-hidden="true">{{ item.icon }}</span>
-            <span class="um__label">{{ item.label }}</span>
-            <span class="um__soon">Pronto</span>
-          </button>
+            <span class="um__glyph" aria-hidden="true">✉</span>
+            <span class="um__label">Preferencias de correo</span>
+          </RouterLink>
         </div>
 
         <div class="um__sep" />
@@ -147,15 +141,6 @@ const TIER_LABEL: Record<SubscriptionTier, string> = {
 const tierLabel = computed(() => TIER_LABEL[user.value?.subscriptionTier ?? 'gratuito'])
 
 const isStaff = computed(() => authStore.hasRole('SUPER_ADMIN', 'ADMIN', 'EDITOR'))
-
-const mockItems = [{ label: 'Preferencias de correo', icon: '✉' }]
-
-// Inerte a propósito: el ítem existe para fijar la forma del menú, la
-// vista real todavía no está construida.
-function onMock() {
-  open.value = false
-  emit('navigate')
-}
 
 function onLogout() {
   open.value = false
@@ -346,17 +331,6 @@ onBeforeUnmount(() => {
 .um__label {
   flex: 1;
   min-width: 0;
-}
-
-.um__soon {
-  font-size: 0.62rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--color-ink-faint);
-  border: 1px solid var(--color-line-light);
-  border-radius: var(--radius-full);
-  padding: 2px 7px;
 }
 
 .um__item--danger {
