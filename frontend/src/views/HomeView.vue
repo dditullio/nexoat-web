@@ -417,7 +417,11 @@ function goToSearch() {
 .hero {
   position: relative;
   overflow: hidden;
-  padding: clamp(3.5rem, 8vw, 6.5rem) 0 clamp(4rem, 9vw, 7rem);
+  /* El padding-top venía escalando con vw sin techo bajo (8vw), así que en
+     pantallas anchas dejaba un espacio muerto grande entre el header y el
+     texto antes de tocar su tope. Se achica el rango: sigue respirando en
+     mobile pero no se dispara en desktop. */
+  padding: clamp(2rem, 4vw, 3.25rem) 0 clamp(4rem, 9vw, 7rem);
   background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-canvas-alt) 100%);
 }
 
