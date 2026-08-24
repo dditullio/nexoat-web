@@ -30,6 +30,12 @@ export interface AdminWelcomeEbook {
   coverImagePublicId: string | null
   fileKey: string | null
   fileName: string | null
+  // Fase 2 (ver docs/features/welcome-ebook-gift.md): Markdown del libro —
+  // si está seteado, manda por sobre fileKey y se genera un PDF
+  // personalizado (con dedicatoria) al reclamar, vía Gotenberg.
+  content: string | null
+  // Link a la ficha de compra en la futura tienda — activa el QR final del PDF generado.
+  storeUrl: string | null
   active: boolean
   createdAt: string
   updatedAt: string
@@ -43,4 +49,6 @@ export interface GiftFormPayload {
   active?: boolean
   coverImage?: string
   coverImagePublicId?: string
+  content?: string
+  storeUrl?: string
 }

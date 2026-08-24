@@ -42,6 +42,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-nexoat}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nexoat}
+      GOTENBERG_URL: http://gotenberg:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,6 +123,14 @@ services:
       - traefik.http.routers.nexoat-analytics.rule=Host(`${ANALYTICS_DOMAIN}`)
       - traefik.http.routers.nexoat-analytics.tls.certresolver=letsencrypt
       - traefik.http.services.nexoat-analytics.loadbalancer.server.port=3000
+
+  # HTML→PDF para los ebooks de regalo generados al vuelo (fase 2, ver
+  # docs/features/welcome-ebook-gift.md) — sin estado, sin volumen, sin
+  # puerto publicado (solo el backend le habla por la red interna).
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: nexoat-gotenberg
+    restart: unless-stopped
 
 volumes:
   postgres_data:

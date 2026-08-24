@@ -2,9 +2,10 @@
   <div class="gifts">
     <p class="gifts__lead">
       Títulos que se ofrecen como regalo de bienvenida al terminar el onboarding. Un título solo
-      aparece para elegir cuando está <strong>activo</strong> y tiene <strong>PDF cargado</strong> —
-      podés crear el título y cargar la tapa/resumen ahora, y subir el PDF definitivo más adelante
-      sin que se muestre hasta entonces.
+      aparece para elegir cuando está <strong>activo</strong> y tiene contenido: o un
+      <strong>PDF subido</strong>, o <strong>Markdown</strong> — con Markdown, cada persona recibe
+      un PDF generado al momento con una dedicatoria a su nombre. Si cargás los dos, el Markdown
+      manda.
     </p>
 
     <section class="gifts__new">
@@ -128,10 +129,42 @@
             Activo
           </label>
 
+          <div class="gift-item__content">
+            <div class="gifts__field-row">
+              <span class="gifts__label">Contenido (Markdown) — opcional, manda sobre el PDF</span>
+              <button
+                type="button"
+                class="gift-item__preview-toggle"
+                @click="togglePreview(ebook.id)"
+              >
+                {{ showPreview[ebook.id] ? 'Ver editor' : 'Ver preview' }}
+              </button>
+            </div>
+            <textarea
+              v-if="!showPreview[ebook.id]"
+              v-model="edits[ebook.id].content"
+              rows="8"
+              class="gifts__input gifts__input--code"
+              placeholder="# Título del capítulo…"
+            />
+            <div v-else class="prose gift-item__preview" v-html="previewHtml(ebook.id)"></div>
+          </div>
+
+          <label class="gifts__field">
+            <span class="gifts__label">Link a la ficha de compra (activa el QR final del PDF)</span>
+            <input
+              v-model="edits[ebook.id].storeUrl"
+              type="text"
+              maxlength="500"
+              placeholder="https://nexoat.com/tienda/…"
+              class="gifts__input"
+            />
+          </label>
+
           <div class="gift-item__file">
             <span v-if="ebook.fileName" class="gift-item__filename">📄 {{ ebook.fileName }}</span>
             <span v-else class="gift-item__filename gift-item__filename--empty"
-              >Sin PDF todavía</span
+              >Sin PDF subido</span
             >
 
             <div class="gift-item__file-actions">
@@ -184,6 +217,7 @@ import {
 } from '@/services/admin/gifts.api'
 import { deleteMedia, uploadMedia } from '@/services/admin/media.api'
 import { ApiError } from '@/services/http'
+import { renderMarkdown } from '@/utils/markdown'
 import type { AdminWelcomeEbook } from '@/types/gifts'
 
 interface EditableFields {
@@ -192,6 +226,8 @@ interface EditableFields {
   topic: string
   summary: string
   active: boolean
+  content: string
+  storeUrl: string
 }
 
 const ebooks = ref<AdminWelcomeEbook[]>([])
@@ -202,6 +238,9 @@ const errors = reactive<Record<string, string>>({})
 // así "Guardar cambios" siempre compara contra lo último guardado (mismo
 // criterio de :disabled que AdminSettingsView.vue con isDirty).
 const edits = reactive<Record<string, EditableFields>>({})
+// Toggle editor/preview del Markdown, por ebook — mismo patrón que
+// AdminArticleFormView.vue.
+const showPreview = reactive<Record<string, boolean>>({})
 
 const draft = reactive({ title: '', subtitle: '', topic: '', summary: '' })
 const isCreating = ref(false)
@@ -214,6 +253,8 @@ function toEditable(ebook: AdminWelcomeEbook): EditableFields {
     topic: ebook.topic,
     summary: ebook.summary,
     active: ebook.active,
+    content: ebook.content ?? '',
+    storeUrl: ebook.storeUrl ?? '',
   }
 }
 
@@ -225,7 +266,9 @@ function isDirty(ebook: AdminWelcomeEbook): boolean {
     edit.subtitle !== (ebook.subtitle ?? '') ||
     edit.topic !== ebook.topic ||
     edit.summary !== ebook.summary ||
-    edit.active !== ebook.active
+    edit.active !== ebook.active ||
+    edit.content !== (ebook.content ?? '') ||
+    edit.storeUrl !== (ebook.storeUrl ?? '')
   )
 }
 
@@ -233,14 +276,24 @@ function isBusy(id: string): boolean {
   return pendingId.value === id
 }
 
+function togglePreview(id: string) {
+  showPreview[id] = !showPreview[id]
+}
+
+function previewHtml(id: string): string {
+  return renderMarkdown(edits[id]?.content ?? '')
+}
+
+// "Disponible" = tiene contenido (Markdown, se genera al reclamar) o un PDF
+// subido a mano — mismo criterio que GiftsService.available() en el backend.
 function statusLabel(ebook: AdminWelcomeEbook): string {
   if (!ebook.active) return 'Inactivo'
-  return ebook.fileKey ? 'Disponible' : 'Sin PDF'
+  return ebook.content || ebook.fileKey ? 'Disponible' : 'Sin contenido'
 }
 
 function statusClass(ebook: AdminWelcomeEbook): string {
   if (!ebook.active) return 'gift-item__badge--off'
-  return ebook.fileKey ? 'gift-item__badge--ok' : 'gift-item__badge--pending'
+  return ebook.content || ebook.fileKey ? 'gift-item__badge--ok' : 'gift-item__badge--pending'
 }
 
 async function loadGifts() {
@@ -289,6 +342,8 @@ async function onSaveEdits(ebook: AdminWelcomeEbook) {
       topic: edit.topic,
       summary: edit.summary,
       active: edit.active,
+      content: edit.content || '',
+      storeUrl: edit.storeUrl || '',
     })
     replaceEbook(updated)
   } catch (err) {
@@ -445,6 +500,20 @@ onMounted(loadGifts)
   color: var(--color-accent-dark);
 }
 
+.gifts__input--code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.82rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.gifts__field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .gifts__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -549,6 +618,32 @@ onMounted(loadGifts)
 
 .gift-item__active input {
   accent-color: var(--color-primary);
+}
+
+.gift-item__content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--color-line-faint);
+  padding-top: 12px;
+}
+
+.gift-item__preview-toggle {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  flex-shrink: 0;
+}
+
+.gift-item__preview {
+  background: var(--color-canvas);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  max-height: 220px;
+  overflow-y: auto;
+  max-width: none;
+  font-size: 0.86rem;
 }
 
 .gift-item__file {

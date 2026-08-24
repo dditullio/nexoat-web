@@ -83,4 +83,14 @@ export class AdminGiftsController {
   removeFile(@Param('id') id: string, @CurrentUser() actor: User) {
     return this.gifts.removeFile(id, actor.id)
   }
+
+  @Post('claims/:claimId/regenerate')
+  @ApiOperation({
+    summary:
+      'Reintenta generar el PDF (con dedicatoria) de un claim que se quedó sin archivo — ' +
+      'ej. porque Gotenberg estaba caído al momento de reclamarlo',
+  })
+  regenerateClaim(@Param('claimId') claimId: string, @CurrentUser() actor: User) {
+    return this.gifts.regenerate(claimId, actor.id)
+  }
 }

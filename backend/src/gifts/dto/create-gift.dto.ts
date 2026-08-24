@@ -48,4 +48,21 @@ export class CreateGiftDto {
   @IsOptional()
   @IsString()
   coverImagePublicId?: string
+
+  // Fase 2 (ver docs/features/welcome-ebook-gift.md): Markdown del libro —
+  // si viene seteado, manda por sobre fileKey y el claim genera un PDF
+  // personalizado vía Gotenberg en vez de servir el archivo subido a mano.
+  @ApiPropertyOptional({ description: 'Markdown del libro — si está, se genera al reclamar' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200_000)
+  content?: string
+
+  @ApiPropertyOptional({
+    description: 'Link a la ficha de compra en la futura tienda — activa el QR final del PDF',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  storeUrl?: string
 }

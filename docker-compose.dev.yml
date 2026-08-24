@@ -17,5 +17,15 @@ services:
       timeout: 5s
       retries: 5
 
+  # HTML→PDF para los ebooks de regalo generados al vuelo (fase 2, ver
+  # docs/features/welcome-ebook-gift.md) — sin estado, sin volumen. Puerto
+  # 3002 porque 3000/3001 ya los usan frontend/backend en desarrollo.
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: nexoat-gotenberg-dev
+    restart: unless-stopped
+    ports:
+      - '3002:3000'
+
 volumes:
   postgres_dev_data:

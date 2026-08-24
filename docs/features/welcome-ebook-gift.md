@@ -149,7 +149,7 @@ Puntos donde el código terminó distinto de lo que dice la especificación de a
 
 ## Fase 2: generación al vuelo con dedicatoria personalizada (Gotenberg)
 
-**Estado:** documentado, pendiente de implementar. Motivada por: en vez de subir un PDF terminado a mano, cargar el contenido en Markdown (mismo pipeline que ya usan los artículos) y armar el PDF en el momento en que el usuario reclama su regalo — con una dedicatoria a su nombre. El mismo contenido queda listo para reusarse el día que exista una tienda de ebooks (ver "Reuso futuro: tienda de ebooks" más abajo).
+**Estado:** implementado y verificado. Motivada por: en vez de subir un PDF terminado a mano, cargar el contenido en Markdown (mismo pipeline que ya usan los artículos) y armar el PDF en el momento en que el usuario reclama su regalo — con una dedicatoria a su nombre. El mismo contenido queda listo para reusarse el día que exista una tienda de ebooks (ver "Reuso futuro: tienda de ebooks" más abajo).
 
 ### Decisiones acordadas con el usuario
 
@@ -220,3 +220,13 @@ Cuando exista la venta: mismo `WelcomeEbook` (quizás renombrado o con un modelo
 4. Apagar Gotenberg a propósito y reclamar con otro usuario → confirmar que el claim se crea igual, sin `generatedFileKey`, y que se loguea el error sin tirar abajo el request.
 5. Setear `storeUrl` en un ebook y confirmar que el PDF generado trae la página final con el QR apuntando ahí; sin `storeUrl`, confirmar que esa página no aparece.
 6. Confirmar que un ebook con `fileKey` (sin `content`) sigue funcionando exactamente como en la Fase 1 — sin esta fase tocarle el comportamiento.
+
+Los 6 puntos se verificaron a mano contra Gotenberg real (`docker-compose.dev.yml`, puerto 3002): PDF de 4 páginas generado y descargado, texto extraído con `pdftotext` confirma portada (título/subtítulo), dedicatoria (nombre/email del usuario), contenido Markdown renderizado (encabezados, negrita/cursiva) y la página de QR con el texto esperado — todo con acentos correctos. Se apagó Gotenberg a propósito: el `claim()` igual devolvió 201 sin `generatedFileKey`, `GET /gifts/download` respondió 404 con el mensaje "todavía se está preparando", y `POST /admin/gifts/claims/:claimId/regenerate` completó la generación una vez reiniciado Gotenberg. `type-check` y `lint` de ambos paquetes, limpios.
+
+## Notas de implementación (Fase 2)
+
+- **Sin sanitizar el HTML del Markdown en el backend.** A diferencia del frontend (que pasa todo por `dompurify` antes de un `v-html`), el HTML que arma `ebook-pdf.template.ts` para mandarle a Gotenberg no se sanitiza — mismo nivel de confianza que `Article.content` (contenido escrito por ADMIN/SUPER_ADMIN, gateado por `RolesGuard`, nunca por un usuario público). El único riesgo teórico es que un admin se autoataque con su propio PDF, no una superficie de XSS contra terceros.
+- **Fuentes: Georgia/Arial, no Fraunces/Karla embebidas.** El documento original planteaba embeber las tipografías del sitio como `@font-face` en base64. Se resolvió más simple: mismas fuentes de sistema que ya usan las plantillas de `mail/templates/` (`Georgia, 'Times New Roman', serif` / `Arial, sans-serif`) — coherente con un problema que el proyecto ya resolvió así una vez, y evita el peso/mantenimiento de los archivos de fuente embebidos.
+- **`generatedFileKey` incluye el `userId`, no solo el `claimId`** (`{ebookId}-{userId}.pdf`, no `{claimId}.pdf`) — más fácil de inspeccionar a mano en `storage/ebooks/generated/` durante debugging; el `EbookClaim.userId` ya es único, así que no hay colisión posible.
+- **Sin UI de administración de claims/regenerar.** El endpoint `POST /admin/gifts/claims/:claimId/regenerate` existe y funciona (probado por API), pero no hay una pantalla admin que liste claims sin `generatedFileKey` para encontrar el `claimId` a mano — queda para cuando haga falta de verdad (activarlo hoy sería construir una vista para un caso borde que todavía no ocurrió).
+- **`Content-Disposition` no llega al frontend vía `fetch()` del navegador** por las reglas de CORS (no es un header "simple" y el backend no lo expone con `Access-Control-Expose-Headers`) — sin impacto real: `downloadMyGift()`/`downloadBackup()` ya fijan el nombre de archivo a mano en el `<a download>`, nunca dependieron de leer ese header desde JS.

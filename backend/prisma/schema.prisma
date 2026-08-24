@@ -397,8 +397,16 @@ model WelcomeEbook {
   summary            String
   coverImage         String? // Cloudinary, carpeta "ebook-covers" — mismo mecanismo que coverImage de Category/Article
   coverImagePublicId String?
-  fileKey            String? // nombre de archivo dentro de storage/ebooks
+  fileKey            String? // nombre de archivo dentro de storage/ebooks — PDF subido a mano (fase 1)
   fileName           String? // nombre original, para el header Content-Disposition de la descarga
+  // Fase 2 (ver docs/features/welcome-ebook-gift.md): Markdown del libro —
+  // si está seteado, manda por sobre fileKey y se genera un PDF personalizado
+  // (con dedicatoria) al reclamar, vía Gotenberg. fileKey queda de respaldo
+  // si content es null.
+  content            String?
+  // Link a la ficha de compra en la futura tienda — null = sin página de QR
+  // al final del PDF generado (visibilidad por datos, no por flag de código).
+  storeUrl           String?
   active             Boolean      @default(true)
   claims             EbookClaim[]
   createdAt          DateTime     @default(now())
@@ -418,6 +426,11 @@ model EbookClaim {
   ebookId   String
   ebook     WelcomeEbook @relation(fields: [ebookId], references: [id], onDelete: Restrict)
   claimedAt DateTime     @default(now())
+  // Fase 2: PDF personalizado (con dedicatoria) generado al reclamar, en
+  // storage/ebooks/generated/ — null si el ebook usa fileKey en vez de
+  // content, o si la generación falló (ver GiftsService.claim()).
+  generatedFileKey  String?
+  generatedFileName String?
 
   @@index([ebookId])
   @@map("ebook_claims")
