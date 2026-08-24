@@ -70,7 +70,15 @@ function onCancel() {
 
 <style scoped>
 .cdlg {
+  /* El reset global (main.css) pone margin: 0 en *, lo que anula el
+     margin: auto con el que el navegador centra <dialog> al abrirlo con
+     showModal() — mismo fix que NewsletterModal.vue. Sin esto el diálogo
+     queda pegado a la esquina superior izquierda. */
+  position: fixed;
+  inset: 0;
+  margin: auto;
   width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
   padding: 0;
   border: 1px solid var(--color-line-light);
   border-radius: var(--radius-xl);
