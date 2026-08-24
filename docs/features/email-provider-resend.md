@@ -35,11 +35,54 @@ Se evaluaron Hostinger Reach, Resend, Brevo, Listmonk autohospedado y Mailchimp 
 
 Detalle completo (decisiones, schema, verificación) en su propio documento: [`email-verification-and-password-reset.md`](email-verification-and-password-reset.md).
 
-### Fase 3 — Newsletter real vía Resend Broadcasts
+### Fase 3 — Sincronizar `NewsletterSubscriber` con la audiencia de Resend
 
-- `NewsletterSubscriber` sigue siendo la fuente de verdad para el admin (listado en `/nexoat-admin`, ya implementado) — no se reemplaza por la audiencia de Resend, se **sincroniza** con ella.
-- Cambio de schema: `NewsletterSubscriber` suma `resendContactId String?` — al dar de alta/baja en `NewsletterService.subscribe`/`unsubscribe`, se replica en la audiencia de Resend (`contacts.create`/`contacts.remove`, guardando el id que devuelve).
-- Redactar y enviar el newsletter en sí sigue siendo manual (componer y mandar el Broadcast desde el dashboard de Resend, apuntando a la audiencia sincronizada) — automatizar "nuevo artículo → newsletter automático" queda fuera de esta fase; se evalúa más adelante si hace falta.
+**Estado:** planificado, pendiente de implementar.
+
+Chequeado en vivo contra la API real de Resend antes de planificar esto (con la key "Full access"):
+
+- `GET /audiences` ya devuelve una audiencia **"General"** (`id: ab6c24e9-9b4e-4a4f-aa93-9be06782bacc`), creada automáticamente por Resend al configurar la cuenta — se reusa esa, no hace falta crear una nueva. Se guarda su id en `RESEND_AUDIENCE_ID` (`.env`), no hardcodeado.
+- `GET /audiences/:id/contacts`, y por extensión `POST`/`PATCH`/`DELETE` de contactos, existen y funcionan — confirmado.
+- `GET /broadcasts` también existe y responde — Resend **sí tiene API para crear/enviar campañas** (a diferencia de Hostinger Reach, que se descartó justamente por no tenerla). Aun así, la decisión de esta fase es **no automatizar el envío del newsletter en sí** — ver más abajo, es una decisión de alcance, no una limitación técnica.
+
+#### Hallazgo importante: hoy no existe ningún endpoint de baja
+
+`NewsletterController` solo tiene `POST /newsletter/subscribe` — no hay `unsubscribe` en ningún lado, ni público ni admin, pese a que `NewsletterSubscriber.isActive`/`unsubscribedAt` ya existen en el schema para soportarlo. Se agrega en esta fase porque:
+
+1. Sincronizar con Resend implica marcar el contacto como `unsubscribed` allá también — necesita un lugar en el código que dispare esa baja.
+2. La Fase 4 ("Preferencias de correo") va a necesitar togglear apagado, no solo prender.
+
+#### Cambios de schema
+
+```prisma
+model NewsletterSubscriber {
+  // ...campos existentes...
+  resendContactId String? // id del contacto en la audiencia de Resend — permite actualizar/dar de baja sin re-buscar por email
+}
+```
+
+#### Backend
+
+| Archivo                                                                                              | Cambio                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `newsletter/newsletter.service.ts`                                                                   | `subscribe` gana un paso más: después del upsert local, llama a Resend (`contacts.create` si no hay `resendContactId` guardado, `contacts.update` si ya existe — reactiva `unsubscribed: false`) y persiste el id devuelto. Nuevo método `unsubscribe(email)`: marca `isActive: false`, `unsubscribedAt: now()` localmente, y `contacts.update({ unsubscribed: true })` en Resend. Ambas llamadas a Resend son **fire-and-forget con catch+log** (mismo patrón que `AuthService.sendWelcomeEmail`) — un hipo de Resend nunca debe romper un alta/baja local. |
+| `newsletter/dto/unsubscribe.dto.ts` (nuevo)                                                          | `{ email }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `newsletter/newsletter.controller.ts`                                                                | `POST /newsletter/unsubscribe` — público, mismo `@Throttle` que `subscribe`. Responde `{ ok: true }` siempre (mismo criterio anti-enumeración que `forgot-password`).                                                                                                                                                                                                                                                                                                                                                                                        |
+| `backend/scripts/backfill-resend-contacts.ts` (nuevo, mismo patrón que `backfill-article-tracks.ts`) | Recorre los `NewsletterSubscriber` que ya existen en la DB (dados de alta antes de esta fase, sin `resendContactId`) y los sincroniza una sola vez contra la audiencia de Resend. Corre a mano (`pnpm --filter @nexoat/backend backfill:resend-contacts`), no en cada deploy.                                                                                                                                                                                                                                                                                |
+
+#### Por qué el envío del newsletter sigue siendo manual (decisión, no limitación)
+
+Aunque `POST /broadcasts` existe y funciona, redactar el contenido de un envío (elegir qué artículos destacar, escribir el copy) es trabajo editorial — no hay una fuente de verdad automática de "esto va en el newsletter de esta semana". Automatizarlo bien requeriría antes decidir una cadencia, una plantilla de curaduría, etc., que no se pidió todavía. Por ahora: se compone y manda a mano desde el dashboard de Resend, apuntando a la audiencia ya sincronizada por este código. Si más adelante se quiere automatizar (ej. "resumen semanal de artículos nuevos"), la Fase 3 ya deja la audiencia lista — solo faltaría construir el compositor.
+
+#### Plan de verificación
+
+1. Test de backend: `subscribe` con un contacto nuevo → llama a `contacts.create`, guarda el `resendContactId` devuelto.
+2. Test de backend: `subscribe` de alguien que ya se había dado de baja → llama a `contacts.update` (no `create`), reactiva.
+3. Test de backend: `unsubscribe` → marca inactivo localmente y llama a `contacts.update({ unsubscribed: true })`.
+4. Test de backend: si la llamada a Resend falla, el alta/baja local igual se guarda (no rompe la respuesta al usuario).
+5. Manual: suscribirse desde el formulario público (`HomeView`/`NewsletterForm`) → aparece en `GET /audiences/:id/contacts` de Resend con el mismo email.
+6. Manual: `POST /newsletter/unsubscribe` → el contacto en Resend pasa a `unsubscribed: true`, sigue en la audiencia pero no recibiría un Broadcast futuro.
+7. Manual: correr el script de backfill sobre los suscriptores que ya existían → todos terminan con `resendContactId` y aparecen en la audiencia de Resend.
 
 ### Fase 4 — "Preferencias de correo" (el ítem mockeado del menú)
 
@@ -48,11 +91,7 @@ Detalle completo (decisiones, schema, verificación) en su propio documento: [`e
 
 ## Fuera de alcance (de todo el documento)
 
-- Automatizar el envío del newsletter al publicar un artículo (sigue siendo manual vía el dashboard de Resend).
+- Automatizar el envío del newsletter al publicar un artículo (sigue siendo manual vía el dashboard de Resend, ver Fase 3).
 - Cualquier campaña de email más allá del newsletter simple (drip campaigns, segmentación avanzada) — no lo pidió el proyecto.
 
-## Plan de verificación (por fase, al implementar cada una)
-
-- **Fase 1:** registrar una cuenta nueva → llega un email real de bienvenida a una casilla de prueba, remitente `@nexoat.com`, sin ir a spam.
-- **Fase 3:** suscribirse desde el formulario público → aparece en la audiencia de Resend con el mismo email; darse de baja → desaparece/se marca unsubscribed en ambos lados.
-- **Fase 4:** togglear "Recibir novedades" desde `/mi-cuenta/preferencias` → se refleja en `/nexoat-admin` (listado de `NewsletterSubscriber`) y en la audiencia de Resend.
+Los pasos de verificación de cada fase están en su propia sección arriba (o en `email-verification-and-password-reset.md` para la Fase 2).
