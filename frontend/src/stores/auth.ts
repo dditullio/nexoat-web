@@ -79,6 +79,35 @@ export const useAuthStore = defineStore('auth', () => {
     providers.value = await http<ProvidersResponse>('/auth/providers', { skipAuthRetry: true })
   }
 
+  /** No lanza si el token es inválido/venció — el caller (VerifyEmailView) decide qué mostrar según el resultado. */
+  async function verifyEmail(token: string): Promise<boolean> {
+    try {
+      await http('/auth/verify-email', { method: 'POST', body: { token }, skipAuthRetry: true })
+      if (user.value) user.value = { ...user.value, emailVerified: new Date().toISOString() }
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /** Requiere sesión — reenvía al email de la cuenta logueada. */
+  async function resendVerification() {
+    await http('/auth/verify-email/resend', { method: 'POST' })
+  }
+
+  /** Siempre resuelve, exista o no la cuenta — el backend nunca revela si el email existe. */
+  async function requestPasswordReset(email: string) {
+    await http('/auth/forgot-password', { method: 'POST', body: { email }, skipAuthRetry: true })
+  }
+
+  async function resetPassword(token: string, password: string) {
+    await http('/auth/reset-password', {
+      method: 'POST',
+      body: { token, password },
+      skipAuthRetry: true,
+    })
+  }
+
   /** Se llama una vez al montar App.vue — idempotente, así el router guard puede repetirla sin costo. */
   async function bootstrap() {
     if (isBootstrapped.value) return
@@ -119,5 +148,9 @@ export const useAuthStore = defineStore('auth', () => {
     fetchProviders,
     bootstrap,
     updateLocalUser,
+    verifyEmail,
+    resendVerification,
+    requestPasswordReset,
+    resetPassword,
   }
 })

@@ -6,6 +6,9 @@ import type { User } from '@prisma/client'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
+import { VerifyEmailDto } from './dto/verify-email.dto'
+import { ForgotPasswordDto } from './dto/forgot-password.dto'
+import { ResetPasswordDto } from './dto/reset-password.dto'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { LocalAuthGuard } from './guards/local-auth.guard'
 import { RefreshTokenGuard } from './guards/refresh-token.guard'
@@ -90,6 +93,49 @@ export class AuthController {
   })
   providers() {
     return this.authService.getProviders()
+  }
+
+  @Post('verify-email')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Confirma el email con el token del link — no bloquea nada, es informativo',
+  })
+  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<{ ok: true }> {
+    await this.authService.verifyEmail(dto.token)
+    return { ok: true }
+  }
+
+  @Throttle(AUTH_THROTTLE)
+  @UseGuards(JwtAuthGuard)
+  @Post('verify-email/resend')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reenvía el email de confirmación al usuario autenticado' })
+  async resendVerification(@CurrentUser() user: User): Promise<{ ok: true }> {
+    await this.authService.resendVerificationEmail(user)
+    return { ok: true }
+  }
+
+  @Throttle(AUTH_THROTTLE)
+  @Post('forgot-password')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Pide el reset de contraseña',
+    description:
+      'Siempre responde { ok: true }, exista o no la cuenta — evita enumeración de emails.',
+  })
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ ok: true }> {
+    await this.authService.requestPasswordReset(dto.email)
+    return { ok: true }
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Cambia la contraseña con el token del link — revoca todas las sesiones activas',
+  })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ ok: true }> {
+    await this.authService.resetPassword(dto.token, dto.password)
+    return { ok: true }
   }
 
   private async issueSession(user: User, req: FastifyRequest, res: FastifyReply) {

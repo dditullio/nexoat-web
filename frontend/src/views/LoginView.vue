@@ -37,6 +37,10 @@
         </button>
       </form>
 
+      <RouterLink to="/recuperar-contrasena" class="auth__forgot">
+        ¿Olvidaste tu contraseña?
+      </RouterLink>
+
       <RouterLink
         v-if="oauthLabel"
         :to="{ name: 'login', query: route.query }"
@@ -188,6 +192,21 @@ async function onSubmit() {
 .auth__submit {
   width: 100%;
   margin-top: 6px;
+}
+
+.auth__forgot {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--color-ink-faint);
+  text-decoration: underline;
+  text-decoration-color: var(--color-line);
+  text-underline-offset: 3px;
+}
+
+.auth__forgot:hover {
+  color: var(--color-ink);
 }
 
 .auth__oauth-link {

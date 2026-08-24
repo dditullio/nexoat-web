@@ -1,14 +1,14 @@
 import { Test } from '@nestjs/testing'
 import { JwtModule } from '@nestjs/jwt'
-import { ConflictException } from '@nestjs/common'
+import { BadRequestException, ConflictException } from '@nestjs/common'
 import * as bcrypt from 'bcryptjs'
-import { Role, type User } from '@prisma/client'
+import { Role, VerificationTokenType, type User } from '@prisma/client'
 import { AuthService } from './auth.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
 
 type MockPrisma = {
-  user: { findUnique: jest.Mock; create: jest.Mock }
+  user: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock }
   refreshToken: {
     create: jest.Mock
     findUnique: jest.Mock
@@ -16,6 +16,7 @@ type MockPrisma = {
     updateMany: jest.Mock
   }
   oAuthAccount: { findUnique: jest.Mock; create: jest.Mock }
+  verificationToken: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock }
 }
 
 describe('AuthService', () => {
@@ -27,7 +28,7 @@ describe('AuthService', () => {
     process.env.JWT_ACCESS_SECRET = 'test-secret'
 
     prisma = {
-      user: { findUnique: jest.fn(), create: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
       refreshToken: {
         create: jest.fn(),
         findUnique: jest.fn(),
@@ -35,6 +36,7 @@ describe('AuthService', () => {
         updateMany: jest.fn(),
       },
       oAuthAccount: { findUnique: jest.fn(), create: jest.fn() },
+      verificationToken: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     }
     mail = { send: jest.fn().mockResolvedValue(undefined) }
 
@@ -192,6 +194,158 @@ describe('AuthService', () => {
       delete process.env.FACEBOOK_CLIENT_SECRET
 
       expect(service.getProviders()).toEqual({ google: true, facebook: false })
+    })
+  })
+
+  describe('verifyEmail', () => {
+    it('rechaza un token inexistente', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue(null)
+      await expect(service.verifyEmail('raw')).rejects.toThrow(BadRequestException)
+      expect(prisma.user.update).not.toHaveBeenCalled()
+    })
+
+    it('rechaza un token del tipo equivocado (ej. uno de reset usado como verificación)', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue({
+        id: 't1',
+        type: VerificationTokenType.password_reset,
+        usedAt: null,
+        expiresAt: new Date(Date.now() + 10_000),
+        user: { id: 'u1' },
+      })
+      await expect(service.verifyEmail('raw')).rejects.toThrow(BadRequestException)
+    })
+
+    it('rechaza un token ya usado', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue({
+        id: 't1',
+        type: VerificationTokenType.email_verification,
+        usedAt: new Date(),
+        expiresAt: new Date(Date.now() + 10_000),
+        user: { id: 'u1' },
+      })
+      await expect(service.verifyEmail('raw')).rejects.toThrow(BadRequestException)
+    })
+
+    it('rechaza un token vencido', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue({
+        id: 't1',
+        type: VerificationTokenType.email_verification,
+        usedAt: null,
+        expiresAt: new Date(Date.now() - 10_000),
+        user: { id: 'u1' },
+      })
+      await expect(service.verifyEmail('raw')).rejects.toThrow(BadRequestException)
+    })
+
+    it('marca el token como usado y setea emailVerified con un token válido', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue({
+        id: 't1',
+        type: VerificationTokenType.email_verification,
+        usedAt: null,
+        expiresAt: new Date(Date.now() + 10_000),
+        user: { id: 'u1' },
+      })
+
+      await service.verifyEmail('raw')
+
+      expect(prisma.verificationToken.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 't1' }, data: { usedAt: expect.any(Date) } })
+      )
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'u1' } })
+      )
+    })
+  })
+
+  describe('requestPasswordReset', () => {
+    it('no manda nada ni lanza si el email no existe (evita enumeración)', async () => {
+      prisma.user.findUnique.mockResolvedValue(null)
+      await expect(service.requestPasswordReset('nadie@x.com')).resolves.toBeUndefined()
+      expect(mail.send).not.toHaveBeenCalled()
+      expect(prisma.verificationToken.create).not.toHaveBeenCalled()
+    })
+
+    it('no manda nada si la cuenta es 100% OAuth (sin passwordHash que resetear)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        isActive: true,
+        passwordHash: null,
+        email: 'x@x.com',
+      })
+      await service.requestPasswordReset('x@x.com')
+      expect(mail.send).not.toHaveBeenCalled()
+    })
+
+    it('manda el email de reset si la cuenta existe y tiene contraseña', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        isActive: true,
+        passwordHash: 'hash',
+        email: 'x@x.com',
+      })
+
+      await service.requestPasswordReset('x@x.com')
+
+      expect(prisma.verificationToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'u1',
+            type: VerificationTokenType.password_reset,
+          }),
+        })
+      )
+      expect(mail.send).toHaveBeenCalledWith('x@x.com', expect.any(String), expect.any(String))
+    })
+  })
+
+  describe('resetPassword', () => {
+    it('rechaza un token inválido sin tocar la contraseña', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue(null)
+      await expect(service.resetPassword('raw', 'nueva12345')).rejects.toThrow(BadRequestException)
+      expect(prisma.user.update).not.toHaveBeenCalled()
+    })
+
+    it('cambia la contraseña y revoca todas las sesiones activas del usuario', async () => {
+      prisma.verificationToken.findUnique.mockResolvedValue({
+        id: 't1',
+        type: VerificationTokenType.password_reset,
+        usedAt: null,
+        expiresAt: new Date(Date.now() + 10_000),
+        user: { id: 'u1' },
+      })
+
+      await service.resetPassword('raw', 'nueva12345')
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'u1' } })
+      )
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'u1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      })
+    })
+  })
+
+  describe('resendVerificationEmail', () => {
+    it('no manda nada si el usuario ya está verificado', async () => {
+      await service.resendVerificationEmail({
+        id: 'u1',
+        email: 'x@x.com',
+        emailVerified: new Date(),
+      } as User)
+
+      expect(mail.send).not.toHaveBeenCalled()
+      expect(prisma.verificationToken.create).not.toHaveBeenCalled()
+    })
+
+    it('manda un email nuevo si todavía no está verificado', async () => {
+      await service.resendVerificationEmail({
+        id: 'u1',
+        email: 'x@x.com',
+        emailVerified: null,
+      } as User)
+
+      expect(mail.send).toHaveBeenCalledWith('x@x.com', expect.any(String), expect.any(String))
     })
   })
 })

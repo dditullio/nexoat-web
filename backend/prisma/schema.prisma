@@ -212,6 +212,7 @@ model User {
   auditLogs           AuditLog[]            @relation("AuditActor")
   readingHistory      ReadingHistoryEntry[]
   savedArticles       SavedArticle[]
+  verificationTokens  VerificationToken[]
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 
@@ -235,6 +236,30 @@ model ProfessionalProfile {
   updatedAt       DateTime @updatedAt
 
   @@map("professional_profiles")
+}
+
+enum VerificationTokenType {
+  email_verification
+  password_reset
+}
+
+// Token de un solo uso con expiración, mandado por email — un mismo modelo
+// para verificación de cuenta y reset de contraseña (distinto vencimiento
+// por `type`, ver docs/features/email-verification-and-password-reset.md).
+// Nunca se guarda el token crudo, solo su hash (mismo criterio que
+// RefreshToken).
+model VerificationToken {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String                @unique
+  type      VerificationTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  @@index([userId, type])
+  @@map("verification_tokens")
 }
 
 // Un ítem por artículo (no un log de cada visita) — se hace upsert en cada

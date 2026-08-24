@@ -5,6 +5,7 @@
     </template>
     <template v-else>
       <AppHeader />
+      <EmailVerificationBanner />
       <main class="app__main">
         <RouterView />
       </main>
@@ -18,6 +19,7 @@ import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
+import EmailVerificationBanner from '@/components/layout/EmailVerificationBanner.vue'
 import { useBlogStore } from '@/stores/blog'
 import { useThemeStore } from '@/stores/theme'
 import { useTrackStore } from '@/stores/track'

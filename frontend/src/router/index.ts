@@ -90,6 +90,24 @@ const router = createRouter({
       meta: { title: 'Ingresando…' },
     },
     {
+      path: '/verificar-correo',
+      name: 'verify-email',
+      component: () => import('@/views/VerifyEmailView.vue'),
+      meta: { title: 'Confirmar email' },
+    },
+    {
+      path: '/recuperar-contrasena',
+      name: 'forgot-password',
+      component: () => import('@/views/ForgotPasswordView.vue'),
+      meta: { title: 'Recuperar contraseña' },
+    },
+    {
+      path: '/restablecer-contrasena',
+      name: 'reset-password',
+      component: () => import('@/views/ResetPasswordView.vue'),
+      meta: { title: 'Elegir nueva contraseña' },
+    },
+    {
       path: '/planes',
       name: 'plans',
       component: () => import('@/views/PlansView.vue'),

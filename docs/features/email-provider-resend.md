@@ -1,6 +1,6 @@
 # Proveedor de email: Resend (transaccional + newsletter)
 
-**Estado:** fase 1 implementada y verificada. Fases 2-4 pendientes.
+**Estado:** fases 1 y 2 implementadas y verificadas. Fases 3-4 pendientes.
 
 ## Contexto
 
@@ -31,10 +31,9 @@ Se evaluaron Hostinger Reach, Resend, Brevo, Listmonk autohospedado y Mailchimp 
   2. **Dominio `nexoat.com` verificado en Resend (2026-08-24)** — el DNS del dominio vive en DonWeb (no Hostinger, pese a que el VPS sí lo es), se cargaron a mano los 4 registros que pidió Resend (DKIM `resend._domainkey`, MX + TXT SPF en `send`, TXT DMARC en `_dmarc`). `RESEND_FROM_EMAIL` pasa a `NexoAT <notificaciones@nexoat.com>`. Confirmado registrando con un email ajeno a la cuenta de Resend (`gmail.com`, no `hola.nexoat@gmail.com`) → entregado sin error, ya no hay restricción de destinatario.
 - Se evaluó explícitamente el "Tracking subdomain" que ofrece Resend (reescribe links + pixel de apertura para medir aperturas/clics) y **se dejó sin configurar a propósito** — mismo criterio que llevó a elegir Umami self-hosted sobre Google Analytics: no tiene sentido trackear aperturas de email en un sitio sobre acompañamiento terapéutico y salud mental. Se puede sumar más adelante con consentimiento explícito si hace falta medir aperturas del newsletter puntualmente.
 
-### Fase 2 — Verificación de cuenta y reset de contraseña
+### Fase 2 — Verificación de cuenta y reset de contraseña ✅ implementado
 
-- Retoma exactamente lo que `auth-and-admin-dashboard.md` dejó pendiente: `User.emailVerified` ya existe en el schema, falta el flujo (token de verificación + endpoint + email + pantalla `/verificar-correo`) y el de reset (`/recuperar-contraseña`, token con expiración, mismo patrón que `RefreshToken`).
-- Fuera del alcance de este documento en detalle — merece su propio doc de feature cuando se encare (el flujo de tokens/expiración tiene sus propias decisiones).
+Detalle completo (decisiones, schema, verificación) en su propio documento: [`email-verification-and-password-reset.md`](email-verification-and-password-reset.md).
 
 ### Fase 3 — Newsletter real vía Resend Broadcasts
 

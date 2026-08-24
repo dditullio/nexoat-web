@@ -4,7 +4,12 @@
 // clientes ignora <style> en el <head>) — no reusa el sistema de diseño del
 // sitio tal cual, solo su paleta base, para no arrastrar CSS que no
 // funciona en clientes de correo.
-export function welcomeEmailHtml(name?: string): string {
+// `verifyUrl` solo viene presente en altas por email/contraseña — las de
+// OAuth ya llegan con `emailVerified` seteado (el proveedor ya lo verificó),
+// no tiene sentido pedirles nada más. Un solo email combinado en vez de
+// "bienvenida" + "verificá tu email" separados — ver
+// docs/features/email-verification-and-password-reset.md, decisión 2.
+export function welcomeEmailHtml(name?: string, verifyUrl?: string): string {
   const greeting = name ? `Hola, ${name}` : 'Hola'
 
   return `
@@ -22,9 +27,18 @@ export function welcomeEmailHtml(name?: string): string {
     <p style="font-size:15px;line-height:1.6;color:#4a4030;margin:0 0 24px;font-family:Arial,sans-serif;">
       Gracias por sumarte al acompañamiento terapéutico y el cuidado de personas.
     </p>
-    <a href="https://nexoat.com" style="display:inline-block;background:#7a8a5c;color:#fffdfa;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;">
-      Ir a NexoAT
+    ${
+      verifyUrl
+        ? `<a href="${verifyUrl}" style="display:inline-block;background:#7a8a5c;color:#fffdfa;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;">
+      Confirmá tu email
     </a>
+    <p style="font-size:13px;line-height:1.6;color:#7a6f5c;margin:16px 0 0;font-family:Arial,sans-serif;">
+      Confirmar tu email es opcional — tu cuenta ya funciona igual sin hacerlo.
+    </p>`
+        : `<a href="https://nexoat.com" style="display:inline-block;background:#7a8a5c;color:#fffdfa;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;">
+      Ir a NexoAT
+    </a>`
+    }
   </div>
 </div>`.trim()
 }
