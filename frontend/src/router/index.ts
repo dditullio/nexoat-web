@@ -12,6 +12,8 @@ declare module 'vue-router' {
     public?: boolean
     /** Si falta, cualquier rol autenticado entra — solo el guard de admin lo mira. */
     minRole?: Role[]
+    /** Rutas públicas (`layout` distinto de 'admin') que igual exigen sesión de lector, ej. "Mi perfil". */
+    requiresAuth?: boolean
   }
 }
 
@@ -92,6 +94,12 @@ const router = createRouter({
       name: 'plans',
       component: () => import('@/views/PlansView.vue'),
       meta: { title: 'Planes de suscripción' },
+    },
+    {
+      path: '/mi-cuenta/perfil',
+      name: 'my-profile',
+      component: () => import('@/views/ProfileView.vue'),
+      meta: { title: 'Mi perfil', requiresAuth: true },
     },
     {
       path: '/nexoat-admin',
@@ -189,17 +197,33 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (to.meta.layout !== 'admin' || to.meta.public) return true
+  // Ramas separadas para el layout admin y para rutas públicas que igual
+  // exigen sesión (ej. "Mi perfil") — distinto destino de login en cada
+  // caso, así que no conviene fusionarlas en una sola condición.
+  if (to.meta.layout === 'admin') {
+    if (to.meta.public) return true
 
-  const authStore = useAuthStore()
-  await authStore.bootstrap()
+    const authStore = useAuthStore()
+    await authStore.bootstrap()
 
-  if (!authStore.isAuthenticated) {
-    return { name: 'admin-login', query: { redirect: to.fullPath } }
+    if (!authStore.isAuthenticated) {
+      return { name: 'admin-login', query: { redirect: to.fullPath } }
+    }
+
+    if (to.meta.minRole && !authStore.hasRole(...to.meta.minRole)) {
+      return { name: 'admin-dashboard' }
+    }
+
+    return true
   }
 
-  if (to.meta.minRole && !authStore.hasRole(...to.meta.minRole)) {
-    return { name: 'admin-dashboard' }
+  if (to.meta.requiresAuth) {
+    const authStore = useAuthStore()
+    await authStore.bootstrap()
+
+    if (!authStore.isAuthenticated) {
+      return { name: 'login', query: { redirect: to.fullPath } }
+    }
   }
 
   return true

@@ -94,6 +94,16 @@ export const useAuthStore = defineStore('auth', () => {
     isBootstrapped.value = true
   }
 
+  /**
+   * Refleja en el store el AuthUser que ya devolvió una llamada a
+   * `services/profile.api.ts` (que siempre trae el registro completo) —
+   * evita un `fetchMe()` extra de ida y vuelta al servidor después de cada
+   * cambio de perfil.
+   */
+  function updateLocalUser(updated: AuthUser) {
+    user.value = updated
+  }
+
   return {
     user,
     accessToken,
@@ -108,5 +118,6 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     fetchProviders,
     bootstrap,
+    updateLocalUser,
   }
 })

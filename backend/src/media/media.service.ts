@@ -11,7 +11,7 @@ export interface UploadedMedia {
 // cuenta (avatares, directorio de acompañantes, etc.) y permite borrar con
 // confianza sabiendo de qué feature viene cada publicId.
 const ROOT_FOLDER = 'nexoat'
-export const MEDIA_FOLDERS = ['articles', 'categories'] as const
+export const MEDIA_FOLDERS = ['articles', 'categories', 'avatars'] as const
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number]
 
 export const ALLOWED_IMAGE_MIME_TYPES = new Set([
@@ -24,13 +24,23 @@ export const ALLOWED_IMAGE_MIME_TYPES = new Set([
 // para el mensaje de error del controller — mismo número, un solo lugar.
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
-// Ancho/calidad tope compartido entre `upload` (subida nueva) y
-// `reoptimize` (assets ya existentes, ver scripts/reoptimize-images.ts) —
-// misma receta en los dos casos, un solo lugar si se ajusta más adelante.
-const OPTIMIZED_TRANSFORMATION = [
-  { width: 1920, crop: 'limit' },
-  { quality: 'auto:good', fetch_format: 'auto' },
-]
+// Ancho tope por carpeta — un avatar nunca se muestra más grande que un
+// círculo chico en la UI, así que no tiene sentido guardar la misma versión
+// de 1920px que una portada de artículo/categoría (ver
+// docs/features/reader-profile.md). `quality`/`fetch_format` sí se
+// comparten: es la misma heurística de Cloudinary para cualquier tamaño.
+const WIDTH_LIMIT_BY_FOLDER: Record<MediaFolder, number> = {
+  articles: 1920,
+  categories: 1920,
+  avatars: 512,
+}
+
+function optimizedTransformation(folder: MediaFolder) {
+  return [
+    { width: WIDTH_LIMIT_BY_FOLDER[folder], crop: 'limit' },
+    { quality: 'auto:good', fetch_format: 'auto' },
+  ]
+}
 
 // El SDK de Cloudinary a veces rechaza con un objeto plano (ej.
 // { message, http_code }), no con una instancia de Error — un template
@@ -83,7 +93,7 @@ export class MediaService {
         // - quality "auto:good" + fetch_format "auto": Cloudinary elige
         //   la compresión y el formato (WebP/AVIF si conviene) que mejor
         //   balancea peso y calidad para esa imagen en particular.
-        transformation: OPTIMIZED_TRANSFORMATION,
+        transformation: optimizedTransformation(folder),
       })
     } catch (error) {
       throw new InternalServerErrorException(
@@ -106,7 +116,7 @@ export class MediaService {
       result = await cloudinary.uploader.upload(sourceUrl, {
         folder: `${ROOT_FOLDER}/${folder}`,
         resource_type: 'image',
-        transformation: OPTIMIZED_TRANSFORMATION,
+        transformation: optimizedTransformation(folder),
       })
     } catch (error) {
       throw new InternalServerErrorException(

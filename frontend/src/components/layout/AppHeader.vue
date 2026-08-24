@@ -94,15 +94,8 @@
           </svg>
         </RouterLink>
 
-        <div v-if="authStore.isAuthenticated" class="hdr__session">
-          <span class="hdr__session-name">{{ authStore.user?.name || authStore.user?.email }}</span>
-          <button class="hdr__session-logout" @click="onLogout">Salir</button>
-        </div>
-        <RouterLink v-else to="/ingresar" class="hdr__link hdr__login">Ingresar</RouterLink>
-
-        <button type="button" class="btn btn--primary hdr__cta" @click="showNewsletter = true">
-          Suscribirme
-        </button>
+        <UserMenu v-if="authStore.isAuthenticated" />
+        <RouterLink v-else to="/ingresar" class="btn btn--primary hdr__cta">Ingresar</RouterLink>
       </div>
 
       <button class="hdr__burger" aria-label="Abrir menú" @click="menuOpen = true">
@@ -177,33 +170,66 @@
         </nav>
 
         <div class="drawer__foot">
-          <div v-if="authStore.isAuthenticated" class="drawer__session">
-            <span class="drawer__session-name">{{
-              authStore.user?.name || authStore.user?.email
-            }}</span>
-            <button class="drawer__session-logout" @click="onLogout">Salir</button>
-          </div>
+          <template v-if="authStore.isAuthenticated">
+            <div class="drawer__session">
+              <span class="drawer__session-name">{{
+                authStore.user?.name || authStore.user?.email
+              }}</span>
+            </div>
+            <RouterLink
+              to="/mi-cuenta/perfil"
+              class="drawer__link drawer__link--sub"
+              @click="menuOpen = false"
+            >
+              <span class="drawer__glyph" aria-hidden="true">👤</span>
+              Mi perfil
+            </RouterLink>
+            <!-- Mockeados igual que en `UserMenu` (desktop): estas vistas
+                 todavía no existen ("Mi perfil" arriba ya sí está cableado). -->
+            <button
+              v-for="item in accountItems"
+              :key="item.label"
+              type="button"
+              class="drawer__link drawer__link--sub"
+              @click="onAccountMock()"
+            >
+              <span class="drawer__glyph" aria-hidden="true">{{ item.icon }}</span>
+              {{ item.label }}
+              <span class="drawer__soon">Pronto</span>
+            </button>
+            <RouterLink
+              to="/planes"
+              class="drawer__link drawer__link--sub"
+              @click="menuOpen = false"
+            >
+              <span class="drawer__glyph" aria-hidden="true">✦</span>
+              Planes y suscripción
+            </RouterLink>
+            <RouterLink
+              v-if="isStaff"
+              to="/nexoat-admin"
+              class="drawer__link drawer__link--sub"
+              @click="menuOpen = false"
+            >
+              <span class="drawer__glyph" aria-hidden="true">⚙</span>
+              Panel de administración
+            </RouterLink>
+            <button type="button" class="btn btn--ghost drawer__logout" @click="onLogout">
+              Cerrar sesión
+            </button>
+          </template>
           <RouterLink
             v-else
             to="/ingresar"
-            class="btn btn--ghost drawer__login"
+            class="btn btn--primary drawer__login"
             @click="menuOpen = false"
           >
             Ingresar
           </RouterLink>
-          <button
-            type="button"
-            class="btn btn--primary drawer__cta"
-            @click="openNewsletterFromDrawer"
-          >
-            Suscribirme
-          </button>
         </div>
       </aside>
     </Transition>
   </Teleport>
-
-  <NewsletterModal v-model:open="showNewsletter" />
 </template>
 
 <script setup lang="ts">
@@ -212,7 +238,7 @@ import { useBlogStore } from '@/stores/blog'
 import { useAuthStore } from '@/stores/auth'
 import { CATEGORY_TRACK_MAP, TRACK_CHIPS } from '@/utils/theme'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
-import NewsletterModal from '@/components/blog/NewsletterModal.vue'
+import UserMenu from '@/components/ui/UserMenu.vue'
 import type { Category, ContentTrack } from '@/types'
 
 const store = useBlogStore()
@@ -220,7 +246,6 @@ const authStore = useAuthStore()
 const showCats = ref(false)
 const menuOpen = ref(false)
 const scrolled = ref(false)
-const showNewsletter = ref(false)
 
 const TRACKS: ContentTrack[] = [
   'acompanamiento-terapeutico',
@@ -276,13 +301,23 @@ const trackGroups = computed<TrackGroup[]>(() => {
   return groups.filter((g) => g.categories.length)
 })
 
-function onLogout() {
-  authStore.logout()
+const isStaff = computed(() => authStore.hasRole('SUPER_ADMIN', 'ADMIN', 'EDITOR'))
+
+// Mismo set mockeado que `UserMenu` (ver ese componente).
+const accountItems = [
+  { label: 'Artículos guardados', icon: '🔖' },
+  { label: 'Historial de lectura', icon: '🕮' },
+  { label: 'Preferencias de correo', icon: '✉' },
+]
+
+// Inerte a propósito, igual que en `UserMenu`.
+function onAccountMock() {
+  menuOpen.value = false
 }
 
-function openNewsletterFromDrawer() {
+function onLogout() {
   menuOpen.value = false
-  showNewsletter.value = true
+  authStore.logout()
 }
 
 function onScroll() {
@@ -549,43 +584,6 @@ onBeforeUnmount(() => {
   margin-left: 4px;
 }
 
-.hdr__login {
-  white-space: nowrap;
-}
-
-.hdr__session {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 6px;
-}
-
-.hdr__session-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-ink-secondary);
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hdr__session-logout {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--color-ink-faint);
-  padding: 6px 10px;
-  border-radius: var(--radius-full);
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
-}
-
-.hdr__session-logout:hover {
-  background: var(--color-hover-bg);
-  color: var(--color-ink);
-}
-
 /* Hamburguesa */
 .hdr__burger {
   display: none;
@@ -685,6 +683,11 @@ onBeforeUnmount(() => {
 .drawer__link--sub {
   font-size: 0.88rem;
   padding: 10px 14px;
+  /* Algunos `.drawer__link--sub` son `<button>` (ítems mockeados de
+     cuenta): sin esto no ocupan el ancho de la columna como los
+     RouterLink vecinos. */
+  width: 100%;
+  text-align: left;
 }
 
 .drawer__dot {
@@ -699,40 +702,45 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--color-line-faint);
 }
 
-.drawer__cta {
-  width: 100%;
-}
-
 .drawer__login {
   width: 100%;
-  margin-bottom: 12px;
 }
 
 .drawer__session {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  padding: 0 14px 6px;
 }
 
 .drawer__session-name {
   font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-ink-secondary);
+  font-weight: 700;
+  color: var(--color-ink);
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.drawer__session-logout {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--color-ink-faint);
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-line-light);
+.drawer__glyph {
+  width: 20px;
+  text-align: center;
   flex-shrink: 0;
+}
+
+.drawer__soon {
+  margin-left: auto;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-ink-faint);
+  border: 1px solid var(--color-line-light);
+  border-radius: var(--radius-full);
+  padding: 2px 7px;
+}
+
+.drawer__logout {
+  width: 100%;
+  margin-top: 12px;
 }
 
 /* Transiciones */

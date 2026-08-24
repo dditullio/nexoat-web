@@ -84,6 +84,19 @@ enum SubscriptionTier {
   nivel_3
 }
 
+// Quién es el lector dentro del público del sitio — no confundir con Role
+// (permisos de administración) ni con SubscriptionTier (nivel de pago).
+// Opcional: toda cuenta nace sin elegir (ver docs/features/reader-profile.md),
+// se completa desde "Mi perfil". `acompanante_terapeutico` cubre tanto AT en
+// ejercicio como estudiantes — separarlos no aporta nada hoy, ambos acceden
+// al mismo ProfessionalProfile.
+enum ProfileRole {
+  acompanante_terapeutico
+  cuidador
+  familiar
+  otro
+}
+
 // ─── Modelos ────────────────────────────────────────────────────────────────
 
 model Category {
@@ -172,23 +185,49 @@ model ArticleTag {
 }
 
 model User {
-  id               String           @id @default(cuid())
-  email            String           @unique
-  emailVerified    DateTime?
-  name             String?
-  avatarUrl        String?
-  passwordHash     String? // null si es cuenta 100% OAuth
-  role             Role             @default(USER)
-  subscriptionTier SubscriptionTier @default(gratuito)
-  isActive         Boolean          @default(true)
-  accounts         OAuthAccount[]
-  refreshTokens    RefreshToken[]
-  articles         Article[]        @relation("ArticleAuthor")
-  auditLogs        AuditLog[]       @relation("AuditActor")
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  emailVerified       DateTime?
+  name                String?
+  avatarUrl           String?
+  // ID de Cloudinary del avatar (carpeta "avatars") — mismo rol que
+  // Article.coverImagePublicId: permite borrar el asset viejo al
+  // reemplazar/quitar la foto. Null en avatares que vienen de OAuth (esos
+  // son una URL externa de Google/Facebook, no un asset propio).
+  avatarPublicId      String?
+  passwordHash        String? // null si es cuenta 100% OAuth
+  role                Role                 @default(USER)
+  subscriptionTier    SubscriptionTier     @default(gratuito)
+  profileRole         ProfileRole?
+  professionalProfile ProfessionalProfile?
+  isActive            Boolean              @default(true)
+  accounts            OAuthAccount[]
+  refreshTokens       RefreshToken[]
+  articles            Article[]            @relation("ArticleAuthor")
+  auditLogs           AuditLog[]           @relation("AuditActor")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   @@map("users")
+}
+
+// Mini-currículum opcional, solo para profileRole "acompanante_terapeutico"
+// o "cuidador" (validado en profile.service.ts, no acá). Ver
+// docs/features/reader-profile.md.
+model ProfessionalProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization  String
+  experienceYears Int?
+  bio             String?
+  // Reservado para el futuro directorio de acompañantes — sin efecto hoy,
+  // no se expone en ningún endpoint público (ver docs/features/reader-profile.md).
+  isPublic        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("professional_profiles")
 }
 
 model OAuthAccount {

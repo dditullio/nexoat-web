@@ -14,6 +14,7 @@ import { MailModule } from './mail/mail.module'
 import { MediaModule } from './media/media.module'
 import { BackupModule } from './backup/backup.module'
 import { SettingsModule } from './settings/settings.module'
+import { ProfileModule } from './profile/profile.module'
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SettingsModule } from './settings/settings.module'
     MediaModule,
     BackupModule,
     SettingsModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
