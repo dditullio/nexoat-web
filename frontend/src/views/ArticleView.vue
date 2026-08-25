@@ -121,6 +121,7 @@
 
         <div
           v-if="contentHtml"
+          ref="articleBodyEl"
           class="prose art__body"
           :class="{ 'art__body--truncated': article.isTruncated }"
           v-html="contentHtml"
@@ -191,7 +192,7 @@
         </footer>
       </article>
 
-      <aside class="side">
+      <aside ref="asideEl" class="side">
         <div class="side__sticky">
           <div class="side__block">
             <h2 class="eyebrow side__title">Compartir</h2>
@@ -229,6 +230,22 @@
           </div>
         </div>
       </aside>
+
+      <!-- Aparece al pasar la mitad del artículo — se asume que si llegó
+           hasta ahí es porque le está resultando interesante (ver comentario
+           en onScroll más abajo). Fixed real (no sticky): tiene que quedar
+           anclada a la ventana pase lo que pase con el scroll, no solo
+           mientras dure el recorrido de la columna lateral — por eso vive
+           fuera de <aside>, con su posición horizontal calculada por JS para
+           alinearse con esa columna (que está centrada dentro de .container,
+           así que no hay un "right: Npx" fijo que sirva en todos los anchos). -->
+      <div
+        v-if="showSavePrompt"
+        class="side__save-prompt"
+        :style="{ left: `${savePromptLeft}px`, width: `${savePromptWidth}px` }"
+      >
+        <SaveArticlePrompt :saving="isSaving" @save="onToggleSaved" @dismiss="dismissSavePrompt" />
+      </div>
     </div>
   </div>
 
@@ -240,7 +257,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { useAuthStore } from '@/stores/auth'
@@ -250,6 +267,7 @@ import { renderMarkdown } from '@/utils/markdown'
 import { getSavedStatus, saveArticle, unsaveArticle } from '@/services/saved-articles.api'
 import AppChip from '@/components/ui/AppChip.vue'
 import ArticleShare from '@/components/blog/ArticleShare.vue'
+import SaveArticlePrompt from '@/components/blog/SaveArticlePrompt.vue'
 import type { ArticleFull } from '@/types'
 
 const route = useRoute()
@@ -267,11 +285,42 @@ const contentHtml = computed(() => (article.value ? renderMarkdown(article.value
 const isSaved = ref(false)
 const isSaving = ref(false)
 
+// ── Aviso de "guardar en favoritos" al pasar la mitad del artículo ──
+//
+// Se mide el progreso de lectura como la proporción de .art__body que ya
+// pasó por encima del viewport, no con IntersectionObserver: el target acá
+// es mucho más alto que el viewport, así que su intersectionRatio no
+// refleja "cuánto se scrolleó", sino solo cuánto es visible en un instante.
+// Un listener de scroll (con throttle a un frame) da la proporción real.
+// Declarado antes del watchEffect de abajo, que ya lo usa desde el primer
+// fetch del artículo.
+const articleBodyEl = ref<HTMLElement | null>(null)
+const asideEl = ref<HTMLElement | null>(null)
+const showSavePrompt = ref(false)
+const savePromptDismissed = ref(false)
+const savePromptLeft = ref(0)
+const savePromptWidth = ref(290)
+let scrollRaf = 0
+
+// El aviso es fixed (no sticky) para quedar anclado a la ventana pase lo
+// que pase con el scroll — pero fixed no sabe alinearse solo con una
+// columna de grid centrada dentro de .container, así que se mide la
+// posición real de <aside> y se copia por inline style. Se recalcula al
+// mostrarse y ante cualquier resize (el ancho de la columna es fijo en CSS,
+// pero su offset horizontal cambia con el ancho de la ventana).
+function updateSavePromptPosition() {
+  const rect = asideEl.value?.getBoundingClientRect()
+  if (!rect) return
+  savePromptLeft.value = rect.left
+  savePromptWidth.value = rect.width
+}
+
 watchEffect(async () => {
   const slug = route.params.slug
   if (typeof slug !== 'string') return
   isLoading.value = true
   isSaved.value = false
+  resetSavePrompt()
   try {
     article.value = await http<ArticleFull>(`/articles/${slug}`, { skipAuthRetry: true })
     if (authStore.isAuthenticated) {
@@ -281,11 +330,63 @@ watchEffect(async () => {
         .then((res) => (isSaved.value = res.saved))
         .catch(() => undefined)
     }
+    // El contenido (v-html) recién existe en el DOM después de este render
+    // — hay que esperar el próximo tick para que articleBodyEl tenga altura
+    // real antes de empezar a medir el progreso de lectura.
+    await nextTick()
+    onScroll()
   } catch {
     article.value = null
   } finally {
     isLoading.value = false
   }
+})
+
+function readingProgress(): number {
+  const el = articleBodyEl.value
+  if (!el) return 0
+  const rect = el.getBoundingClientRect()
+  const scrollableRange = rect.height - window.innerHeight
+  if (scrollableRange <= 0) return rect.top <= 0 ? 1 : 0
+  return Math.min(1, Math.max(0, -rect.top / scrollableRange))
+}
+
+function onScroll() {
+  if (scrollRaf) return
+  scrollRaf = window.requestAnimationFrame(() => {
+    scrollRaf = 0
+    if (
+      !savePromptDismissed.value &&
+      authStore.isAuthenticated &&
+      !isSaved.value &&
+      readingProgress() >= 0.5
+    ) {
+      updateSavePromptPosition()
+      showSavePrompt.value = true
+    }
+  })
+}
+
+function dismissSavePrompt() {
+  showSavePrompt.value = false
+  savePromptDismissed.value = true
+}
+
+// Solo en memoria (nada de sessionStorage): el descarte dura mientras el
+// usuario sigue en esta página. Al navegar a otro artículo, volver a este o
+// recargar, se resetea — si vuelve a pasar la mitad del artículo, el aviso
+// reaparece.
+function resetSavePrompt() {
+  showSavePrompt.value = false
+  savePromptDismissed.value = false
+}
+
+window.addEventListener('scroll', onScroll, { passive: true })
+window.addEventListener('resize', updateSavePromptPosition)
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll)
+  window.removeEventListener('resize', updateSavePromptPosition)
+  if (scrollRaf) window.cancelAnimationFrame(scrollRaf)
 })
 
 const primaryCategory = computed(() =>
@@ -338,6 +439,7 @@ async function onToggleSaved() {
       await saveArticle(slug)
     }
     isSaved.value = !wasSaved
+    if (isSaved.value) showSavePrompt.value = false
   } catch {
     // sin cambio visual si falla — el botón queda en el estado previo
   } finally {
@@ -525,6 +627,12 @@ async function onToggleSaved() {
   grid-template-columns: minmax(0, 1fr) 290px;
   gap: 64px;
   padding-block: 56px 96px;
+  /* align-items:start (no stretch): el aside solo debe ser tan alto como su
+     propio contenido, para que .side__sticky (sticky top) se despegue y
+     scrollee con normalidad apenas termina su bloque, en vez de quedar
+     clavado arriba durante todo el artículo. El aviso de guardar ya no
+     depende de esto — es position:fixed (ver .side__save-prompt más abajo),
+     así que no necesita que el aside sea alto. */
   align-items: start;
 }
 
@@ -824,6 +932,16 @@ async function onToggleSaved() {
   color: var(--color-ink-faint);
 }
 
+/* Fixed real (no sticky) — ver comentario en el template. left/width se
+   asignan por JS (updateSavePromptPosition) para alinearse con el ancho
+   real de .side, que está centrado dentro de .container y no tiene un
+   offset fijo desde el borde de la ventana. */
+.side__save-prompt {
+  position: fixed;
+  bottom: 24px;
+  z-index: 40;
+}
+
 /* ── Sin artículo ── */
 .art-loading {
   padding-block: 120px;
@@ -845,6 +963,10 @@ async function onToggleSaved() {
   }
 
   .side__sticky {
+    position: static;
+  }
+
+  .side__save-prompt {
     position: static;
   }
 }
