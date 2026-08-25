@@ -15,9 +15,16 @@
            estado) — es la columna de referencia para que el contraste con
            "Gratuito" haga el trabajo de vender el registro. Los ítems son
            los mismos textos que Gratuito, mismo orden, para que se lean
-           alineados en fila aunque no sea una tabla literal. -->
+           alineados en fila aunque no sea una tabla literal.
+
+           El tag cambia según haya o no sesión: "Así lo ves hoy" solo es
+           cierto para quien todavía no tiene cuenta — alguien ya
+           registrado no "ve" esto hoy, está comparando contra su propio
+           pasado. -->
       <div class="plan plan--anon">
-        <span class="plan__tag plan__tag--anon">Así lo ves hoy</span>
+        <span class="plan__tag plan__tag--anon">
+          {{ authStore.isAuthenticated ? 'Antes de registrarte' : 'Así lo ves hoy' }}
+        </span>
         <h2 class="plan__name">Visitante</h2>
         <p class="plan__desc">Sin cuenta, con acceso solo al contenido público del blog.</p>
         <ul class="plan__benefits plan__benefits--muted">
