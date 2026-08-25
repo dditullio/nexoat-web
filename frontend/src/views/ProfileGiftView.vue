@@ -100,7 +100,7 @@ async function onDownload() {
   downloadError.value = ''
   isDownloading.value = true
   try {
-    await downloadMyGift(`${claim.value.ebook.slug}.pdf`)
+    await downloadMyGift(claim.value.ebook.fileName ?? `${claim.value.ebook.slug}.pdf`)
   } catch {
     downloadError.value = 'No pudimos descargar el archivo. Probá de nuevo.'
   } finally {

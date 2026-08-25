@@ -41,6 +41,9 @@ const AVAILABLE_SELECT = {
   topic: true,
   summary: true,
   coverImage: true,
+  // No es sensible (es el nombre del archivo que subió un admin) — el frontend lo usa para
+  // nombrar la descarga con su nombre real en vez de "{slug}.pdf" (ver ProfileGiftView.vue).
+  fileName: true,
 } as const
 
 function frontendUrl(): string {

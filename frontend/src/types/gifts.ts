@@ -9,6 +9,9 @@ export interface WelcomeEbook {
   topic: string
   summary: string
   coverImage: string | null
+  // Nombre real del archivo subido — se usa para nombrar la descarga en vez de
+  // "{slug}.pdf" (ver ProfileGiftView.vue). Null si el ebook no tiene PDF subido.
+  fileName: string | null
 }
 
 export interface EbookClaim {
