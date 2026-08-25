@@ -4,27 +4,12 @@
       <p v-if="isLoading" class="section-lead">Cargando…</p>
 
       <template v-else-if="claim">
-        <p class="gift-view__eyebrow">Tu regalo de bienvenida</p>
-        <img
-          v-if="claim.ebook.coverImage"
-          :src="claim.ebook.coverImage"
-          :alt="`Portada de ${claim.ebook.title}`"
-          class="gift-view__cover"
+        <GiftDownloadCard
+          :ebook="claim.ebook"
+          :downloading="isDownloading"
+          :error="downloadError"
+          @download="onDownload"
         />
-        <h1 class="gift-view__title">{{ claim.ebook.title }}</h1>
-        <p v-if="claim.ebook.subtitle" class="gift-view__subtitle">{{ claim.ebook.subtitle }}</p>
-        <p class="gift-view__summary">{{ claim.ebook.summary }}</p>
-
-        <button
-          type="button"
-          class="btn btn--primary gift-view__submit"
-          :disabled="isDownloading"
-          @click="onDownload"
-        >
-          {{ isDownloading ? 'Descargando…' : 'Descargar mi ebook' }}
-        </button>
-
-        <p v-if="downloadError" class="gift-view__error" role="alert">{{ downloadError }}</p>
       </template>
 
       <template v-else-if="availableEbooks.length">
@@ -60,6 +45,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import GiftPicker from '@/components/gifts/GiftPicker.vue'
+import GiftDownloadCard from '@/components/gifts/GiftDownloadCard.vue'
 import { claimGift, downloadMyGift, getAvailableGifts, getMyGiftClaim } from '@/services/gifts.api'
 import { ApiError } from '@/services/http'
 import type { EbookClaim, WelcomeEbook } from '@/types/gifts'
@@ -128,7 +114,9 @@ onMounted(load)
 
 .gift-view__card {
   width: 100%;
-  max-width: 520px;
+  /* Más ancha que antes (520px) para que la disposición horizontal de GiftDownloadCard (portada +
+     texto) entre cómoda — mismo ancho que el diálogo de vista ampliada de GiftPicker.vue. */
+  max-width: 640px;
   background: var(--color-surface);
   border: 1px solid var(--color-line-light);
   border-radius: var(--radius-2xl);
@@ -148,27 +136,12 @@ onMounted(load)
   margin: 0;
 }
 
-.gift-view__cover {
-  width: 140px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  align-self: center;
-}
-
 .gift-view__title {
   font-size: 1.5rem;
   margin: 0;
 }
 
-.gift-view__subtitle {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--color-ink-muted);
-  margin: -8px 0 0;
-}
-
-.gift-view__lead,
-.gift-view__summary {
+.gift-view__lead {
   font-size: 0.92rem;
   color: var(--color-ink-secondary);
   line-height: 1.6;

@@ -168,41 +168,25 @@
 
       <!-- Paso 4b: confirmación — recién elegido, antes de cerrar el onboarding. Sin esto el
            diálogo se cerraba solo (onFinish() redirige) sin ninguna pista de dónde quedó el
-           regalo — frustrante para el usuario, que recién eligió el título. -->
+           regalo — frustrante para el usuario, que recién eligió el título. Mismo diseño (portada
+           + texto en horizontal) que la vista ampliada de GiftPicker.vue y que ProfileGiftView.vue
+           — un solo componente compartido, GiftDownloadCard. -->
       <template v-else-if="currentKind === 'gift' && claimedGift">
-        <p class="onboarding__step-label">Tu regalo de bienvenida</p>
-        <img
-          v-if="claimedGift.ebook.coverImage"
-          :src="claimedGift.ebook.coverImage"
-          :alt="`Portada de ${claimedGift.ebook.title}`"
-          class="onboarding__gift-cover"
-        />
-        <h1 class="onboarding__title">{{ claimedGift.ebook.title }}</h1>
-        <p v-if="claimedGift.ebook.subtitle" class="onboarding__gift-subtitle">
-          {{ claimedGift.ebook.subtitle }}
-        </p>
-
-        <button
-          type="button"
-          class="btn btn--primary onboarding__submit"
-          :disabled="isDownloadingGift"
-          @click="onDownloadClaimedGift"
+        <GiftDownloadCard
+          :ebook="claimedGift.ebook"
+          :downloading="isDownloadingGift"
+          :error="downloadGiftError"
+          @download="onDownloadClaimedGift"
         >
-          {{ isDownloadingGift ? 'Descargando…' : 'Descargar mi ebook' }}
-        </button>
+          <p class="onboarding__gift-note">
+            También podés descargarlo cuando quieras desde el menú de tu perfil, en
+            <strong>"Tu regalo de bienvenida"</strong>.
+          </p>
 
-        <p v-if="downloadGiftError" class="onboarding__error" role="alert">
-          {{ downloadGiftError }}
-        </p>
-
-        <p class="onboarding__gift-note">
-          También podés descargarlo cuando quieras desde el menú de tu perfil, en
-          <strong>"Tu regalo de bienvenida"</strong>.
-        </p>
-
-        <button type="button" class="btn btn--ghost onboarding__submit" @click="onFinish">
-          Listo, continuar
-        </button>
+          <button type="button" class="btn btn--ghost onboarding__submit" @click="onFinish">
+            Listo, continuar
+          </button>
+        </GiftDownloadCard>
       </template>
     </div>
   </div>
@@ -216,6 +200,7 @@ import { completeOnboarding } from '@/services/onboarding.api'
 import { upsertProfessionalProfile } from '@/services/profile.api'
 import { claimGift, downloadMyGift, getAvailableGifts } from '@/services/gifts.api'
 import GiftPicker from '@/components/gifts/GiftPicker.vue'
+import GiftDownloadCard from '@/components/gifts/GiftDownloadCard.vue'
 import { PROFESSIONAL_PROFILE_ROLES, PROFILE_ROLE_LABEL, type ProfileRole } from '@/types/auth'
 import type { EbookClaim, WelcomeEbook } from '@/types/gifts'
 
@@ -513,20 +498,6 @@ function onFinish() {
   resize: vertical;
   line-height: 1.6;
   font-family: inherit;
-}
-
-.onboarding__gift-cover {
-  width: 140px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  align-self: center;
-}
-
-.onboarding__gift-subtitle {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--color-ink-muted);
-  margin: -8px 0 0;
 }
 
 .onboarding__gift-note {
