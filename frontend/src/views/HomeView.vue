@@ -8,7 +8,42 @@
 
       <div class="container hero__inner">
         <div class="hero__text">
-          <span class="hero__badge rise" style="animation-delay: 0.05s">
+          <!-- Para quien no tiene cuenta, este espacio vale más como invitación a
+               registrarse (con la promesa del ebook de regalo) que como texto
+               decorativo. Tarjeta CTA propia (no la pill original) — más
+               llamativa a propósito, con el motivo del arco en el ícono y el
+               tono arcilla de "oferta cálida" en vez del salvia de marca. -->
+          <RouterLink
+            v-if="!authStore.isAuthenticated"
+            :to="{ name: 'register' }"
+            class="hero__cta rise"
+            style="animation-delay: 0.05s"
+          >
+            <span class="hero__cta-icon" aria-hidden="true">🎁</span>
+            <span class="hero__cta-copy">
+              <strong class="hero__cta-title">
+                Creá tu cuenta gratis y llevate un libro electrónico de regalo
+              </strong>
+              <span class="hero__cta-sub"
+                >Elegís el título · sin tarjeta · cancelás cuando quieras</span
+              >
+            </span>
+            <svg
+              class="hero__cta-arrow"
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 9h10M9.5 4.5L14 9l-4.5 4.5" />
+            </svg>
+          </RouterLink>
+          <span v-else class="hero__badge rise" style="animation-delay: 0.05s">
             <span class="hero__badge-dot" aria-hidden="true"></span>
             Acompañamiento terapéutico y cuidado de personas
           </span>
@@ -307,6 +342,7 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useBlogStore } from '@/stores/blog'
 import { useTrackStore } from '@/stores/track'
+import { useAuthStore } from '@/stores/auth'
 import { getCategoryTheme, LEVEL_CHIPS, TRACK_CHIPS } from '@/utils/theme'
 import { useReveal } from '@/composables/useReveal'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
@@ -319,6 +355,7 @@ import type { Article, Category } from '@/types'
 const router = useRouter()
 const store = useBlogStore()
 const trackStore = useTrackStore()
+const authStore = useAuthStore()
 const { filteredArticles } = storeToRefs(store)
 
 useReveal()
@@ -483,6 +520,94 @@ function goToSearch() {
   color: var(--color-ink-secondary);
   letter-spacing: 0.01em;
   box-shadow: var(--shadow-sm);
+}
+
+/* Tarjeta CTA del hero (solo visitantes sin cuenta) — más llamativa a
+   propósito que la pill original: gradiente cálido en tono arcilla (lee
+   como "oferta especial", distinto del salvia de marca), ícono con el
+   motivo del arco, y flecha que se desplaza en hover. */
+.hero__cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 460px;
+  margin-bottom: 26px;
+  padding: 12px 18px 12px 12px;
+  background: linear-gradient(135deg, var(--color-accent-soft), var(--color-surface));
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+  transition:
+    box-shadow 0.25s var(--ease-out-soft),
+    transform 0.25s var(--ease-out-soft),
+    border-color 0.25s var(--ease-out-soft);
+}
+
+.hero__cta:hover {
+  box-shadow: var(--shadow-bloom);
+  border-color: var(--color-accent-dark);
+  transform: translateY(-2px);
+}
+
+.hero__cta-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  background: var(--color-surface);
+  /* Motivo del arco: casi circular arriba, esquina suave abajo. */
+  border-radius: 999px 999px var(--radius-md) var(--radius-md) / 60% 60% var(--radius-md)
+    var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero__cta-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.hero__cta-title {
+  font-family: var(--font-display);
+  font-variation-settings:
+    'SOFT' 60,
+    'WONK' 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.32;
+  color: var(--color-ink);
+}
+
+.hero__cta-sub {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-accent-dark);
+  letter-spacing: 0.01em;
+}
+
+.hero__cta-arrow {
+  flex-shrink: 0;
+  color: var(--color-accent-dark);
+  transition: transform 0.25s var(--ease-out-soft);
+}
+
+.hero__cta:hover .hero__cta-arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 480px) {
+  .hero__cta {
+    max-width: none;
+  }
+
+  .hero__cta-sub {
+    display: none;
+  }
 }
 
 .hero__badge-dot {
