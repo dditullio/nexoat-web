@@ -74,6 +74,14 @@
         >
           Acerca de
         </RouterLink>
+
+        <RouterLink
+          to="/planes"
+          class="hdr__link"
+          :class="{ 'is-active': $route.path === '/planes' }"
+        >
+          Planes
+        </RouterLink>
       </nav>
 
       <div class="hdr__actions">
@@ -303,6 +311,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { useAuthStore } from '@/stores/auth'
 import { CATEGORY_TRACK_MAP, TRACK_CHIPS } from '@/utils/theme'
@@ -317,6 +326,7 @@ import NewsletterModal from '@/components/blog/NewsletterModal.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import type { Category, ContentTrack } from '@/types'
 
+const router = useRouter()
 const store = useBlogStore()
 const authStore = useAuthStore()
 const showCats = ref(false)
@@ -456,7 +466,10 @@ const isStaff = computed(() => authStore.hasRole('SUPER_ADMIN', 'ADMIN', 'EDITOR
 
 function onLogout() {
   menuOpen.value = false
+  // Ver comentario equivalente en UserMenu.vue: no se espera la respuesta
+  // de red para navegar, la sesión local ya queda limpia de todos modos.
   authStore.logout()
+  router.push({ name: 'home' })
 }
 
 function onScroll() {

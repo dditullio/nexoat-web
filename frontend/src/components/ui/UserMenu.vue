@@ -126,12 +126,14 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getAvailableGifts, getMyGiftClaim } from '@/services/gifts.api'
 import type { SubscriptionTier } from '@/types/auth'
 
 const emit = defineEmits<{ (e: 'navigate'): void }>()
 
+const router = useRouter()
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 const open = ref(false)
@@ -169,7 +171,13 @@ const isStaff = computed(() => authStore.hasRole('SUPER_ADMIN', 'ADMIN', 'EDITOR
 function onLogout() {
   open.value = false
   emit('navigate')
+  // No se espera la respuesta del POST /auth/logout para navegar: la sesión
+  // local ya se limpia sí o sí (clearSession corre en el finally de
+  // authStore.logout, gane o pierda la llamada de red) — el usuario no
+  // debería quedarse esperando en una pantalla que ya no le corresponde
+  // (ej. /mi-cuenta) si el logout tarda o falla en la red.
   authStore.logout()
+  router.push({ name: 'home' })
 }
 
 function onDocClick(e: MouseEvent) {
