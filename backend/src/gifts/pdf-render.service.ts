@@ -14,33 +14,24 @@ function describeError(error: unknown): string {
   }
 }
 
-export interface RenderOptions {
-  /** HTML de encabezado/pie repetido en cada página — mecanismo nativo de Chromium (clases
-   * `pageNumber`/`totalPages`/etc.), no de Gotenberg. Si se pasa alguno, Gotenberg activa
-   * `displayHeaderFooter` solo. */
-  headerHtml?: string
-  footerHtml?: string
-  /** Pulgadas — default de Gotenberg (1in) si no se especifica. */
-  marginTop?: number
-  marginBottom?: number
-  /** Pulgadas — default de Gotenberg (Letter) si no se especifica. */
-  paperWidth?: number
-  paperHeight?: number
-}
-
 /**
- * Cliente de Gotenberg (HTML → PDF vía Chromium headless, ver
- * docs/features/welcome-ebook-gift.md, Fase 2). Sin `GOTENBERG_URL`
- * configurada, o si Gotenberg no responde, `render()` devuelve `null` en
- * vez de lanzar — mismo criterio que MailService con RESEND_API_KEY: la
- * generación del PDF nunca debe tirar abajo el `claim()` del regalo.
+ * Cliente de Gotenberg (Fase 3, ver docs/features/welcome-ebook-gift.md): convierte un `.docx`
+ * ya armado (`ebook-docx.builder.ts`) a PDF vía `forms/libreoffice/convert` — LibreOffice viene
+ * instalado de fábrica en `gotenberg/gotenberg:8`, no hace falta ningún servicio nuevo.
+ * Reemplaza al render HTML→PDF vía Chromium de la Fase 2 (`forms/chromium/convert/html`): ya no
+ * hace falta un header/footer HTML aparte ni pasar tamaño de página — todo eso vive dentro del
+ * propio `.docx` (secciones, header/footer nativos, tamaño A4).
+ *
+ * Sin `GOTENBERG_URL` configurada, o si Gotenberg no responde, `render()` devuelve `null` en vez
+ * de lanzar — mismo criterio que MailService con RESEND_API_KEY: la generación del PDF nunca
+ * debe tirar abajo el `claim()` del regalo.
  */
 @Injectable()
 export class PdfRenderService {
   private readonly logger = new Logger(PdfRenderService.name)
   private readonly url = process.env.GOTENBERG_URL
 
-  async render(html: string, options: RenderOptions = {}): Promise<Buffer | null> {
+  async render(docxBuffer: Buffer): Promise<Buffer | null> {
     if (!this.url) {
       this.logger.warn('GOTENBERG_URL no configurada — no se puede generar el PDF')
       return null
@@ -48,38 +39,15 @@ export class PdfRenderService {
 
     try {
       const formData = new FormData()
-      // Gotenberg exige que el archivo principal se llame literalmente
-      // "index.html" dentro del multipart — "header.html"/"footer.html" son
-      // los nombres que reconoce para las plantillas de encabezado/pie.
-      formData.append('files', new Blob([html], { type: 'text/html' }), 'index.html')
-      if (options.headerHtml) {
-        formData.append(
-          'files',
-          new Blob([options.headerHtml], { type: 'text/html' }),
-          'header.html'
-        )
-      }
-      if (options.footerHtml) {
-        formData.append(
-          'files',
-          new Blob([options.footerHtml], { type: 'text/html' }),
-          'footer.html'
-        )
-      }
-      if (options.marginTop !== undefined) {
-        formData.append('marginTop', String(options.marginTop))
-      }
-      if (options.marginBottom !== undefined) {
-        formData.append('marginBottom', String(options.marginBottom))
-      }
-      if (options.paperWidth !== undefined) {
-        formData.append('paperWidth', String(options.paperWidth))
-      }
-      if (options.paperHeight !== undefined) {
-        formData.append('paperHeight', String(options.paperHeight))
-      }
+      formData.append(
+        'files',
+        new Blob([docxBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        }),
+        'ebook.docx'
+      )
 
-      const res = await fetch(`${this.url}/forms/chromium/convert/html`, {
+      const res = await fetch(`${this.url}/forms/libreoffice/convert`, {
         method: 'POST',
         body: formData,
       })

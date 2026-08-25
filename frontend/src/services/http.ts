@@ -103,6 +103,22 @@ export async function httpBlob(path: string, options: HttpOptions = {}): Promise
   return res.blob()
 }
 
+/**
+ * Igual que `httpBlob`, pero además intenta leer el nombre de archivo real del header
+ * `Content-Disposition` (el backend necesita exponerlo vía CORS con `exposedHeaders` — ver
+ * `main.ts` — si no, el navegador lo esconde aunque venga en la respuesta). `filename` da `null`
+ * si el header no vino o no se pudo parsear — el llamador decide el fallback.
+ */
+export async function httpBlobWithFilename(
+  path: string,
+  options: HttpOptions = {}
+): Promise<{ blob: Blob; filename: string | null }> {
+  const res = await request(path, options)
+  const disposition = res.headers.get('Content-Disposition') ?? ''
+  const match = disposition.match(/filename="?([^";]+)"?/)
+  return { blob: await res.blob(), filename: match ? match[1] : null }
+}
+
 /** Serializa un objeto plano como querystring, salteando undefined/null/''. */
 export function toQueryString<T extends object>(params: T): string {
   const search = new URLSearchParams()

@@ -96,6 +96,21 @@ function choosePreview() {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Container query, no media query: el ancho relevante es el de esta tarjeta (que cambia según
+     la vista que la use — OnboardingView.vue la ensancha para este paso, ProfileGiftView.vue no
+     necesariamente), no el del viewport. */
+  container-type: inline-size;
+}
+
+/* Con suficiente ancho, 2 columnas — evita que la descripción de cada título estire la lista
+   verticalmente y obligue a scrollear para llegar al botón de confirmar (reportado por el
+   usuario: el botón "Elegir y finalizar" quedaba fuera de la pantalla). */
+@container (min-width: 620px) {
+  .gift-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
 }
 
 .gift-picker__option {

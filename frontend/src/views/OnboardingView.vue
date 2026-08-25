@@ -1,7 +1,7 @@
 <template>
   <div class="container onboarding">
-    <div class="onboarding__card">
-      <p class="onboarding__step-label">Paso {{ step }} de {{ totalSteps }}</p>
+    <div class="onboarding__card" :class="{ 'onboarding__card--wide': currentKind === 'gift' }">
+      <p v-if="!claimedGift" class="onboarding__step-label">Paso {{ step }} de {{ totalSteps }}</p>
 
       <!-- Paso 1: tipo de usuario -->
       <template v-if="currentKind === 'role'">
@@ -140,7 +140,7 @@
       </template>
 
       <!-- Paso 4: regalo de bienvenida — solo si hay al menos un ebook activo con PDF cargado -->
-      <template v-else-if="currentKind === 'gift'">
+      <template v-else-if="currentKind === 'gift' && !claimedGift">
         <h1 class="onboarding__title">Elegí tu regalo de bienvenida 🎁</h1>
         <p class="onboarding__lead">
           Un ebook a elección, de yapa por sumarte. Podés descargarlo ahora o más tarde desde tu
@@ -165,6 +165,45 @@
           </button>
         </div>
       </template>
+
+      <!-- Paso 4b: confirmación — recién elegido, antes de cerrar el onboarding. Sin esto el
+           diálogo se cerraba solo (onFinish() redirige) sin ninguna pista de dónde quedó el
+           regalo — frustrante para el usuario, que recién eligió el título. -->
+      <template v-else-if="currentKind === 'gift' && claimedGift">
+        <p class="onboarding__step-label">Tu regalo de bienvenida</p>
+        <img
+          v-if="claimedGift.ebook.coverImage"
+          :src="claimedGift.ebook.coverImage"
+          :alt="`Portada de ${claimedGift.ebook.title}`"
+          class="onboarding__gift-cover"
+        />
+        <h1 class="onboarding__title">{{ claimedGift.ebook.title }}</h1>
+        <p v-if="claimedGift.ebook.subtitle" class="onboarding__gift-subtitle">
+          {{ claimedGift.ebook.subtitle }}
+        </p>
+
+        <button
+          type="button"
+          class="btn btn--primary onboarding__submit"
+          :disabled="isDownloadingGift"
+          @click="onDownloadClaimedGift"
+        >
+          {{ isDownloadingGift ? 'Descargando…' : 'Descargar mi ebook' }}
+        </button>
+
+        <p v-if="downloadGiftError" class="onboarding__error" role="alert">
+          {{ downloadGiftError }}
+        </p>
+
+        <p class="onboarding__gift-note">
+          También podés descargarlo cuando quieras desde el menú de tu perfil, en
+          <strong>"Tu regalo de bienvenida"</strong>.
+        </p>
+
+        <button type="button" class="btn btn--ghost onboarding__submit" @click="onFinish">
+          Listo, continuar
+        </button>
+      </template>
     </div>
   </div>
 </template>
@@ -175,10 +214,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { completeOnboarding } from '@/services/onboarding.api'
 import { upsertProfessionalProfile } from '@/services/profile.api'
-import { claimGift, getAvailableGifts } from '@/services/gifts.api'
+import { claimGift, downloadMyGift, getAvailableGifts } from '@/services/gifts.api'
 import GiftPicker from '@/components/gifts/GiftPicker.vue'
 import { PROFESSIONAL_PROFILE_ROLES, PROFILE_ROLE_LABEL, type ProfileRole } from '@/types/auth'
-import type { WelcomeEbook } from '@/types/gifts'
+import type { EbookClaim, WelcomeEbook } from '@/types/gifts'
 
 const route = useRoute()
 const router = useRouter()
@@ -293,18 +332,42 @@ async function onSaveProfessionalAndFinish() {
 const giftSelectedId = ref<string | null>(null)
 const isClaimingGift = ref(false)
 const giftError = ref('')
+// Paso 4b (confirmación) — ver template: no cierra el onboarding apenas se elige, primero
+// muestra de dónde descargar (y que también queda disponible desde el menú de perfil).
+const claimedGift = ref<EbookClaim | null>(null)
+const isDownloadingGift = ref(false)
+const downloadGiftError = ref('')
 
 async function onClaimGiftAndFinish() {
   if (!giftSelectedId.value) return
   isClaimingGift.value = true
   giftError.value = ''
   try {
-    await claimGift(giftSelectedId.value)
-    onFinish()
+    claimedGift.value = await claimGift(giftSelectedId.value)
+    // La confirmación reemplaza al picker en el mismo lugar del DOM, pero si el usuario venía
+    // scrolleado (esperable — el picker es largo) la tarjeta seguía arrancando fuera de vista.
+    // `nextTick` no alcanza acá porque el scroll debe pasar después de que Vue reemplace el
+    // contenido del paso, así que se espera al siguiente frame de pintado.
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
   } catch {
     giftError.value = 'No pudimos guardar tu elección. Probá de nuevo.'
   } finally {
     isClaimingGift.value = false
+  }
+}
+
+async function onDownloadClaimedGift() {
+  if (!claimedGift.value) return
+  downloadGiftError.value = ''
+  isDownloadingGift.value = true
+  try {
+    const ebook = claimedGift.value.ebook
+    await downloadMyGift(ebook.fileName ?? `${ebook.slug}.pdf`)
+  } catch {
+    downloadGiftError.value =
+      'No pudimos descargar el archivo. Podés intentarlo de nuevo desde tu perfil.'
+  } finally {
+    isDownloadingGift.value = false
   }
 }
 
@@ -334,6 +397,15 @@ function onFinish() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  transition: max-width 0.2s ease;
+}
+
+/* Paso del regalo (elección + confirmación de descarga): las tarjetas de GiftPicker con el
+   ancho angosto de siempre estiraban mucho la descripción verticalmente y obligaban a scrollear
+   para llegar al botón — con más ancho, GiftPicker pasa a 2 columnas (ver gift-picker.css) y todo
+   el paso entra sin scroll en la mayoría de las pantallas. */
+.onboarding__card--wide {
+  max-width: 760px;
 }
 
 .onboarding__step-label {
@@ -441,6 +513,29 @@ function onFinish() {
   resize: vertical;
   line-height: 1.6;
   font-family: inherit;
+}
+
+.onboarding__gift-cover {
+  width: 140px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  align-self: center;
+}
+
+.onboarding__gift-subtitle {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  margin: -8px 0 0;
+}
+
+.onboarding__gift-note {
+  font-size: 0.85rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.55;
+  background: var(--color-canvas);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
 }
 
 /* Mismo lenguaje visual que los formularios de auth */

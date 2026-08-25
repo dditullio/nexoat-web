@@ -245,4 +245,153 @@ Los 7 puntos se verificaron a mano contra Gotenberg real, con el contenido real 
 - **Matching de capítulo por palabra completa, no substring.** `locateChapterPages()` usaba `String.includes()` — un capítulo titulado "Referencias" matcheaba como parte de "prefer**encias**" en el cuerpo de otro capítulo, dándole una página del índice completamente equivocada. `includesWholeWord()` en `pdf-page-index.ts` valida que el carácter inmediatamente antes/después del match no sea una letra.
 - **`generatedFileKey` incluye el `userId`, no solo el `claimId`** (`{ebookId}-{userId}.pdf`) — más fácil de inspeccionar a mano en `storage/ebooks/generated/` durante debugging; `EbookClaim.userId` ya es único, sin colisión posible.
 - **Sin UI de administración de claims/regenerar.** El endpoint existe y funciona (probado por API), pero no hay pantalla admin que liste claims sin `generatedFileKey` para encontrar el `claimId` a mano — queda para cuando haga falta de verdad.
-- **`Content-Disposition` no llega al frontend vía `fetch()`** por las reglas de CORS — sin impacto real, `downloadMyGift()` ya fija el nombre de archivo a mano en el `<a download>`.
+- **`Content-Disposition` no llegaba al frontend vía `fetch()`** por las reglas de CORS — en su momento se asumió sin impacto real porque `downloadMyGift()` fijaba el nombre de archivo a mano en el `<a download>`. **Resultó tener impacto real:** ese nombre armado a mano se desincronizaba del título vigente del ebook apenas se editaba después de un claim — ver "Nombre de archivo: cliente vs. servidor" en la Fase 3, que revierte esta nota.
+
+---
+
+## Fase 3: motor de render docx + LibreOffice, en vez de HTML + Chromium
+
+**Estado:** implementado y verificado.
+
+### Contexto
+
+La Fase 2 funciona, pero maquetar un libro completo a mano en HTML/CSS para Chromium resultó incómodo y forzó varios workarounds: Chromium no ejecuta JS dentro de las plantillas de header/footer de Gotenberg, así que "portada sin numerar + contenido numerado desde 1" obligó a separar el libro en **dos PDFs** (`buildFrontMatterHtml` / `buildContentHtml`) que se unen después con `pdf-lib`; el índice con números de página reales requirió una primera pasada de render solo para _medir_ dónde cae cada capítulo (`pdf-page-index.ts`, con un fix aparte para que "Referencias" no matcheara dentro de "preferencias"); y la convención "capítulo 1 en página impar" se resuelve contando páginas del frente a mano y volviendo a renderizar con una hoja en blanco si hace falta. Todo eso son cosas que un procesador de texto real resuelve nativo: tabla de contenidos con campo `PAGEREF` que se autoactualiza, secciones con su propio header/footer, "esta sección empieza en página impar" como propiedad de sección, numeración de página que arranca sola por sección.
+
+**Decisión: generar un `.docx` con la librería `docx` (Node) y convertirlo a PDF con el endpoint `libreoffice/convert` de Gotenberg**, en vez de armar HTML para `chromium/convert/html`. Gotenberg 8 (`gotenberg/gotenberg:8`, ya corriendo — ver Fase 2) trae LibreOffice instalado de fábrica, así que no hace falta agregar ni cambiar ningún servicio Docker, solo el endpoint que le pega `PdfRenderService`.
+
+### Qué cambia
+
+- **`pdf-render.service.ts`:** `render()` deja de mandar HTML a `forms/chromium/convert/html` y pasa a mandar el buffer del `.docx` (multipart, un único archivo — LibreOffice detecta el formato por extensión) a `forms/libreoffice/convert`. Misma firma pública (`render(input, options): Promise<Buffer | null>`, nunca lanza, `null` sin `GOTENBERG_URL`) — no cambia nada en `GiftsService` más allá de qué le pasa como `input`. `headerHtml`/`footerHtml`/márgenes ya no aplican por este endpoint (van embebidos en el propio `.docx`); esas opciones se eliminan de `RenderOptions`.
+- **Nuevo `ebook-docx.builder.ts`** (`buildEbookDocx()`) reemplaza a `ebook-pdf.template.ts`. Arma **un único documento** (no dos) con `docx` (`Document`, `Section`, `Paragraph`, `TextRun`, `Header`, `Footer`), con tres secciones:
+  1. **Portada:** imagen a página completa (`ImageRun`, descargada de la URL de Cloudinary con `fetch`), sin header/footer; sin `coverImage` cargada, cae al mismo fallback tipográfico simple que la Fase 2.
+  2. **Ficha + dedicatoria + índice:** sin header/footer. Ver "Índice: dos pasadas de render" más abajo — **no** usa el campo `TableOfContents` nativo de `docx` (se intentó primero y no funciona con este motor).
+  3. **Capítulos + QR:** `properties.type: SectionType.ODD_PAGE` — Word/LibreOffice arrancan esta sección en la siguiente página impar automáticamente al convertir; se verificó contra Gotenberg real (front matter de 4 páginas → capítulo 1 en la página 5). Header (título del libro) y footer (`nexoat.com · N`) propios de la sección, con `pageNumbers: { start: 1 }` — numeración propia, arranca en 1 sola, sin ningún cálculo de nuestro lado.
+  - `parseBookChapters()` (`markdown-book.ts`) cambió: expone `bodyMarkdown` (Markdown crudo) en vez de `bodyHtml` — el builder nuevo arma `Paragraph`/`TextRun` de `docx` directamente, no pasa por HTML. `markdown-inline.ts` (nuevo) resuelve `**negrita**`/`*cursiva*`/`` `código` `` inline a `TextRun[]`; el cuerpo de cada capítulo se separa en bloques por línea en blanco reconociendo encabezados `###`/`####`, blockquotes, listas y párrafos.
+  - QR: mismo `qrcode` (Node, sin red), pero `QRCode.toBuffer()` en vez de `toDataURL()` — el PNG se pasa directo a `ImageRun`.
+- **Se eliminan** `pdf-merge.ts` completo y las funciones `buildFrontMatterHtml`/`buildContentHtml`/`buildContentHeaderHtml`/`buildContentFooterHtml` de la Fase 2 (`ebook-pdf.template.ts` se borra). `pdf-page-index.ts` se reemplaza por `pdf-chapter-locator.ts` (ver abajo) — más simple porque ya no hay que corregir ningún offset entre dos PDFs. `GiftsService.generatePdf()` ya no une PDFs con `pdf-lib` ni cuenta páginas para decidir una hoja en blanco — eso lo resuelve `SectionType.ODD_PAGE` dentro del propio documento.
+- **`BOOK_PAPER_WIDTH_IN`/`BOOK_PAPER_HEIGHT_IN`** (A5, 5.83×8.27in) se reemplazan por tamaño **A4** (`convertMillimetersToTwip(210)`/`convertMillimetersToTwip(297)`, 595×842pt — verificado contra el `/MediaBox` del PDF real). A4 y no una proporción de pantalla "óptima" (algunas guías editoriales sugieren 16:10/4:3 para lectura en tablet) fue una decisión deliberada: el PDF también se puede imprimir en una impresora hogareña, que carga A4/Carta de fábrica — un tamaño no estándar obliga a "ajustar a página" al imprimir, con márgenes irregulares y texto reescalado.
+
+### Índice: dos pasadas de render (no el campo TOC nativo)
+
+El diseño original de esta fase proponía usar `TableOfContents` de `docx` (el campo `TOC` nativo de Word, que enlaza a los párrafos con estilo `Heading1` y se autoactualiza). **No funciona con este motor**: se probó a mano contra Gotenberg real y LibreOffice headless no recalcula ese campo al convertir — a diferencia de Word de escritorio, que lo actualiza la primera vez que una persona abre el documento, la conversión sin UI deja la página del índice con el título "Contenido" y **sin ninguna entrada**, campo vacío.
+
+La solución fue volver a un mecanismo de dos pasadas — mucho más simple que el de la Fase 2 porque ahora el libro es un solo documento, no dos que haya que unir ni corregir por offset:
+
+1. `buildEbookDocx({ ...data, tocPageNumbers: null })` → primera pasada de render, con el índice mostrando "–" en vez de números.
+2. `locateChapterPages()` (`pdf-chapter-locator.ts`, vía `pdf-parse`) busca en qué página del PDF aparece cada título de capítulo, con dos filtros: coincidencia de **palabra completa** (mismo motivo que la Fase 2 — "Referencias" no debe matchear dentro de "preferencias") y **solo páginas con el pie propio de la sección de capítulos** (`nexoat.com · N`) — sin este segundo filtro, el título de cada capítulo matcheaba primero en su propia entrada del índice (que también lo menciona) en vez de en la página donde arranca de verdad; se detectó y corrigió a mano contra el PDF real antes de dar la función por buena.
+3. `buildEbookDocx({ ...data, tocPageNumbers })` → segunda pasada, ya con los números reales horneados como texto plano (párrafos con `tabStops` de tipo `RIGHT` y `leader: LeaderType.DOT`, no un campo de Word) — esta es la que se guarda como resultado final.
+
+El costo es el mismo que en la Fase 2 (dos round-trips a Gotenberg), pero la lógica alrededor es bastante más chica: sin unión de PDFs, sin hoja en blanco condicional, sin recorte de página sobrante.
+
+### Tipografía: tamaños base × factor de escala
+
+En vez de tamaños de fuente sueltos por elemento, `ebook-docx.builder.ts` define un objeto `BASE_PT` en puntos siguiendo proporciones típicas de publicación (cuerpo 11pt, título de capítulo 24pt, encabezado interno 14pt, pie/metadatos 9pt, etc.) y una única constante `FONT_SCALE_FACTOR` que multiplica a todos por igual vía el helper `pt(base, extraScale = 1) = Math.round(base * FONT_SCALE_FACTOR * extraScale * 2)` (`docx` pide half-points en `size`). El segundo parámetro (`extraScale`) es un multiplicador puntual por elemento sin tocar el factor global — lo usa el capítulo "Referencias" (ver abajo). El interlineado (`lineSpacing()`, también parametrizado) escala junto con el factor para no dejar el texto apretado. Motivo del cambio de A5 a A4: A5 con tipografía cómoda de leer en pantalla completa (desktop/tablet) quedaba con muy poco texto por página; A4 da más superficie sin que la maquetación se sienta vacía — y de paso permite imprimir el PDF sin fricción (ver más arriba).
+
+**Márgenes y `FONT_SCALE_FACTOR` se ajustaron dos veces después de la primera verificación**, contra feedback del usuario mirando el PDF real generado:
+
+1. Con márgenes de 32mm y `FONT_SCALE_FACTOR = 1.4` (primer intento), la línea de cuerpo quedaba en ~65-70 caracteres — el usuario la vio "demasiado grande" y pidió apuntar a ~80 caracteres por línea.
+2. Bajar `FONT_SCALE_FACTOR` a `1.2` con los mismos márgenes acercó la línea a 77-85 caracteres — pero el usuario pidió además achicar los márgenes a 2cm de cada lado (más superficie de texto por página).
+3. Con márgenes de 20mm, `1.2` se quedaba corto (88-98 caracteres, demasiado ancho) — el ancho de columna disponible creció, así que hubo que **subir** el factor de nuevo. Valor final verificado empíricamente contra Gotenberg real (render de un párrafo de prueba + medición de longitud de línea con `pdftotext -layout`): **`MARGIN_SIDE_TWIP = 20mm`, `MARGIN_VERTICAL_TWIP = 20mm`, `FONT_SCALE_FACTOR = 1.4`** — línea de cuerpo en 75-80 caracteres.
+
+La lección para el próximo ajuste: margen y tamaño de fuente no son independientes — achicar el margen sin recalcular el factor descompensa el objetivo de caracteres por línea. Cualquier cambio a uno de los dos números requiere volver a medir contra un render real, no asumir la proporción.
+
+**Cuarto ajuste, con contenido realista en vez de texto de relleno artificial.** Al medir contra el PDF real generado por el usuario, la línea de cuerpo daba ~60-67 caracteres, no los 75-80 del texto de prueba anterior — el texto de relleno usado para medir tenía palabras artificialmente largas que sobreestimaban cuántos caracteres reales entran por línea. Repitiendo la medición con oraciones de largo variado, similares al contenido real (`pdftotext -layout` + longitud de línea), el valor final quedó en **`FONT_SCALE_FACTOR = 1.13`** (con los mismos márgenes de 20mm) — línea de cuerpo en 78-83 caracteres. Moraleja adicional: medir con texto de prueba sintético puede dar un resultado optimista; conviene validar con una muestra de contenido real antes de dar un ajuste tipográfico por bueno.
+
+### Cuerpo justificado
+
+Los párrafos de cuerpo de capítulo (no los títulos, blockquotes ni listas) usan `alignment: AlignmentType.JUSTIFIED` en `chapterBodyParagraphs()` — pedido explícito del usuario después de ver el texto en bandera contra el PDF real.
+
+### Orden de la dedicatoria
+
+Nombre → email → línea de reconocimiento (si aplica), en ese orden — el diseño original ponía el reconocimiento inmediatamente debajo del nombre y el email al final; el usuario pidió el email pegado al nombre y el reconocimiento después.
+
+### Nombre de archivo: cliente vs. servidor
+
+Dos intentos fallidos antes de llegar a la causa real (reportado dos veces por el usuario — "sigue mostrando el nombre viejo" después del primer intento de arreglo):
+
+1. **Primer intento:** calcular `slugify(ebook.title)` en `GiftsService.generatePdf()` y guardarlo en `EbookClaim.generatedFileName`. Insuficiente — ese valor se fija en el momento del `claim()`/`regenerate()`; si el admin edita el título **después**, sin volver a regenerar, queda desactualizado igual.
+2. **Segundo intento:** mover el cálculo a `GiftsService.openForDownload()`, recalculando `slugify(claim.ebook.title)` en cada descarga en vez de leer el campo guardado — correcto del lado del backend (`Content-Disposition` de la respuesta ya traía el nombre bueno, verificado con `curl`), pero **el frontend nunca lo leía**. `downloadMyGift()` (`gifts.api.ts`) armaba el nombre de archivo él mismo, del lado del cliente, con `ebook.fileName ?? ebook.slug` — datos que también estaban desincronizados del título vigente, e independientes de lo que el backend calculaba. Cambiar el backend no tenía ningún efecto observable porque el frontend ni siquiera intentaba leer su respuesta.
+
+**Causa raíz real:** una nota de la Fase 1 (ver Notas de implementación de esa fase) asumía que el navegador bloquea la lectura de `Content-Disposition` vía `fetch()` por CORS "sin impacto real" porque el nombre se armaba a mano de todos modos — ese supuesto sin impacto terminó siendo exactamente la causa del bug. La solución final:
+
+- **`main.ts`**: `app.enableCors({ ..., exposedHeaders: ['Content-Disposition'] })` — sin esto, el header viaja en la respuesta HTTP pero el navegador se lo esconde a JavaScript aunque la petición sea CORS válida (verificado con `curl -H "Origin: ..."` antes/después: `access-control-expose-headers: Content-Disposition` en la respuesta).
+- **`http.ts`**: nuevo `httpBlobWithFilename()` (junto a `httpBlob`, que otros llamadores como `downloadBackup` siguen usando tal cual) — devuelve `{ blob, filename }`, parseando `filename="..."` del header cuando está presente.
+- **`gifts.api.ts`**: `downloadMyGift(fallbackFilename)` usa el nombre real del header si vino; el parámetro pasa a ser un fallback, no la fuente de verdad.
+
+Moraleja: "el backend ya lo calcula bien" no alcanza si nadie del otro lado lee ese cálculo — conviene verificar el dato en el punto donde el usuario realmente lo ve (la descarga en el navegador), no solo en la respuesta cruda del servidor.
+
+### Confirmación de descarga al terminar el onboarding
+
+`OnboardingView.vue` (paso "gift", ver [`email-first-signup-and-onboarding.md`](email-first-signup-and-onboarding.md)): antes, `onClaimGiftAndFinish()` reclamaba el ebook y llamaba `onFinish()` en el mismo paso — el onboarding se cerraba (redirect a `/` o a `route.query.redirect`) sin ninguna confirmación visible de qué se había elegido ni de dónde volver a buscarlo, algo frustrante justo después de elegir un título. Se agregó un sub-estado "4b" (`claimedGift`, no cuenta como paso propio en `stepOrder`/`totalSteps`): tras reclamar, en vez de cerrar, muestra la portada (si tiene), título/subtítulo y un botón "Descargar mi ebook" (mismo `downloadMyGift()` que ya usa `ProfileGiftView.vue`), más una nota de que también queda disponible desde el menú de perfil — recién ahí un botón "Listo, continuar" llama a `onFinish()`. No es un modal/diálogo aparte, sino un reemplazo del contenido del mismo paso del onboarding (mismo patrón visual de tarjeta que el resto de los pasos) — más simple que introducir un componente de diálogo nuevo para un caso de uso único.
+
+### Referencias: cuerpo un 20% más chico
+
+El capítulo cuyo título (normalizado, sin distinguir mayúsculas) es exactamente "Referencias" se detecta en `buildEbookDocx()` y su cuerpo se arma con `chapterBodyParagraphs(chapter.bodyMarkdown, 0.8)` — mismo helper que el resto de los capítulos, con el multiplicador `extraScale` en 0.8 en vez de 1. Es una comparación por título, no un campo de datos nuevo — sigue la misma convención editorial que ya usa `markdown-book.ts` (todo `## ` es un capítulo, sin metadata aparte que lo distinga).
+
+### Página de cierre institucional
+
+Cuarta sección del documento (después de capítulos + QR), con el texto "Un espacio de divulgación para quienes cuidan de otra persona…" (mismo texto que usa el sitio) centrado, sin header/footer — mismo criterio visual limpio que la ficha/dedicatoria, no el de las páginas de capítulo. Siempre se agrega (no depende de `storeUrl` como el QR).
+
+**Nota de implementación:** una sección de `docx` sin `headers`/`footers` propios **hereda** los de la sección anterior (comportamiento real de OOXML, no un bug de LibreOffice) — el primer intento de esta página salió con el header (título del libro) y el footer (`nexoat.com · N`) de la sección de capítulos pegados encima. Se corrigió declarando `headers`/`footers` vacíos explícitos (`new Header({ children: [] })`) en esa sección — cualquier sección nueva que se agregue más adelante sin querer header/footer va a necesitar el mismo override explícito, no alcanza con omitir la propiedad.
+
+### Reconocimiento en la dedicatoria
+
+Debajo del nombre del destinatario, si `User.profileRole` (elegido en el onboarding, ver [`email-first-signup-and-onboarding.md`](email-first-signup-and-onboarding.md)) tiene una entrada en `RECOGNITION_BY_ROLE`, se agrega una línea en itálica antes del email:
+
+- `acompanante_terapeutico` → "en reconocimiento a su dedicación en el ámbito del Acompañamiento Terapéutico"
+- `cuidador` → "en reconocimiento a su dedicación en el cuidado de personas"
+- `familiar` → "en reconocimiento al amor y la presencia con que acompaña a quien cuida" — redacción deliberadamente genérica (no se sabe a quién cuida ni en qué circunstancia); a revisar/ajustar si no convence del todo.
+- `otro` y `null` (todavía no completó el onboarding) → **sin línea**, no se fuerza ningún texto — no había una redacción genérica razonable para "otro" que no sonara vacía o forzada.
+
+Márgenes (`MARGIN_SIDE_TWIP = 32mm`, `MARGIN_VERTICAL_TWIP = 24mm`) elegidos para que, con el factor 1.4, la línea de cuerpo caiga dentro del rango de 45–75 caracteres recomendado para lectura cómoda (verificado a ojo contra el PDF de prueba, no medido carácter por carácter — si al implementar contenido real la línea queda corta/larga, es cuestión de tocar `MARGIN_SIDE_TWIP`, no la lógica).
+
+### Recomendaciones editoriales aplicadas (y descartadas)
+
+El usuario compartió recomendaciones de una editorial sobre maquetación de ebooks en PDF. Se evaluaron contra este pipeline (`docx` + LibreOffice, no InDesign) y se aplicaron las que tenían sentido:
+
+- **Control de viudas/huérfanas** (`widowControl: true` en todos los párrafos de cuerpo/lista/blockquote/dedicatoria).
+- **Longitud de línea 45–75 caracteres** — criterio detrás de los márgenes elegidos (ver arriba), no un valor de margen fijo e independiente del tamaño de fuente.
+- **Texto alternativo en imágenes** — `altText` en el `ImageRun` de portada y del QR.
+
+Aplicadas parcial/con ajuste — no al pie de la letra de la recomendación:
+
+- **Proporción de página.** La editorial sugiere 16:10/4:3 en vez de A4 para pantalla; se descartó a favor de A4 porque el PDF también debe poder imprimirse en una impresora hogareña sin reescalado (ver "Qué cambia" arriba) — decisión explícita del usuario, no un descuido.
+- **Marcadores (bookmarks) del panel lateral del lector de PDF** — se probó pasando `exportBookmarks=true` a `forms/libreoffice/convert` contra Gotenberg real y el PDF resultante no trae `/Outlines`: LibreOffice no genera el árbol de marcadores a partir de los estilos `Heading1`/`Heading2` en esta conversión headless. No se investigó más a fondo (no es bloqueante, el índice en texto ya resuelve la navegación) — queda anotado como mejora futura si se encuentra la combinación de parámetros correcta.
+- **Fuentes incrustadas (Fraunces/Karla del sitio, no genéricas).** Se evaluó embeber las fuentes reales del sistema de diseño en el `.docx`, pero el repo no tiene los archivos `.ttf`/`.otf` — el sitio las carga desde Google Fonts vía `<link>`, no como asset local. Se mantienen **Georgia** (serif, cuerpo/títulos) y **Arial** (sans, metadatos/pie) — mismo criterio de portabilidad que ya usaban `mail/templates/` y la Fase 2. Si en algún momento se agregan los archivos de fuente al repo, `FONT_SERIF`/`FONT_SANS` en `ebook-docx.builder.ts` son el único lugar a tocar.
+
+Descartadas — fuera de alcance para este pipeline:
+
+- **Grilla base (baseline grid)** — nivel de control tipográfico de InDesign, no algo que `docx`/LibreOffice expongan razonablemente.
+- **PDF/UA-1/UA-2 completo** (tagged PDF validado, orden de lectura, PAC/Acrobat checker) — estándar de accesibilidad serio que requiere revisión dedicada; fuera de alcance de esta fase. Con buena estructura de `Heading1`/`Heading2` se consigue una base razonable, pero no hay reclamo de cumplimiento del estándar.
+- Gráficos vectoriales, notas al pie con enlaces cruzados, glosario — el libro no tiene ese tipo de contenido.
+- Todo lo referido a lomo/encuadernación de libro impreso — no aplica a un PDF digital.
+
+### Qué no cambia
+
+Schema de Prisma, endpoints de `gifts.controller.ts`/`admin-gifts.controller.ts`, `GiftsService` público (`claim`, `regenerate`, `openForDownload`, CRUD admin), storage en disco (`storage/ebooks/generated/`), el criterio de "nunca explota, `null` sin Gotenberg", Docker (mismo `gotenberg/gotenberg:8`, sin agregar nada), frontend (`AdminGiftsView.vue` sigue mandando `content` en Markdown tal cual).
+
+### Dependencias
+
+- **Nueva:** `docx` (Node, generación de `.docx` — MIT, sin dependencias nativas).
+- **Se elimina `pdf-lib`** (solo la usaba `pdf-merge.ts`, borrado). `pdf-parse` **se mantiene** — ya no lo usa `pdf-page-index.ts` (borrado) pero pasa a usarlo el nuevo `pdf-chapter-locator.ts` para el índice de dos pasadas. Nota: `pdf-parse` publicó una v2 con API distinta a la v1 que tenía el proyecto en `package.json` (clase `PDFParse` con `getText()`, no la función `pdfParse(buffer, { pagerender })` de v1) — `pdf-chapter-locator.ts` usa la API nueva.
+
+### Plan de verificación
+
+1. `GET http://localhost:3002/health` de Gotenberg (ya corriendo, Fase 2) — no requiere cambios de infra.
+2. Generar un `.docx` de prueba con `buildEbookDocx()` (3 capítulos, con negrita/cursiva/lista/subtítulo, uno de ellos titulado "Referencias" para probar el matching de palabra completa) y convertirlo a mano contra Gotenberg real (`forms/libreoffice/convert`).
+3. `pdftotext -layout` página por página del PDF resultante: confirmar A4 (`/MediaBox` 595×842pt), portada sin numerar, sección de capítulos arrancando en página impar (verificado: frente de 4 páginas → capítulo 1 en la página 5), pie con numeración propia desde 1, texto en negrita/cursiva/lista renderizado correctamente.
+4. Confirmar que el índice (`tocPageNumbers`) trae los números reales — **primer intento sin filtrar por pie de página dio mal** (el título de cada capítulo matcheaba en su propia entrada del índice, página 4 para los tres) — corregido en `pdf-chapter-locator.ts` filtrando primero las páginas por el pie propio de la sección de capítulos (`nexoat.com · N`) antes de buscar el título. Con la corrección, los tres capítulos de prueba ubicaron sus páginas reales (5, 6, 7) y el índice regenerado (segunda pasada) mostró exactamente esos números con líder de puntos.
+5. `pnpm --filter @nexoat/backend test` (131 tests, toda la suite existente) + `type-check` + `lint` de `src/gifts` — limpios.
+
+Los 5 puntos se verificaron a mano contra Gotenberg real corriendo en `localhost:3002`. Pendiente de probar en este ciclo (no bloqueante, se prueba naturalmente en el próximo `claim()` real): el flujo completo end-to-end vía `GiftsService.claim()`/`regenerate()`/`openForDownload()` con un `WelcomeEbook` de la base (la lógica de las dos pasadas está integrada en `generatePdf()`, pero no se corrió contra Prisma en este ciclo), y el comportamiento con Gotenberg apagado (sin cambios respecto a la Fase 2, mismo `try/catch` con `null`).
+
+### Notas de implementación (Fase 3)
+
+- **El campo `TableOfContents` nativo de `docx` no funciona con LibreOffice headless** — ver "Índice: dos pasadas de render" arriba. Se descubrió probando contra Gotenberg real, no por documentación: la primera versión de este código usaba `TableOfContents` con `features: { updateFields: true }` y el PDF resultante traía la página del índice con el título "Contenido" y ninguna entrada.
+- **`locateChapterPages()` necesitó un segundo filtro además del matching de palabra completa** — sin restringir la búsqueda a páginas con el pie propio de la sección de capítulos, cada título matcheaba primero en su propia línea del índice (que también lo menciona) en vez de en la página real donde arranca el capítulo. Se detectó comparando el resultado contra `pdftotext` del PDF real antes de dar la función por buena.
+- **`pdf-parse@2.4.5` tiene una API completamente distinta a la v1** (clase `PDFParse` con métodos `getText()`/`getInfo()`/etc., no la función con callback `pagerender` de la v1 que usaba `pdf-page-index.ts` en la Fase 2) — el import y el uso en `pdf-chapter-locator.ts` son nuevos, no una migración directa del código anterior.
+- **Sin fuentes embebidas (Fraunces/Karla)** — el repo no tiene los archivos `.ttf`/`.otf` del sistema de diseño (se cargan vía Google Fonts en el frontend, no como asset local); se mantienen Georgia/Arial. Ver "Recomendaciones editoriales aplicadas" arriba.
+- **Sin marcadores (bookmarks) en el panel del lector de PDF** — se probó `exportBookmarks=true` contra Gotenberg real sin efecto (`/Outlines` ausente en el PDF resultante). Ver "Recomendaciones editoriales aplicadas" arriba.
+- **`locateChapterPages()` fallaba con títulos largos que se envuelven en dos líneas** (bug real, encontrado al probar con un libro real de 11 capítulos: solo el primero —corto, una línea— y "Referencias" —una palabra— ubicaban su página; los otros 9, todos títulos largos, quedaban en "–"). `pdf-parse` inserta un salto de línea (no un espacio) entre líneas que quedaron separadas verticalmente en la página — un título envuelto por el ancho de la página queda con un "\n" exactamente donde el original tiene un espacio, así que la búsqueda literal fallaba. Se corrigió normalizando todo espacio en blanco (saltos de línea incluidos) a un único espacio antes de comparar, tanto en el texto de la página como en el título buscado (`normalizeWhitespace()` en `pdf-chapter-locator.ts`). Verificado con los 11 títulos reales del ejemplo del usuario ("La parálisis no es tuya" … "Referencias") — los 11 ubicaron su página correctamente después del fix.
+- **El nombre de archivo descargado usaba `ebook.slug`, fijado una sola vez en `create()`** — si el título de un `WelcomeEbook` se edita después (`update()` no toca `slug`), el archivo descargado seguía llamándose como el título original, aunque el contenido ya fuera otro libro completamente distinto (reportado por el usuario probando con un ebook editado desde el título "Neurodiversidad en el día a día"). Primer intento: calcular `slugify(ebook.title)` en `generatePdf()` y guardarlo en `EbookClaim.generatedFileName` — **insuficiente**, el usuario volvió a pisarlo: si el ebook se reclama, y **después** se edita el título/contenido sin volver a `regenerate()`, el nombre guardado en el claim queda desactualizado igual, solo que ahora con el título de cuando se reclamó en vez del de la creación. La corrección real fue mover el cálculo a `openForDownload()`: `filename` se arma con `slugify(claim.ebook.title)` en cada descarga, no se lee más de `claim.generatedFileName` — así no hay ningún momento del ciclo de vida del claim en el que el nombre pueda quedar pegado a un título viejo. `EbookClaim.generatedFileName` se sigue guardando (sin migración) pero pasó a ser solo informativo, no autoritativo.
+- **Márgenes achicados a 20mm y `FONT_SCALE_FACTOR` reajustado a 1.4** (había bajado a 1.2 en un paso intermedio) tras feedback del usuario mirando el PDF real — ver "Márgenes y `FONT_SCALE_FACTOR` se ajustaron dos veces" arriba.

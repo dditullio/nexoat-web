@@ -15,17 +15,9 @@ import { MailService } from '../mail/mail.service'
 import { welcomeGiftEmailHtml } from '../mail/templates/welcome-gift.template'
 import { slugify } from '../common/slugify'
 import { PdfRenderService } from './pdf-render.service'
-import {
-  BOOK_PAPER_HEIGHT_IN,
-  BOOK_PAPER_WIDTH_IN,
-  buildContentFooterHtml,
-  buildContentHeaderHtml,
-  buildContentHtml,
-  buildFrontMatterHtml,
-} from './ebook-pdf.template'
+import { buildEbookDocx } from './ebook-docx.builder'
 import { parseBookChapters } from './markdown-book'
-import { locateChapterPages } from './pdf-page-index'
-import { countPdfPages, mergePdfs, trimTrailingBlankPage } from './pdf-merge'
+import { locateChapterPages } from './pdf-chapter-locator'
 import type { CreateGiftDto } from './dto/create-gift.dto'
 import type { UpdateGiftDto } from './dto/update-gift.dto'
 
@@ -141,94 +133,53 @@ export class GiftsService {
   }
 
   /**
-   * Arma el PDF y guarda el resultado en storage/ebooks/generated/ (ver
-   * docs/features/welcome-ebook-gift.md, sección "índice con números de
-   * página reales"). El frente del libro (portada/ficha/dedicatoria/índice)
-   * y el contenido (capítulos + QR) se renderizan como **dos PDFs
-   * separados** y se unen al final — necesario porque el contenido lleva
-   * encabezado/pie con numeración propia (arranca sola en 1, mecanismo
-   * nativo de Chromium vía Gotenberg) y el frente no lleva ninguno; un
-   * único documento no puede aplicar header/footer distinto por página.
+   * Arma el `.docx` del libro (`ebook-docx.builder.ts`) y lo convierte a PDF vía Gotenberg
+   * (`PdfRenderService`, `forms/libreoffice/convert`), guardando el resultado en
+   * storage/ebooks/generated/. Header/footer y el arranque de los capítulos en página impar los
+   * resuelve Word/LibreOffice nativos al convertir (`SectionType.ODD_PAGE`) — a diferencia de la
+   * Fase 2 (HTML + Chromium), no hace falta renderizar dos PDFs, unirlos con `pdf-lib`, ni contar
+   * páginas a mano para decidir si insertar una hoja en blanco.
    *
-   * 1. Renderiza el contenido (sin depender de nada del frente).
-   * 2. Busca en qué página cayó cada capítulo — esos son los números reales
-   *    del índice, porque son internos al PDF de contenido mismo.
-   * 3. Renderiza el frente con esos números — si el frente da un número de
-   *    páginas impar (el capítulo 1 quedaría en página par al unir), se
-   *    agrega una hoja en blanco y se corrige el índice sumando 1 a cada
-   *    entrada (convención editorial: los capítulos arrancan en impar).
-   * 4. Une frente + contenido en un solo PDF.
+   * El índice sí necesita **dos pasadas de render**: el campo `TableOfContents` nativo de `docx`
+   * no se recalcula al convertir con LibreOffice headless (se probó contra Gotenberg real — a
+   * diferencia de Word de escritorio, que sí lo actualiza al abrirse, queda con el título y sin
+   * entradas). Por eso el índice se arma con párrafos propios y números baked-in (ver
+   * `buildEbookDocx`): la primera pasada renderiza sin esos números para poder ubicar en qué
+   * página cae cada capítulo (`locateChapterPages`, con matching de palabra completa — evita que
+   * "Referencias" matchee dentro de "preferencias"), la segunda ya los incluye. Ver
+   * docs/features/welcome-ebook-gift.md, Fase 3.
    *
-   * Si Gotenberg no responde en cualquiera de las dos renderizaciones,
-   * devuelve `null` sin lanzar (mismo criterio que el resto de la
-   * generación).
+   * Si Gotenberg no responde en cualquiera de las dos pasadas, devuelve `null` sin lanzar (mismo
+   * criterio que el resto de la generación).
    */
   private async generatePdf(
     ebook: WelcomeEbook,
     user: User
   ): Promise<{ generatedFileKey: string; generatedFileName: string } | null> {
-    const pdfData = {
+    const content = ebook.content ?? ''
+    const docxData = {
       title: ebook.title,
       subtitle: ebook.subtitle,
       coverImage: ebook.coverImage,
-      content: ebook.content ?? '',
+      content,
       recipientName: user.name || 'nuevo miembro de NexoAT',
       recipientEmail: user.email,
+      recipientProfileRole: user.profileRole,
       storeUrl: ebook.storeUrl,
     }
-    const chapterTitles = parseBookChapters(pdfData.content).map((c) => c.title)
-    const paperSize = { paperWidth: BOOK_PAPER_WIDTH_IN, paperHeight: BOOK_PAPER_HEIGHT_IN }
-    // Reserva espacio para encabezado/pie sin imponerle además un margen lateral —
-    // ese ya lo da el padding de .page en el propio HTML.
-    const pageMargins = { marginTop: 0.35, marginBottom: 0.35 }
+    const chapterTitles = parseBookChapters(content).map((c) => c.title)
 
-    const contentHtml = await buildContentHtml(pdfData)
-    let contentBuffer = await this.pdfRender.render(contentHtml, {
-      headerHtml: buildContentHeaderHtml(ebook.title),
-      footerHtml: buildContentFooterHtml(),
-      ...paperSize,
-      ...pageMargins,
-    })
-    if (!contentBuffer) return null
-    contentBuffer = await trimTrailingBlankPage(contentBuffer).catch((error) => {
-      this.logger.warn(`No se pudo revisar la última página del PDF: ${String(error)}`)
-      return contentBuffer as Buffer
-    })
+    const firstPassDocx = await buildEbookDocx({ ...docxData, tocPageNumbers: null })
+    const firstPassPdf = await this.pdfRender.render(firstPassDocx)
+    if (!firstPassPdf) return null
 
-    let chapterPages = await locateChapterPages(contentBuffer, chapterTitles).catch((error) => {
+    const tocPageNumbers = await locateChapterPages(firstPassPdf, chapterTitles).catch((error) => {
       this.logger.error(`No se pudo indexar las páginas del PDF: ${String(error)}`)
       return chapterTitles.map(() => null)
     })
 
-    let frontBuffer = await this.pdfRender.render(buildFrontMatterHtml(pdfData, chapterPages), {
-      ...paperSize,
-    })
-    if (!frontBuffer) return null
-    // Mismo artefacto de Chromium que en el contenido (una página casi vacía sobrante) puede
-    // pasar acá por el desborde del índice — se recorta antes de contar, para no confundirla
-    // con la hoja en blanco *intencional* que se agrega más abajo por la convención de página
-    // impar (esa si se deja, adrede).
-    frontBuffer = await trimTrailingBlankPage(frontBuffer).catch((error) => {
-      this.logger.warn(`No se pudo revisar la última página del frente del PDF: ${String(error)}`)
-      return frontBuffer as Buffer
-    })
-
-    // Convención editorial: los capítulos arrancan en página impar. Si el frente mide una
-    // cantidad impar de páginas, el capítulo 1 (primera página del PDF de contenido) caería
-    // en página par al unir los dos — se agrega una hoja en blanco y se corrige el índice.
-    const frontPageCount = await countPdfPages(frontBuffer).catch(() => null)
-    if (frontPageCount != null && frontPageCount % 2 !== 0) {
-      chapterPages = chapterPages.map((page) => (page == null ? null : page + 1))
-      frontBuffer = await this.pdfRender.render(buildFrontMatterHtml(pdfData, chapterPages, true), {
-        ...paperSize,
-      })
-      if (!frontBuffer) return null
-    }
-
-    const buffer = await mergePdfs([frontBuffer, contentBuffer]).catch((error) => {
-      this.logger.error(`No se pudo unir el frente con el contenido del PDF: ${String(error)}`)
-      return null
-    })
+    const finalDocx = await buildEbookDocx({ ...docxData, tocPageNumbers })
+    const buffer = await this.pdfRender.render(finalDocx)
     if (!buffer) return null
 
     const generatedDir = join(this.dir, 'generated')
@@ -237,7 +188,13 @@ export class GiftsService {
     await writeFile(join(generatedDir, generatedFileKey), buffer)
 
     this.logger.log(`PDF generado para el regalo de ${user.email} (${buffer.length} bytes)`)
-    return { generatedFileKey, generatedFileName: `${ebook.slug}.pdf` }
+    // `generatedFileName` queda guardado a título informativo (ej. para inspeccionar el claim a
+    // mano) — `openForDownload()` ya NO lo usa para nombrar la descarga, lo recalcula del título
+    // actual del ebook en cada request. Guardarlo acá con el título del momento del claim y
+    // servirlo tal cual más adelante hacía que la descarga quedara con el nombre del título
+    // viejo si el admin editaba el ebook después (reportado por el usuario) — ver
+    // docs/features/welcome-ebook-gift.md, Fase 3.
+    return { generatedFileKey, generatedFileName: `${slugify(ebook.title) || ebook.slug}.pdf` }
   }
 
   /**
@@ -294,7 +251,13 @@ export class GiftsService {
     if (claim.generatedFileKey) {
       return {
         stream: createReadStream(join(this.dir, 'generated', claim.generatedFileKey)),
-        filename: claim.generatedFileName ?? `${claim.ebook.slug}.pdf`,
+        // Nombre calculado del título ACTUAL del ebook, no `claim.generatedFileName` guardado:
+        // ese campo se fija en el momento del claim()/regenerate() y queda desactualizado si el
+        // admin edita el título después sin volver a regenerar — el usuario reportó justo este
+        // caso (editó título/contenido de un ebook ya reclamado por otra persona y la descarga
+        // seguía con el nombre del título viejo). Recalcularlo acá, en cada descarga, evita que
+        // vuelva a desincronizarse pase lo que pase con el ciclo de vida del claim.
+        filename: `${slugify(claim.ebook.title) || claim.ebook.slug}.pdf`,
       }
     }
 

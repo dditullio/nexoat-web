@@ -5,6 +5,12 @@
 
       <template v-else-if="claim">
         <p class="gift-view__eyebrow">Tu regalo de bienvenida</p>
+        <img
+          v-if="claim.ebook.coverImage"
+          :src="claim.ebook.coverImage"
+          :alt="`Portada de ${claim.ebook.title}`"
+          class="gift-view__cover"
+        />
         <h1 class="gift-view__title">{{ claim.ebook.title }}</h1>
         <p v-if="claim.ebook.subtitle" class="gift-view__subtitle">{{ claim.ebook.subtitle }}</p>
         <p class="gift-view__summary">{{ claim.ebook.summary }}</p>
@@ -140,6 +146,13 @@ onMounted(load)
   letter-spacing: 0.08em;
   color: var(--color-ink-faint);
   margin: 0;
+}
+
+.gift-view__cover {
+  width: 140px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  align-self: center;
 }
 
 .gift-view__title {

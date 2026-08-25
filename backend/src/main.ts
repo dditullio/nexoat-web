@@ -32,6 +32,12 @@ async function bootstrap() {
     // DELETE (ej. borrar un artículo) falla en el preflight con
     // "Method DELETE is not allowed by Access-Control-Allow-Methods".
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    // Por default el navegador solo deja leer un puñado de headers "seguros" de la respuesta vía
+    // fetch(), aunque la petición haya sido same-origin lógicamente — Content-Disposition no está
+    // en esa lista. Sin esto, downloadMyGift() (gifts.api.ts) no podía leer el nombre de archivo
+    // real que arma el backend y tenía que reconstruirlo del lado del cliente con datos que se
+    // desincronizaban del título actual del ebook (ver docs/features/welcome-ebook-gift.md, Fase 3).
+    exposedHeaders: ['Content-Disposition'],
   })
 
   app.useGlobalPipes(

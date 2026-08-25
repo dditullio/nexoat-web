@@ -1,14 +1,14 @@
-import { marked } from 'marked'
-
-marked.setOptions({ breaks: true, gfm: true })
-
 export interface BookChapter {
   /** Texto exacto del encabezado `## ...` — se usa tal cual como entrada del índice. */
   title: string
   /** Primer blockquote inmediatamente debajo del título, si existe (ver docs/features/welcome-ebook-gift.md). */
   pullquote: string | null
-  /** Resto del capítulo ya renderizado a HTML (sin el pullquote, que se muestra aparte). */
-  bodyHtml: string
+  /**
+   * Resto del capítulo, en Markdown crudo (sin el pullquote, que se muestra aparte). Desde la
+   * Fase 3 el consumidor es `ebook-docx.builder.ts`, que arma `Paragraph`/`TextRun` de `docx`
+   * directamente — no hace falta pasar por HTML como en la Fase 2 (Chromium/Gotenberg).
+   */
+  bodyMarkdown: string
 }
 
 /**
@@ -45,7 +45,7 @@ export function parseBookChapters(markdown: string): BookChapter[] {
     chapters.push({
       title,
       pullquote,
-      bodyHtml: marked.parse(bodyMarkdown, { async: false }) as string,
+      bodyMarkdown,
     })
   }
 
