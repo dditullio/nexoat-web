@@ -14,6 +14,20 @@ function describeError(error: unknown): string {
   }
 }
 
+export interface RenderOptions {
+  /** HTML de encabezado/pie repetido en cada página — mecanismo nativo de Chromium (clases
+   * `pageNumber`/`totalPages`/etc.), no de Gotenberg. Si se pasa alguno, Gotenberg activa
+   * `displayHeaderFooter` solo. */
+  headerHtml?: string
+  footerHtml?: string
+  /** Pulgadas — default de Gotenberg (1in) si no se especifica. */
+  marginTop?: number
+  marginBottom?: number
+  /** Pulgadas — default de Gotenberg (Letter) si no se especifica. */
+  paperWidth?: number
+  paperHeight?: number
+}
+
 /**
  * Cliente de Gotenberg (HTML → PDF vía Chromium headless, ver
  * docs/features/welcome-ebook-gift.md, Fase 2). Sin `GOTENBERG_URL`
@@ -26,7 +40,7 @@ export class PdfRenderService {
   private readonly logger = new Logger(PdfRenderService.name)
   private readonly url = process.env.GOTENBERG_URL
 
-  async render(html: string): Promise<Buffer | null> {
+  async render(html: string, options: RenderOptions = {}): Promise<Buffer | null> {
     if (!this.url) {
       this.logger.warn('GOTENBERG_URL no configurada — no se puede generar el PDF')
       return null
@@ -35,8 +49,35 @@ export class PdfRenderService {
     try {
       const formData = new FormData()
       // Gotenberg exige que el archivo principal se llame literalmente
-      // "index.html" dentro del multipart.
+      // "index.html" dentro del multipart — "header.html"/"footer.html" son
+      // los nombres que reconoce para las plantillas de encabezado/pie.
       formData.append('files', new Blob([html], { type: 'text/html' }), 'index.html')
+      if (options.headerHtml) {
+        formData.append(
+          'files',
+          new Blob([options.headerHtml], { type: 'text/html' }),
+          'header.html'
+        )
+      }
+      if (options.footerHtml) {
+        formData.append(
+          'files',
+          new Blob([options.footerHtml], { type: 'text/html' }),
+          'footer.html'
+        )
+      }
+      if (options.marginTop !== undefined) {
+        formData.append('marginTop', String(options.marginTop))
+      }
+      if (options.marginBottom !== undefined) {
+        formData.append('marginBottom', String(options.marginBottom))
+      }
+      if (options.paperWidth !== undefined) {
+        formData.append('paperWidth', String(options.paperWidth))
+      }
+      if (options.paperHeight !== undefined) {
+        formData.append('paperHeight', String(options.paperHeight))
+      }
 
       const res = await fetch(`${this.url}/forms/chromium/convert/html`, {
         method: 'POST',

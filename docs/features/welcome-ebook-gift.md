@@ -153,43 +153,55 @@ Puntos donde el código terminó distinto de lo que dice la especificación de a
 
 ### Decisiones acordadas con el usuario
 
-3. **Motor de render: Gotenberg, no Puppeteer embebido ni pdf-lib.** Gotenberg es un servicio HTTP aparte (Chromium headless por detrás) que convierte HTML→PDF — permite reusar el CSS del sitio (tipografía, `.prose`) para la portada/dedicatoria/contenido sin escribir maquetación a mano (la alternativa de `pdf-lib`), y sin sumarle Chromium a la imagen Docker del propio backend (la alternativa de Puppeteer embebido). Corre como contenedor propio (`gotenberg/gotenberg:8`), sin estado — no necesita volumen.
+3. **Motor de render: Gotenberg, no Puppeteer embebido ni pdf-lib para maquetar.** Gotenberg es un servicio HTTP aparte (Chromium headless por detrás) que convierte HTML→PDF — permite reusar CSS para la portada/dedicatoria/contenido sin escribir maquetación a mano, y sin sumarle Chromium a la imagen Docker del propio backend. Corre como contenedor propio (`gotenberg/gotenberg:8`), sin estado — no necesita volumen. `pdf-lib` sí se terminó usando, pero solo para **unir** dos PDFs ya generados (ver "Arquitectura: dos PDFs, no uno" más abajo) — no para maquetar contenido.
 4. **Ambos modos de carga conviven.** Un `WelcomeEbook` tiene **o** `content` (Markdown, se genera con dedicatoria al reclamar) **o** `fileKey` (PDF subido a mano de la Fase 1, se sirve tal cual — sin personalizar). Da flexibilidad si algún título ya viene terminado de otro lado y no vale la pena pasarlo a Markdown.
 5. **El QR a la tienda queda con el layout listo pero apagado hasta que la tienda exista.** Un QR a una página que todavía no existe es peor que no tener QR, en un PDF que la persona se guarda. Se arma el diseño (última página del libro) desde el principio, pero solo se activa cuando `WelcomeEbook.storeUrl` esté seteado — visibilidad por datos, mismo criterio que el resto de la funcionalidad.
+6. **Estructura de páginas y tamaño, a partir de un PDF de referencia real del usuario** (ver "Estructura del libro" abajo): A5, portada a página completa sin texto superpuesto, ficha con aviso legal en página aparte de la dedicatoria, índice con números de página reales, y los capítulos arrancando siempre en página impar (convención editorial tomada de un manual de maquetación de Bubook que el usuario compartió) — adaptada a un ebook digital, sin las páginas de cortesía en blanco que ese mismo manual recomienda para una edición impresa.
 
-### Flujo (reemplaza el paso 3 de la Fase 1 cuando el ebook tiene `content`)
+### Estructura del libro
 
-1. Al reclamar (`POST /gifts/claim`), si `ebook.content` no es null: se arma un HTML (portada con `coverImage`, página de dedicatoria con el nombre/email del usuario, el contenido renderizado con `marked`+`dompurify` con la clase `.prose`, y — si `ebook.storeUrl` está seteado — una página final con QR hacia esa URL) y se lo manda a Gotenberg. El PDF resultante se guarda en `storage/ebooks/generated/{claimId}.pdf` y se referencia desde `EbookClaim.generatedFileKey`/`generatedFileName`.
-2. Si `ebook.content` es null pero tiene `fileKey` (ebook cargado a la manera de la Fase 1): no se genera nada, el claim queda sin `generatedFileKey` — la descarga cae al PDF subido tal cual, sin dedicatoria.
-3. `GET /gifts/download` sirve `claim.generatedFileKey` si existe; si no, cae a `claim.ebook.fileKey` (mismo comportamiento que hoy). Un ebook `content`-based nunca deja al usuario sin archivo: si Gotenberg falla al momento del claim, el claim igual se crea (no bloquea el regalo) pero sin `generatedFileKey` — hay que reintentar la generación (acción de admin, ver más abajo) antes de que la descarga funcione.
-4. La generación es **una vez por claim**, no en cada descarga — la dedicatoria es fija por usuario, no tiene sentido pagar el costo de Chromium en cada `GET /gifts/download`.
+Tamaño **A5** (148×210mm — `BOOK_PAPER_WIDTH_IN`/`BOOK_PAPER_HEIGHT_IN` en `ebook-pdf.template.ts`), fácil de leer incluso en pantalla chica. Páginas, en orden:
 
-### Cambios de schema
+1. **Portada** — `coverImage` a página completa, sin ningún texto superpuesto (el arte ya lo trae, según mostró el PDF de referencia). Sin tapa cargada, cae a un fallback tipográfico simple (título/subtítulo sobre un fondo liso) para poder probar el resto del circuito igual.
+2. **Ficha** — título repetido, "NexoAT — Textos para acompañar", "Primera edición digital — {año}", `nexoat.com`, y un aviso legal fijo (mismo texto en todas las copias).
+3. **Dedicatoria** — nombre y email del usuario que reclama el regalo. Separada de la ficha a propósito: la ficha es boilerplate idéntico en todas las copias, la dedicatoria es lo único genuinamente personal.
+4. **Índice** — título de cada capítulo (un `## ` del Markdown) con línea punteada hasta su número de página real (ver "Índice con números reales" más abajo).
+5. **Capítulos** — cada uno arranca en página nueva, con el primer `> pullquote` inmediatamente debajo del `##` renderizado aparte (fondo salvia claro), encabezado repetido con el título del libro, pie con `nexoat.com · N` (numeración propia, arranca en 1 en el primer capítulo — no cuenta portada/ficha/dedicatoria/índice).
+6. **QR opcional** — solo si `storeUrl` está seteado.
 
-```prisma
-model WelcomeEbook {
-  // ...campos existentes de la Fase 1 sin cambios...
-  content   String? // Markdown del ebook — si está seteado, se genera al vuelo con dedicatoria (ver Fase 2)
-  storeUrl  String? // link a la ficha de compra en la futura tienda — null = sin QR en la última página
-}
+Los capítulos siempre arrancan en página impar (2, 4, dedicatoria, índice = 4 páginas de frente → capítulo 1 en la página 5): si el frente mide una cantidad impar de páginas, se agrega una hoja en blanco antes del capítulo 1 y se corrige el índice — ver "Arquitectura: dos PDFs, no uno".
 
-model EbookClaim {
-  // ...campos existentes sin cambios...
-  generatedFileKey  String? // PDF personalizado en storage/ebooks/generated/ — null hasta que se genere (o si el ebook usa fileKey en vez de content)
-  generatedFileName String?
-}
-```
+### Arquitectura: dos PDFs, no uno
 
-Un `WelcomeEbook` con `content` Y `fileKey` a la vez no es un estado inválido de por sí, pero `content` manda: si está seteado, se genera; `fileKey` queda de respaldo solo si `content` es null. El admin no debería cargar los dos a propósito — la UI lo deja claro (ver más abajo) pero no lo impide con una validación dura, para no bloquear un caso legítimo (ej. migrar de uno a otro sin borrar el anterior todavía).
+El diseño original de este documento proponía un único HTML con todo el libro, más un pie de página que "restara" las páginas del frente vía un `<script>` dentro de la plantilla de pie de Gotenberg. **No funciona**: se probó a mano contra Gotenberg real y Chromium no ejecuta `<script>` dentro de las plantillas de encabezado/pie (solo reemplaza estáticamente clases como `.pageNumber`/`.totalPages` con el número, antes de imprimir — ningún JS corre encima). Tampoco alcanza con `.pageNumber` a secas, porque numera _todas_ las páginas del documento (portada incluida), y acá el frente no debe llevar numeración.
 
-### Backend — nuevo: `PdfRenderService` (o dentro de `gifts/`)
+La solución fue separar el frente y el contenido en **dos PDFs independientes** que se unen con `pdf-lib` al final:
 
-- `render(html: string): Promise<Buffer>` — `POST` multipart a `${GOTENBERG_URL}/forms/chromium/convert/html` con un `index.html`, devuelve el buffer del PDF. Sin lógica de negocio — no sabe nada de ebooks, dedicatorias ni claims; eso vive en `GiftsService`.
-- `GiftsService.claim()` cambia: si `ebook.content`, arma el HTML (plantilla nueva `mail/templates/` no aplica acá — sería algo como `gifts/ebook-pdf.template.ts`, HTML standalone con `<style>` embebido, no reusa las plantillas de email) y llama a `PdfRenderService.render()`. Si Gotenberg no responde, se loguea el error y el claim se crea igual (mismo criterio de "nunca bloquear por un proveedor externo" que ya usa `MailService`).
-- **Fuentes:** Gotenberg no tiene acceso a Google Fonts sin salir a internet (y no queremos esa dependencia en el momento de generar) — hay que embeber Fraunces/Karla como `@font-face` con los archivos en base64 dentro del `<style>`, o resignarse a una fuente del sistema del contenedor de Gotenberg para el PDF (más simple, pero rompe la identidad visual). A decidir al implementar; probablemente valga la pena embeberlas una sola vez como constante.
-- **QR:** paquete `qrcode` (Node, sin red) genera un data URI PNG/SVG a partir de `storeUrl` — se embebe directo en el `<img>` del HTML, Gotenberg no necesita salir a buscar nada.
-- **Reintentar una generación fallida:** `POST /admin/gifts/claims/:claimId/regenerate` (o similar) — regenera el PDF de un claim puntual, para el caso de que Gotenberg haya fallado al momento del claim original. No se dispara solo; hace falta que un admin lo vea (ej. un filtro "sin archivo generado" en una futura vista de claims) y lo dispare a mano.
-- **`storage/ebooks/generated/`** se suma al mismo volumen `backend_storage` que ya existe (Docker) — no hace falta un volumen nuevo, es un subdirectorio del mismo `storage/`.
+1. **`buildContentHtml()`** — solo los capítulos + QR, con `header.html`/`footer.html` propios. Como es su propio documento, el `.pageNumber` nativo de Chromium ya arranca solo en 1 — sin ningún cálculo de nuestro lado.
+2. **`buildFrontMatterHtml()`** — portada/ficha/dedicatoria/índice, **sin** header/footer.
+3. `mergePdfs([frontBuffer, contentBuffer])` (`pdf-merge.ts`) concatena los dos con `pdf-lib`.
+
+Esto además simplificó el índice: como el contenido es su propio documento, "en qué página cae el capítulo N" es directamente el número que ya va a aparecer impreso en su pie — no hace falta ningún offset.
+
+### Índice con números reales
+
+Se resuelve en dos pasadas, pero ahora acotadas al contenido (no a todo el libro):
+
+1. Se renderiza `buildContentHtml()` una vez.
+2. `locateChapterPages()` (`pdf-page-index.ts`, vía `pdf-parse`) busca en qué página del PDF de contenido aparece cada título de capítulo — con matching de **palabra completa**, no de substring: un capítulo corto como "Referencias" matcheaba como parte de "prefer**encias**" en el cuerpo de otro capítulo antes de este fix, dándole una página incorrecta.
+3. Se renderiza `buildFrontMatterHtml()` con esos números ya puestos en el índice — esa es la única pasada que hace falta para el frente (no hay una "pasada de medición" del frente en sí).
+4. Si el frente da una cantidad impar de páginas, se vuelve a renderizar con una hoja en blanco de más (ver "Estructura del libro") y se suma 1 a cada número del índice.
+
+### Backend — `gifts/` (archivos nuevos de esta fase)
+
+- **`ebook-pdf.template.ts`** — `buildFrontMatterHtml()`, `buildContentHtml()`, `buildContentHeaderHtml()`, `buildContentFooterHtml()`. HTML standalone con `<style>` embebido — no reusa las plantillas de `mail/templates/` (esas son para clientes de correo, no para un motor de PDF con Chromium detrás).
+- **`markdown-book.ts`** — `parseBookChapters()`: separa el Markdown por `## ` en capítulos, y de cada uno extrae el primer `> pullquote` inmediato (si existe) para renderizarlo aparte del resto del cuerpo.
+- **`pdf-render.service.ts`** (`PdfRenderService`) — cliente de Gotenberg. `render(html, options)` — `options` incluye `headerHtml`/`footerHtml`/`marginTop`/`marginBottom`/`paperWidth`/`paperHeight`, todos opcionales. Nunca lanza: sin `GOTENBERG_URL` o si Gotenberg no responde, devuelve `null` (mismo criterio que `MailService` con `RESEND_API_KEY` ausente).
+- **`pdf-page-index.ts`** — `locateChapterPages()`, con el matching de palabra completa descrito arriba.
+- **`pdf-merge.ts`** — `mergePdfs()` (concatena PDFs con `pdf-lib`), `countPdfPages()`, y `trimTrailingBlankPage()` (ver nota de implementación sobre páginas en blanco espurias).
+- **QR:** paquete `qrcode` (Node, sin red) genera un data URI PNG a partir de `storeUrl` — se embebe directo en el `<img>` del HTML de contenido, Gotenberg no necesita salir a buscar nada.
+- **Reintentar una generación fallida:** `POST /admin/gifts/claims/:claimId/regenerate` — regenera el PDF de un claim puntual, para el caso de que Gotenberg haya estado caído al momento del `claim()` original. No se dispara solo.
+- **`storage/ebooks/generated/`** usa el mismo volumen `backend_storage` que ya existe (Docker) — no hace falta uno nuevo, es un subdirectorio de `storage/`.
 
 ### Docker
 
@@ -212,21 +224,25 @@ Se agrega una sección "Contenido (Markdown)" por ebook: textarea + preview en v
 
 Cuando exista la venta: mismo `WelcomeEbook` (quizás renombrado o con un modelo hermano que comparta `content`/`coverImage`/render) más `priceCents`/`isForSale`. Una compra generaría su propio `EbookClaim`-como (o un modelo `EbookPurchase` separado, a decidir cuando llegue) con su propio PDF personalizado — mismo `PdfRenderService`, mismo pipeline de dedicatoria (ahí sí tendría sentido, "Comprado por ‹nombre›" en vez de "Regalo de bienvenida para ‹nombre›"). No se diseña en detalle acá porque depende de decisiones que todavía no están tomadas (pasarela de pago, si el catálogo es el mismo modelo o uno nuevo) — se deja como nota para no perder el hilo cuando llegue esa etapa.
 
-### Plan de verificación (al implementar)
+### Plan de verificación
 
-1. Levantar Gotenberg local (`docker run --rm -p 3002:3000 gotenberg/gotenberg:8` o vía `docker-compose.dev.yml`) y confirmar `GET http://localhost:3002/health` (o el healthcheck que exponga esa versión).
-2. Cargar un `WelcomeEbook` de prueba con `content` Markdown corto desde el admin, sin `fileKey`.
-3. Reclamarlo con un usuario de prueba → confirmar que `EbookClaim.generatedFileKey` queda seteado y que `GET /gifts/download` devuelve un PDF real (no el placeholder de texto) con la dedicatoria (nombre/email correctos) y el contenido renderizado.
-4. Apagar Gotenberg a propósito y reclamar con otro usuario → confirmar que el claim se crea igual, sin `generatedFileKey`, y que se loguea el error sin tirar abajo el request.
-5. Setear `storeUrl` en un ebook y confirmar que el PDF generado trae la página final con el QR apuntando ahí; sin `storeUrl`, confirmar que esa página no aparece.
-6. Confirmar que un ebook con `fileKey` (sin `content`) sigue funcionando exactamente como en la Fase 1 — sin esta fase tocarle el comportamiento.
+1. Levantar Gotenberg local (`docker-compose -f docker-compose.dev.yml up -d gotenberg`, puerto 3002) y confirmar `GET http://localhost:3002/health`.
+2. Cargar `content` Markdown real (los 3 títulos de la semilla de desarrollo, ya escritos siguiendo la convención `## Capítulo` + `> pullquote`) y una tapa.
+3. Reclamarlo con un usuario de prueba → confirmar que `EbookClaim.generatedFileKey` queda seteado y que `GET /gifts/download` devuelve un PDF real con la estructura completa (portada, ficha, dedicatoria, índice, capítulos, pie con numeración).
+4. Extraer el texto del PDF resultante (`pdftotext -layout`) y confirmar: cada entrada del índice apunta a la página donde efectivamente arranca ese capítulo (mismo número que su propio pie de página), el capítulo 1 cae en página impar, y no hay contenido corrido ni acentos rotos.
+5. Apagar Gotenberg a propósito y reclamar con otro usuario → confirmar que el claim se crea igual, sin `generatedFileKey`, que `GET /gifts/download` da 404 con un mensaje claro, y que `POST /admin/gifts/claims/:claimId/regenerate` lo resuelve al reiniciar Gotenberg.
+6. Setear `storeUrl` en un ebook y confirmar que el PDF generado trae la página final con el QR apuntando ahí; sin `storeUrl`, confirmar que esa página no aparece.
+7. Confirmar que un ebook con `fileKey` (sin `content`) sigue funcionando exactamente como en la Fase 1 — sin esta fase tocarle el comportamiento.
 
-Los 6 puntos se verificaron a mano contra Gotenberg real (`docker-compose.dev.yml`, puerto 3002): PDF de 4 páginas generado y descargado, texto extraído con `pdftotext` confirma portada (título/subtítulo), dedicatoria (nombre/email del usuario), contenido Markdown renderizado (encabezados, negrita/cursiva) y la página de QR con el texto esperado — todo con acentos correctos. Se apagó Gotenberg a propósito: el `claim()` igual devolvió 201 sin `generatedFileKey`, `GET /gifts/download` respondió 404 con el mensaje "todavía se está preparando", y `POST /admin/gifts/claims/:claimId/regenerate` completó la generación una vez reiniciado Gotenberg. `type-check` y `lint` de ambos paquetes, limpios.
+Los 7 puntos se verificaron a mano contra Gotenberg real, con el contenido real ya cargado en desarrollo (el libro _"Cuando las palabras no alcanzan"_, 12 capítulos): PDF de 38 páginas (4 de frente + 34 de contenido), índice con los 12 números reales verificados uno por uno contra el pie de página de su propio capítulo (`pdftotext`), capítulo 1 en página impar (5), resiliencia con Gotenberg caído (claim igual se crea, 404 amigable, `regenerate` lo resuelve). `type-check` y `lint` de ambos paquetes, limpios.
 
 ## Notas de implementación (Fase 2)
 
-- **Sin sanitizar el HTML del Markdown en el backend.** A diferencia del frontend (que pasa todo por `dompurify` antes de un `v-html`), el HTML que arma `ebook-pdf.template.ts` para mandarle a Gotenberg no se sanitiza — mismo nivel de confianza que `Article.content` (contenido escrito por ADMIN/SUPER_ADMIN, gateado por `RolesGuard`, nunca por un usuario público). El único riesgo teórico es que un admin se autoataque con su propio PDF, no una superficie de XSS contra terceros.
-- **Fuentes: Georgia/Arial, no Fraunces/Karla embebidas.** El documento original planteaba embeber las tipografías del sitio como `@font-face` en base64. Se resolvió más simple: mismas fuentes de sistema que ya usan las plantillas de `mail/templates/` (`Georgia, 'Times New Roman', serif` / `Arial, sans-serif`) — coherente con un problema que el proyecto ya resolvió así una vez, y evita el peso/mantenimiento de los archivos de fuente embebidos.
-- **`generatedFileKey` incluye el `userId`, no solo el `claimId`** (`{ebookId}-{userId}.pdf`, no `{claimId}.pdf`) — más fácil de inspeccionar a mano en `storage/ebooks/generated/` durante debugging; el `EbookClaim.userId` ya es único, así que no hay colisión posible.
-- **Sin UI de administración de claims/regenerar.** El endpoint `POST /admin/gifts/claims/:claimId/regenerate` existe y funciona (probado por API), pero no hay una pantalla admin que liste claims sin `generatedFileKey` para encontrar el `claimId` a mano — queda para cuando haga falta de verdad (activarlo hoy sería construir una vista para un caso borde que todavía no ocurrió).
-- **`Content-Disposition` no llega al frontend vía `fetch()` del navegador** por las reglas de CORS (no es un header "simple" y el backend no lo expone con `Access-Control-Expose-Headers`) — sin impacto real: `downloadMyGift()`/`downloadBackup()` ya fijan el nombre de archivo a mano en el `<a download>`, nunca dependieron de leer ese header desde JS.
+- **Sin sanitizar el HTML del Markdown en el backend.** El HTML que arma `ebook-pdf.template.ts` para mandarle a Gotenberg no pasa por `dompurify` — mismo nivel de confianza que `Article.content` (contenido escrito por ADMIN/SUPER_ADMIN, gateado por `RolesGuard`, nunca por un usuario público). El único riesgo teórico es que un admin se autoataque con su propio PDF, no una superficie de XSS contra terceros.
+- **Fuentes: Georgia/Arial, no Fraunces/Karla embebidas.** Mismas fuentes de sistema que ya usan las plantillas de `mail/templates/` — coherente con un problema que el proyecto ya resolvió así una vez, evita el peso/mantenimiento de archivos de fuente embebidos, y de paso esquiva un problema real: el contenedor de Gotenberg (Linux) no tiene Georgia/Times New Roman instaladas, así que de cualquier forma cae a una fuente serif sustituta del sistema — sería fuente perdida embeberlas solo para que Chromium las ignore.
+- **Encabezado/pie sin JS — dos PDFs separados en vez de uno con numeración "restada".** Ver "Arquitectura: dos PDFs, no uno" arriba — el intento original con un `<script>` leyendo `.pageNumber` dentro de la plantilla de pie de Gotenberg no funciona porque Chromium no ejecuta scripts ahí (se probó a mano contra la API real antes de descartarlo).
+- **Página en blanco sobrante — recorte defensivo, no una causa puntual identificada.** Chromium a veces agrega una página casi vacía al final de un documento cuando el último elemento desborda por unos pocos píxeles (margen/padding de un párrafo o cita) — `trimTrailingBlankPage()` la detecta (vía `pdf-parse`, sin texto extraíble) y la descarta, tanto en el PDF de contenido como en el de frente, antes de contar páginas para la convención de "capítulo en impar". Ojo al depurar esto con `pdftotext | split('\f')` a mano: `pdftotext` agrega un form-feed también _después_ de la última página, así que un split ingenuo cuenta una página fantasma de más — usar `pdf-lib`/`pdf-parse` (como hace el propio código) o descartar el último elemento vacío del split.
+- **Matching de capítulo por palabra completa, no substring.** `locateChapterPages()` usaba `String.includes()` — un capítulo titulado "Referencias" matcheaba como parte de "prefer**encias**" en el cuerpo de otro capítulo, dándole una página del índice completamente equivocada. `includesWholeWord()` en `pdf-page-index.ts` valida que el carácter inmediatamente antes/después del match no sea una letra.
+- **`generatedFileKey` incluye el `userId`, no solo el `claimId`** (`{ebookId}-{userId}.pdf`) — más fácil de inspeccionar a mano en `storage/ebooks/generated/` durante debugging; `EbookClaim.userId` ya es único, sin colisión posible.
+- **Sin UI de administración de claims/regenerar.** El endpoint existe y funciona (probado por API), pero no hay pantalla admin que liste claims sin `generatedFileKey` para encontrar el `claimId` a mano — queda para cuando haga falta de verdad.
+- **`Content-Disposition` no llega al frontend vía `fetch()`** por las reglas de CORS — sin impacto real, `downloadMyGift()` ya fija el nombre de archivo a mano en el `<a download>`.

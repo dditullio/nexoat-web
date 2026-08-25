@@ -15,7 +15,17 @@ import { MailService } from '../mail/mail.service'
 import { welcomeGiftEmailHtml } from '../mail/templates/welcome-gift.template'
 import { slugify } from '../common/slugify'
 import { PdfRenderService } from './pdf-render.service'
-import { buildEbookPdfHtml } from './ebook-pdf.template'
+import {
+  BOOK_PAPER_HEIGHT_IN,
+  BOOK_PAPER_WIDTH_IN,
+  buildContentFooterHtml,
+  buildContentHeaderHtml,
+  buildContentHtml,
+  buildFrontMatterHtml,
+} from './ebook-pdf.template'
+import { parseBookChapters } from './markdown-book'
+import { locateChapterPages } from './pdf-page-index'
+import { countPdfPages, mergePdfs, trimTrailingBlankPage } from './pdf-merge'
 import type { CreateGiftDto } from './dto/create-gift.dto'
 import type { UpdateGiftDto } from './dto/update-gift.dto'
 
@@ -127,12 +137,34 @@ export class GiftsService {
     return claim
   }
 
-  /** Arma el HTML, lo manda a Gotenberg y guarda el PDF resultante en storage/ebooks/generated/. */
+  /**
+   * Arma el PDF y guarda el resultado en storage/ebooks/generated/ (ver
+   * docs/features/welcome-ebook-gift.md, sección "índice con números de
+   * página reales"). El frente del libro (portada/ficha/dedicatoria/índice)
+   * y el contenido (capítulos + QR) se renderizan como **dos PDFs
+   * separados** y se unen al final — necesario porque el contenido lleva
+   * encabezado/pie con numeración propia (arranca sola en 1, mecanismo
+   * nativo de Chromium vía Gotenberg) y el frente no lleva ninguno; un
+   * único documento no puede aplicar header/footer distinto por página.
+   *
+   * 1. Renderiza el contenido (sin depender de nada del frente).
+   * 2. Busca en qué página cayó cada capítulo — esos son los números reales
+   *    del índice, porque son internos al PDF de contenido mismo.
+   * 3. Renderiza el frente con esos números — si el frente da un número de
+   *    páginas impar (el capítulo 1 quedaría en página par al unir), se
+   *    agrega una hoja en blanco y se corrige el índice sumando 1 a cada
+   *    entrada (convención editorial: los capítulos arrancan en impar).
+   * 4. Une frente + contenido en un solo PDF.
+   *
+   * Si Gotenberg no responde en cualquiera de las dos renderizaciones,
+   * devuelve `null` sin lanzar (mismo criterio que el resto de la
+   * generación).
+   */
   private async generatePdf(
     ebook: WelcomeEbook,
     user: User
   ): Promise<{ generatedFileKey: string; generatedFileName: string } | null> {
-    const html = await buildEbookPdfHtml({
+    const pdfData = {
       title: ebook.title,
       subtitle: ebook.subtitle,
       coverImage: ebook.coverImage,
@@ -140,9 +172,60 @@ export class GiftsService {
       recipientName: user.name || 'nuevo miembro de NexoAT',
       recipientEmail: user.email,
       storeUrl: ebook.storeUrl,
+    }
+    const chapterTitles = parseBookChapters(pdfData.content).map((c) => c.title)
+    const paperSize = { paperWidth: BOOK_PAPER_WIDTH_IN, paperHeight: BOOK_PAPER_HEIGHT_IN }
+    // Reserva espacio para encabezado/pie sin imponerle además un margen lateral —
+    // ese ya lo da el padding de .page en el propio HTML.
+    const pageMargins = { marginTop: 0.35, marginBottom: 0.35 }
+
+    const contentHtml = await buildContentHtml(pdfData)
+    let contentBuffer = await this.pdfRender.render(contentHtml, {
+      headerHtml: buildContentHeaderHtml(ebook.title),
+      footerHtml: buildContentFooterHtml(),
+      ...paperSize,
+      ...pageMargins,
+    })
+    if (!contentBuffer) return null
+    contentBuffer = await trimTrailingBlankPage(contentBuffer).catch((error) => {
+      this.logger.warn(`No se pudo revisar la última página del PDF: ${String(error)}`)
+      return contentBuffer as Buffer
     })
 
-    const buffer = await this.pdfRender.render(html)
+    let chapterPages = await locateChapterPages(contentBuffer, chapterTitles).catch((error) => {
+      this.logger.error(`No se pudo indexar las páginas del PDF: ${String(error)}`)
+      return chapterTitles.map(() => null)
+    })
+
+    let frontBuffer = await this.pdfRender.render(buildFrontMatterHtml(pdfData, chapterPages), {
+      ...paperSize,
+    })
+    if (!frontBuffer) return null
+    // Mismo artefacto de Chromium que en el contenido (una página casi vacía sobrante) puede
+    // pasar acá por el desborde del índice — se recorta antes de contar, para no confundirla
+    // con la hoja en blanco *intencional* que se agrega más abajo por la convención de página
+    // impar (esa si se deja, adrede).
+    frontBuffer = await trimTrailingBlankPage(frontBuffer).catch((error) => {
+      this.logger.warn(`No se pudo revisar la última página del frente del PDF: ${String(error)}`)
+      return frontBuffer as Buffer
+    })
+
+    // Convención editorial: los capítulos arrancan en página impar. Si el frente mide una
+    // cantidad impar de páginas, el capítulo 1 (primera página del PDF de contenido) caería
+    // en página par al unir los dos — se agrega una hoja en blanco y se corrige el índice.
+    const frontPageCount = await countPdfPages(frontBuffer).catch(() => null)
+    if (frontPageCount != null && frontPageCount % 2 !== 0) {
+      chapterPages = chapterPages.map((page) => (page == null ? null : page + 1))
+      frontBuffer = await this.pdfRender.render(buildFrontMatterHtml(pdfData, chapterPages, true), {
+        ...paperSize,
+      })
+      if (!frontBuffer) return null
+    }
+
+    const buffer = await mergePdfs([frontBuffer, contentBuffer]).catch((error) => {
+      this.logger.error(`No se pudo unir el frente con el contenido del PDF: ${String(error)}`)
+      return null
+    })
     if (!buffer) return null
 
     const generatedDir = join(this.dir, 'generated')
