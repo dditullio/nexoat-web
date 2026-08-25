@@ -77,25 +77,41 @@ defineProps<{ category: Category }>()
   transform: scale(1.06);
 }
 
+/* Scrim más temprano y más oscuro que antes (arrancaba recién al 40% y
+   llegaba solo a 0.72 de opacidad) — con fotos claras (paredes blancas,
+   ropa clara) el nombre quedaba comiéndose el fondo aun con el degradado
+   original.
+
+   z-index:1 es necesario, no cosmético: ::after es contenido generado, y en
+   el orden de pintado se comporta como el último hijo del elemento — con
+   .cat__name/.cat__count en position:relative pero sin z-index quedaban
+   "empatados" con el pseudo-elemento, y al estar después en el árbol el
+   degradado terminaba pintándose ENCIMA del texto en vez de detrás. Por eso
+   se veía más oscuro/tapado cuanto más fuerte se hacía el scrim. */
 .cat--photo::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(20, 16, 12, 0) 40%, rgba(20, 16, 12, 0.72) 100%);
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(20, 16, 12, 0) 20%, rgba(20, 16, 12, 0.88) 100%);
+  pointer-events: none;
 }
 
 .cat--photo .cat__name,
 .cat--photo .cat__count {
   position: relative;
+  z-index: 2;
   color: #f7f2e9;
-}
-
-.cat--photo:hover .cat__name {
-  color: #f7f2e9;
+  /* Sombra tipo subtítulo de película: una capa ajustada para el contorno
+     de la letra + un halo difuso más grande, para que el texto se separe
+     de la foto incluso en manchas claras que el scrim no tape del todo. */
+  text-shadow:
+    0 1px 2px rgba(15, 12, 9, 0.85),
+    0 2px 10px rgba(15, 12, 9, 0.55);
 }
 
 .cat--photo .cat__count {
-  color: rgba(247, 242, 233, 0.75);
+  color: rgba(247, 242, 233, 0.85);
 }
 
 /* Arco: el glifo repite el motivo de la portada de artículo */
@@ -134,7 +150,14 @@ defineProps<{ category: Category }>()
   transition: color 0.25s ease;
 }
 
-.cat:hover .cat__name {
+/* :not(.cat--photo) a propósito: antes de este fix había además una regla
+   ".cat--photo:hover .cat__name { color: #f7f2e9 }" para que el nombre
+   siguiera claro en hover — pero empataba en especificidad con esta (3
+   selectores de clase cada una), y como esta quedaba más abajo en el
+   archivo, ganaba ella: el nombre se pintaba de verde oscuro sobre la foto
+   oscurecida en cada hover (el bug de "Autismo y TEA" ilegible). Con
+   :not() ya ni compiten — no depende del orden del archivo. */
+.cat:not(.cat--photo):hover .cat__name {
   color: var(--color-primary-dark);
 }
 
