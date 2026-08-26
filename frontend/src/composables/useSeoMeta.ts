@@ -8,14 +8,23 @@ const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'http://localhost:3000').repl
 
 const DEFAULT_DESCRIPTION =
   'NexoAT — Artículos especializados sobre acompañamiento terapéutico y cuidado de personas.'
-const DEFAULT_IMAGE = `${SITE_URL}/og-default.jpg`
 
 export interface SeoMetaOptions {
-  /** Sin el " — NexoAT" del sufijo, que agrega este composable. */
+  /** Sin el " — NexoAT" del sufijo, que agrega este composable (salvo `titleIncludesBrand`). */
   title: MaybeRefOrGetter<string>
+  /**
+   * La Home ya quiere la marca primero en el título (mejor para el
+   * resultado de búsqueda del dominio raíz), no al final — con esto en
+   * `true`, `title` se usa tal cual, sin el sufijo " — NexoAT".
+   */
+  titleIncludesBrand?: boolean
   description?: MaybeRefOrGetter<string | undefined>
   /** Path relativo (ej. "/articulo/mi-slug") — se resuelve a absoluto acá. */
   path: MaybeRefOrGetter<string>
+  // Sin fallback a una imagen genérica: mientras no exista un asset de
+  // marca real (ver docs/features/seo.md), es mejor omitir og:image/
+  // twitter:image en las páginas sin imagen propia que apuntar a un
+  // archivo que da 404.
   image?: MaybeRefOrGetter<string | undefined>
   type?: MaybeRefOrGetter<'website' | 'article'>
   /** Rutas privadas/transaccionales (admin, mi-cuenta, login, etc.). */
@@ -29,7 +38,8 @@ export interface SeoMetaOptions {
  */
 export function useSeoMeta(options: SeoMetaOptions) {
   useHead({
-    title: () => `${resolve(options.title)} — NexoAT`,
+    title: () =>
+      options.titleIncludesBrand ? resolve(options.title) : `${resolve(options.title)} — NexoAT`,
     meta: [
       {
         name: 'description',
@@ -47,14 +57,14 @@ export function useSeoMeta(options: SeoMetaOptions) {
         content: () => resolve(options.description) ?? DEFAULT_DESCRIPTION,
       },
       { property: 'og:url', content: () => absoluteUrl(resolve(options.path)) },
-      { property: 'og:image', content: () => resolve(options.image) ?? DEFAULT_IMAGE },
+      { property: 'og:image', content: () => resolve(options.image) },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: () => resolve(options.title) },
       {
         name: 'twitter:description',
         content: () => resolve(options.description) ?? DEFAULT_DESCRIPTION,
       },
-      { name: 'twitter:image', content: () => resolve(options.image) ?? DEFAULT_IMAGE },
+      { name: 'twitter:image', content: () => resolve(options.image) },
     ],
     link: [{ rel: 'canonical', href: () => absoluteUrl(resolve(options.path)) }],
   })

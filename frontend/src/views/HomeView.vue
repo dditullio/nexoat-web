@@ -360,9 +360,10 @@ const authStore = useAuthStore()
 const { filteredArticles } = storeToRefs(store)
 
 useSeoMeta({
-  title: 'Inicio',
+  title: 'NexoAT — Acompañamiento Terapéutico y Cuidado de Personas',
+  titleIncludesBrand: true,
   description:
-    'Artículos especializados sobre acompañamiento terapéutico y cuidado de personas, escritos para familias y profesionales.',
+    'Guías y recursos con base en evidencia sobre acompañamiento terapéutico y cuidado de personas, para cuidadores familiares y profesionales.',
   path: '/',
 })
 
