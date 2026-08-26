@@ -60,6 +60,13 @@ export function useSeoMeta(options: SeoMetaOptions) {
   })
 }
 
+// Dos firmas: la requerida (ej. `path`, que nunca es undefined) devuelve
+// `T` sin más — si solo hubiera una firma genérica, TS infiere `T |
+// undefined` para *cualquier* llamada (el parámetro admite `undefined`
+// aunque el valor concreto pasado no lo sea), lo que rompía los usos de
+// `absoluteUrl()` más abajo (espera `string`, no `string | undefined`).
+function resolve<T>(value: MaybeRefOrGetter<T>): T
+function resolve<T>(value: MaybeRefOrGetter<T> | undefined): T | undefined
 function resolve<T>(value: MaybeRefOrGetter<T> | undefined): T | undefined {
   if (value === undefined) return undefined
   return typeof value === 'function' ? (value as () => T)() : (value as T)
