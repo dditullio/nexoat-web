@@ -6,8 +6,10 @@ import type { MaybeRefOrGetter } from 'vue'
 // local, si no está seteada, cae a localhost para no romper nada.
 const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 
+// Mismo texto que el fallback estático de index.html — mantenerlos en
+// sync si se cambia uno.
 const DEFAULT_DESCRIPTION =
-  'NexoAT — Artículos especializados sobre acompañamiento terapéutico y cuidado de personas.'
+  'Guías y recursos con base en evidencia sobre acompañamiento terapéutico y cuidado de personas, para cuidadores familiares y profesionales.'
 
 export interface SeoMetaOptions {
   /** Sin el " — NexoAT" del sufijo, que agrega este composable (salvo `titleIncludesBrand`). */

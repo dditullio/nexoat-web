@@ -4,13 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Fallback estático para crawlers que NO ejecutan JS (WhatsApp,
+      Twitter/X, Facebook, un `curl` plano) — el resto del sitio (SPA sin
+      SSR) reemplaza estos tags en el cliente vía useSeoMeta.ts con
+      contenido específico por página, ver docs/features/seo.md, sección
+      "Fase 1" y la nota sobre Fase 3 (bots que no corren JS). Este bloque
+      solo se ve tal cual en esos casos, así que conviene que ya diga algo
+      representativo del sitio en vez de un genérico desactualizado.
+    -->
     <meta
       name="description"
-      content="NexoAT — Artículos especializados sobre acompañamiento terapéutico y cuidado de personas"
+      content="Guías y recursos con base en evidencia sobre acompañamiento terapéutico y cuidado de personas, para cuidadores familiares y profesionales."
     />
+    <meta property="og:site_name" content="NexoAT" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NexoAT — Acompañamiento Terapéutico y Cuidado de Personas" />
+    <meta
+      property="og:description"
+      content="Guías y recursos con base en evidencia sobre acompañamiento terapéutico y cuidado de personas, para cuidadores familiares y profesionales."
+    />
+    <meta property="og:url" content="https://nexoat.com/" />
     <meta name="theme-color" content="#faf6f0" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#191512" media="(prefers-color-scheme: dark)" />
-    <title>NexoAT — Acompañamiento terapéutico y cuidado de personas</title>
+    <title>NexoAT — Acompañamiento Terapéutico y Cuidado de Personas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
