@@ -85,7 +85,7 @@ export class AuthService {
       VerificationTokenType.account_activation,
       ACCOUNT_ACTIVATION_TTL_MS
     )
-    await this.sendActivationEmail(user.email, token)
+    await this.sendActivationEmail(user.email, token, dto.redirect)
   }
 
   /** Consume el token, activa la cuenta (contraseña + nombre + email verificado) y abre sesión — mismo mecanismo que login/register antes. */
@@ -108,8 +108,17 @@ export class AuthService {
     return user
   }
 
-  private async sendActivationEmail(email: string, token: string): Promise<void> {
-    const activateUrl = `${frontendUrl()}/completar-registro?token=${token}`
+  // `redirect` viaja como query param propio (no como parte del token
+  // firmado): sobrevive el viaje por email tal cual, y CompleteSignupView lo
+  // vuelve a leer de `route.query.redirect` — ver docs/features/article-comments.md,
+  // decisión 4.
+  private async sendActivationEmail(
+    email: string,
+    token: string,
+    redirect?: string
+  ): Promise<void> {
+    const redirectParam = redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''
+    const activateUrl = `${frontendUrl()}/completar-registro?token=${token}${redirectParam}`
     await this.mail
       .send(
         email,

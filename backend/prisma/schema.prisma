@@ -97,6 +97,13 @@ enum ProfileRole {
   otro
 }
 
+// Estado de moderación de un comentario — ver docs/features/article-comments.md.
+enum CommentStatus {
+  visible
+  oculto // moderado por un editor
+  eliminado // borrado por su autor o por un moderador (borrado blando)
+}
+
 // ─── Modelos ────────────────────────────────────────────────────────────────
 
 model Category {
@@ -160,6 +167,11 @@ model Article {
   // desambiguar con @relation("...") en ambos lados.
   readBy             ReadingHistoryEntry[] @relation("ReadingHistory")
   savedBy            SavedArticle[]        @relation("SavedArticles")
+  // Ver docs/features/article-comments.md. Apagar comentarios en un
+  // artículo puntual sin desactivar el sistema entero (checkbox en el form
+  // admin) — los comentarios existentes se siguen leyendo igual.
+  commentsEnabled    Boolean               @default(true)
+  comments           Comment[]             @relation("ArticleComments")
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
@@ -224,6 +236,9 @@ model User {
   savedArticles         SavedArticle[]
   verificationTokens    VerificationToken[]
   ebookClaim            EbookClaim?
+  comments              Comment[]             @relation("CommentAuthor")
+  commentLikes          CommentLike[]
+  commentReports        CommentReport[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -434,4 +449,67 @@ model EbookClaim {
 
   @@index([ebookId])
   @@map("ebook_claims")
+}
+
+// Comentario público de un lector registrado. Ver docs/features/article-comments.md.
+// Visualmente el hilo se aplana a dos niveles (raíz + respuestas), pero acá
+// se guarda el árbol real (`parentId` a cualquier profundidad) — permite
+// profundizar la presentación en el futuro sin migrar datos.
+model Comment {
+  id        String        @id @default(cuid())
+  articleId String
+  article   Article       @relation("ArticleComments", fields: [articleId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User          @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  status    CommentStatus @default(visible)
+  // Comentario concreto al que se respondió (a cualquier profundidad).
+  parentId  String?
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentReplies")
+  // Raíz del hilo, denormalizada (null en los comentarios raíz) — permite
+  // traer un hilo completo con un findMany plano por rootId, sin recursión.
+  rootId    String?
+  // Denormalizado, actualizado en la misma transacción que crea/borra el
+  // CommentLike — evita un count por comentario en cada listado.
+  likeCount Int             @default(0)
+  likes     CommentLike[]
+  reports   CommentReport[]
+  editedAt  DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([articleId, status, createdAt])
+  @@index([rootId, createdAt])
+  @@index([authorId, createdAt])
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("comment_likes")
+}
+
+// Reporte de un lector sobre un comentario ajeno — alimenta el filtro
+// "reportados" del panel de moderación (@nexoat-admin/comentarios).
+model CommentReport {
+  id        String   @id @default(cuid())
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, userId])
+  @@index([createdAt])
+  @@map("comment_reports")
 }

@@ -103,7 +103,10 @@ async function onSubmit() {
     // Siempre resuelve, exista o no el email ya con cuenta — el backend
     // nunca lo revela (evita enumeración). El mensaje "revisá tu correo" es
     // el mismo en los dos casos, lo que cambia es qué email real llega.
-    await authStore.requestSignup(email.value)
+    // El redirect (ej. volver al artículo donde estaba comentando) viaja en
+    // el link de activación del correo — ver CompleteSignupView.vue.
+    const redirect = route.query.redirect
+    await authStore.requestSignup(email.value, typeof redirect === 'string' ? redirect : undefined)
     sent.value = true
   } catch {
     errorMessage.value = 'No pudimos procesar el pedido. Probá de nuevo.'

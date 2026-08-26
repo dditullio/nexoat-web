@@ -185,6 +185,17 @@
         </div>
 
         <div class="side-block">
+          <label class="check">
+            <input v-model="form.commentsEnabled" type="checkbox" />
+            Permitir comentarios
+          </label>
+          <p class="side-block__hint">
+            Si se desmarca, se ocultan el formulario y el ancla "Comentarios" del encabezado; los
+            comentarios ya publicados se siguen leyendo.
+          </p>
+        </div>
+
+        <div class="side-block">
           <span class="field__label">Nivel</span>
           <select v-model="form.level" class="field__input">
             <option v-for="opt in LEVEL_OPTIONS" :key="opt.value" :value="opt.value">
@@ -323,6 +334,7 @@ const form = ref<ArticleFormPayload>({
   tracks: [],
   status: 'borrador',
   scope: 'publico',
+  commentsEnabled: true,
   categorySlugs: [],
   tags: [],
   readingTime: undefined,
@@ -540,6 +552,7 @@ async function loadArticle(id: string) {
       tracks: [...article.tracks],
       status: article.status,
       scope: article.scope,
+      commentsEnabled: article.commentsEnabled,
       categorySlugs: [...article.categorySlugs],
       tags: [...article.keywords],
       readingTime: article.readingTimeMinutes,

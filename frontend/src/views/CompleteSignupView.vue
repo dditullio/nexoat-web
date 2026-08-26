@@ -87,6 +87,11 @@ const passwordConfirm = ref('')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
+function redirectTarget(): string {
+  const redirect = route.query.redirect
+  return typeof redirect === 'string' ? redirect : '/'
+}
+
 async function onSubmit() {
   if (password.value !== passwordConfirm.value) {
     errorMessage.value = 'Las contraseñas no coinciden.'
@@ -97,9 +102,12 @@ async function onSubmit() {
   errorMessage.value = ''
   try {
     await authStore.completeSignup(token.value, name.value, password.value, passwordConfirm.value)
-    // Ya queda logueado — el guard del router lo manda a /bienvenida solo,
-    // no hace falta que esta vista decida a dónde ir.
-    router.push('/')
+    // Ya queda logueado — el guard del router lo manda a /bienvenida solo
+    // (nunca directo al redirect) si el onboarding sigue pendiente; una vez
+    // completado, OnboardingView.vue lee este mismo query param y termina
+    // el viaje ahí. `redirect` viene del link de activación del correo (ver
+    // RegisterView.vue / auth.service.ts#sendActivationEmail).
+    router.push(redirectTarget())
   } catch (err) {
     errorMessage.value =
       err instanceof ApiError && err.status === 400

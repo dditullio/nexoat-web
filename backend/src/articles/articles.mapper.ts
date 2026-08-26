@@ -67,6 +67,7 @@ export function toAdminArticle(article: ArticleWithRelations) {
     ...toPublicArticleFull(article),
     coverImagePublicId: article.coverImagePublicId ?? undefined,
     status: article.status,
+    commentsEnabled: article.commentsEnabled,
     categorySlugs: article.categories.map((c) => c.category.slug),
     authorId: article.authorId,
     authorName: article.author?.name ?? article.author?.email ?? null,

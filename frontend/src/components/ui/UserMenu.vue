@@ -72,6 +72,16 @@
           </RouterLink>
 
           <RouterLink
+            to="/mi-cuenta/comentarios"
+            class="um__item"
+            role="menuitem"
+            @click="open = false"
+          >
+            <span class="um__glyph" aria-hidden="true">💬</span>
+            <span class="um__label">Mis comentarios</span>
+          </RouterLink>
+
+          <RouterLink
             to="/mi-cuenta/preferencias"
             class="um__item"
             role="menuitem"

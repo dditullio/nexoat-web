@@ -43,8 +43,8 @@ export const useAuthStore = defineStore('auth', () => {
    * activación. Siempre resuelve (ni siquiera revela si el email ya tiene
    * cuenta) — ver docs/features/email-first-signup-and-onboarding.md.
    */
-  async function requestSignup(email: string) {
-    await http('/auth/signup', { method: 'POST', body: { email }, skipAuthRetry: true })
+  async function requestSignup(email: string, redirect?: string) {
+    await http('/auth/signup', { method: 'POST', body: { email, redirect }, skipAuthRetry: true })
   }
 
   /** Paso 2: consume el token de activación, crea contraseña/nombre y abre sesión de una. */

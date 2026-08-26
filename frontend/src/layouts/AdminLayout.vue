@@ -43,6 +43,17 @@
         </RouterLink>
 
         <RouterLink
+          v-if="authStore.hasRole('EDITOR', 'ADMIN', 'SUPER_ADMIN')"
+          to="/nexoat-admin/comentarios"
+          class="admin__link"
+          :class="{ 'is-active': $route.path === '/nexoat-admin/comentarios' }"
+        >
+          <IconChat />
+          Comentarios
+          <span v-if="reportedCommentsCount" class="admin__badge">{{ reportedCommentsCount }}</span>
+        </RouterLink>
+
+        <RouterLink
           v-if="authStore.hasRole('ADMIN', 'SUPER_ADMIN')"
           to="/nexoat-admin/auditoria"
           class="admin__link"
@@ -121,14 +132,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { listAdminComments } from '@/services/admin/comments.api'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 import IconGrid from '@/components/admin/icons/IconGrid.vue'
 import IconDocument from '@/components/admin/icons/IconDocument.vue'
 import IconImage from '@/components/admin/icons/IconImage.vue'
 import IconUsers from '@/components/admin/icons/IconUsers.vue'
+import IconChat from '@/components/admin/icons/IconChat.vue'
 import IconClock from '@/components/admin/icons/IconClock.vue'
 import IconMail from '@/components/admin/icons/IconMail.vue'
 import IconArchive from '@/components/admin/icons/IconArchive.vue'
@@ -139,6 +152,19 @@ import IconExternal from '@/components/admin/icons/IconExternal.vue'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Cantidad de comentarios reportados sin resolver (aún visibles) — solo el
+// número, para el badge del ítem de nav; el detalle vive en la pantalla.
+const reportedCommentsCount = ref(0)
+onMounted(async () => {
+  if (!authStore.hasRole('EDITOR', 'ADMIN', 'SUPER_ADMIN')) return
+  try {
+    const res = await listAdminComments({ reported: true, status: 'visible', pageSize: 1 })
+    reportedCommentsCount.value = res.total
+  } catch {
+    // sin badge si falla — no bloquea el resto del panel
+  }
+})
 
 const isDashboard = computed(
   () => route.path === '/nexoat-admin' || route.path === '/nexoat-admin/'
@@ -245,6 +271,17 @@ async function onLogout() {
 
 .admin__link.is-active :deep(svg) {
   opacity: 1;
+}
+
+.admin__badge {
+  margin-left: auto;
+  background: var(--color-accent);
+  color: var(--color-canvas);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: var(--radius-full);
 }
 
 .admin__sidebar-foot {

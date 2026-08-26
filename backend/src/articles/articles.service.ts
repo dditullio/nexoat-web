@@ -189,6 +189,7 @@ export class ArticlesService {
             : suggestTracksFromCategories(dto.categorySlugs),
         status,
         scope: dto.scope,
+        commentsEnabled: dto.commentsEnabled,
         readingTime: dto.readingTime,
         // La fecha explícita (ej. "fecha" del .md importado) manda; si no
         // vino y se publica de una, se usa la fecha/hora actual.
@@ -258,6 +259,7 @@ export class ArticlesService {
         tracks: dto.tracks ? trackFromApi(dto.tracks) : undefined,
         status: dto.status,
         scope: dto.scope,
+        commentsEnabled: dto.commentsEnabled,
         readingTime: dto.readingTime,
         // Si viene una fecha explícita (ej. al editar la "fecha" importada)
         // manda esa; si no, solo se toca al pasar A publicado por primera

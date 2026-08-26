@@ -3,6 +3,7 @@ import { Type } from 'class-transformer'
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsIn,
@@ -160,4 +161,14 @@ export class CreateArticleDto {
   @IsOptional()
   @IsObject()
   importMetadata?: Record<string, unknown>
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'Permite comentarios en este artículo. Si se desactiva, los ya publicados se siguen ' +
+      'leyendo — ver docs/features/article-comments.md.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  commentsEnabled?: boolean
 }

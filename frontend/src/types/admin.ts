@@ -25,6 +25,7 @@ export interface AdminArticle {
   /** Metadata cruda del .md importado (fecha, estado, temas, etc.), si el artículo vino de un import. */
   importMetadata: Record<string, unknown> | null
   status: ArticleStatus
+  commentsEnabled: boolean
   authorId: string | null
   authorName: string | null
   /** Fecha de publicación real (puede ser null si nunca se publicó) — distinta de `date`, que cae a `createdAt`. */
@@ -48,6 +49,8 @@ export interface ArticleFormPayload {
   tracks?: ContentTrack[]
   status?: ArticleStatus
   scope?: ArticleScope
+  /** Ver docs/features/article-comments.md. Default true en el backend si se omite. */
+  commentsEnabled?: boolean
   categorySlugs: string[]
   tags?: string[]
   readingTime?: number

@@ -36,7 +36,23 @@
       </section>
 
       <section class="terms__section">
-        <h2>3. Para qué se usan</h2>
+        <h2>3. Comentarios en los artículos</h2>
+        <p>
+          Cualquier cuenta con sesión iniciada puede comentar en los artículos. Al publicar un
+          comentario, <strong>tu nombre y tu foto de perfil se muestran junto a él</strong>, de
+          forma pública — visibles para cualquier persona que visite el artículo, tenga o no cuenta.
+          Nunca se muestra tu email.
+        </p>
+        <p>
+          Los comentarios se publican de inmediato y se moderan después: podés editar o borrar los
+          tuyos en cualquier momento, y reportar un comentario ajeno para que el equipo lo revise.
+          Un comentario borrado deja de mostrarse, aunque conservamos el registro internamente por
+          motivos de auditoría.
+        </p>
+      </section>
+
+      <section class="terms__section">
+        <h2>4. Para qué se usan</h2>
         <p>
           Para que la cuenta funcione (mostrarte contenido, recordar lo que guardaste), y —solo si
           elegís suscribirte— para mandarte novedades del sitio por correo. Nunca vendemos ni
@@ -45,7 +61,7 @@
       </section>
 
       <section class="terms__section">
-        <h2>4. Con qué proveedores trabajamos</h2>
+        <h2>5. Con qué proveedores trabajamos</h2>
         <ul>
           <li>
             <strong>Cloudinary:</strong> aloja las imágenes que subís (avatar) o que suben los
@@ -64,7 +80,7 @@
       </section>
 
       <section class="terms__section">
-        <h2>5. Tus derechos sobre tus datos</h2>
+        <h2>6. Tus derechos sobre tus datos</h2>
         <p>
           Podés pedir acceder, corregir o borrar tus datos, y dar de baja tu cuenta, en cualquier
           momento. Muchas de estas acciones ya las podés hacer vos mismo/a desde
@@ -74,7 +90,7 @@
       </section>
 
       <section class="terms__section">
-        <h2>6. Cambios a estos términos</h2>
+        <h2>7. Cambios a estos términos</h2>
         <p>
           Si estos términos cambian de forma importante, te lo vamos a avisar. Seguir usando el
           sitio después de un cambio implica que lo aceptás.
