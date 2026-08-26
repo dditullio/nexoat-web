@@ -100,6 +100,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
+import { useSeoMeta } from '@/composables/useSeoMeta'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import FilterSidebar from '@/components/blog/FilterSidebar.vue'
 import ActiveTrackNotice from '@/components/blog/ActiveTrackNotice.vue'
@@ -107,6 +108,16 @@ import ActiveTrackNotice from '@/components/blog/ActiveTrackNotice.vue'
 const route = useRoute()
 const store = useBlogStore()
 const localQuery = ref('')
+
+// Sin index/noindex condicional por query: son resultados de búsqueda del
+// propio contenido público, no vale la pena complicarlo — el buscador en sí
+// (sin resultados relevantes que mostrar en Google) no es una landing que
+// interese posicionar por su propio término de búsqueda.
+useSeoMeta({
+  title: 'Buscar',
+  description: 'Buscá artículos sobre acompañamiento terapéutico y cuidado de personas.',
+  path: '/buscar',
+})
 
 const hasAnyFilter = computed(
   () =>

@@ -83,6 +83,7 @@
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
+import { useSeoMeta } from '@/composables/useSeoMeta'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import FilterSidebar from '@/components/blog/FilterSidebar.vue'
 import ActiveTrackNotice from '@/components/blog/ActiveTrackNotice.vue'
@@ -93,6 +94,13 @@ const store = useBlogStore()
 
 const slug = computed(() => route.params.slug as CategorySlug)
 const category = computed(() => store.getCategoryBySlug(slug.value))
+
+useSeoMeta({
+  title: () => category.value?.name ?? 'Categoría',
+  description: () => category.value?.description,
+  path: () => `/categoria/${slug.value}`,
+  image: () => category.value?.coverImage,
+})
 
 // Sin filtros de la barra (solo acotado a la categoría) — es lo que
 // FilterSidebar usa como universo para calcular sus propios contadores.

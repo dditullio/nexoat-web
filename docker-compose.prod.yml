@@ -64,6 +64,7 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_URL: https://${BACKEND_DOMAIN}/v1
+        VITE_SITE_URL: https://${FRONTEND_DOMAIN}
         VITE_UMAMI_SRC: ${VITE_UMAMI_SRC}
         VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID}
     container_name: nexoat-frontend

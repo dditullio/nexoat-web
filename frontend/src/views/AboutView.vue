@@ -127,7 +127,15 @@
   </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title: 'Acerca de',
+  description: 'Quiénes somos y por qué escribimos sobre acompañamiento terapéutico en NexoAT.',
+  path: '/acerca-de',
+})
+</script>
 
 <style scoped>
 /* Hero */

@@ -18,6 +18,8 @@ import { ProfileModule } from './profile/profile.module'
 import { ReaderLibraryModule } from './reader-library/reader-library.module'
 import { OnboardingModule } from './onboarding/onboarding.module'
 import { GiftsModule } from './gifts/gifts.module'
+import { CommentsModule } from './comments/comments.module'
+import { SitemapModule } from './sitemap/sitemap.module'
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { GiftsModule } from './gifts/gifts.module'
     ReaderLibraryModule,
     OnboardingModule,
     GiftsModule,
+    CommentsModule,
+    SitemapModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
