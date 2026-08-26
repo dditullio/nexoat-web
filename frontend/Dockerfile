@@ -23,6 +23,11 @@ COPY frontend/ ./frontend/
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
+# Base para URLs absolutas de SEO (canonical, og:url, og:image) — ver
+# docs/features/seo.md.
+ARG VITE_SITE_URL
+ENV VITE_SITE_URL=$VITE_SITE_URL
+
 # Analítica (Umami self-hosted) — opcionales; si quedan vacías (dev local)
 # main.ts no inyecta el script de tracking. Ver docs/features/analytics-umami.md.
 ARG VITE_UMAMI_SRC

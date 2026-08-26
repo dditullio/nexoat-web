@@ -150,6 +150,12 @@ const router = createRouter({
       meta: { title: 'Artículos guardados', requiresAuth: true },
     },
     {
+      path: '/mi-cuenta/comentarios',
+      name: 'my-comments',
+      component: () => import('@/views/MyCommentsView.vue'),
+      meta: { title: 'Mis comentarios', requiresAuth: true },
+    },
+    {
       path: '/mi-cuenta/preferencias',
       name: 'preferences',
       component: () => import('@/views/PreferencesView.vue'),
@@ -216,6 +222,12 @@ const router = createRouter({
               name: 'admin-users',
               component: () => import('@/views/admin/AdminUsersView.vue'),
               meta: { title: 'Usuarios', minRole: ['ADMIN', 'SUPER_ADMIN'] },
+            },
+            {
+              path: 'comentarios',
+              name: 'admin-comments',
+              component: () => import('@/views/admin/AdminCommentsView.vue'),
+              meta: { title: 'Comentarios', minRole: ['EDITOR', 'ADMIN', 'SUPER_ADMIN'] },
             },
             {
               path: 'auditoria',
@@ -321,6 +333,12 @@ router.beforeEach(async (to) => {
   return true
 })
 
+// Fallback de <title> para rutas que no llaman a `useSeoMeta` (admin,
+// mi-cuenta, flujos de auth) — las públicas sí lo hacen, de forma reactiva
+// vía `useHead` (ver docs/features/seo.md, Fase 1). Ese manejo reactivo
+// flushea después de este hook síncrono, así que en las rutas públicas el
+// título de `useSeoMeta` termina pisando a este; acá simplemente no hay
+// nada que lo pise en las privadas.
 router.afterEach((to) => {
   const baseTitle = 'NexoAT'
   document.title = to.meta.title ? `${to.meta.title} — ${baseTitle}` : baseTitle

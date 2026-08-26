@@ -1,0 +1,13 @@
+User-agent: *
+Disallow: /nexoat-admin/
+Disallow: /mi-cuenta/
+Disallow: /ingresar
+Disallow: /registrarme
+Disallow: /completar-registro
+Disallow: /oauth-callback
+Disallow: /verificar-correo
+Disallow: /recuperar-contrasena
+Disallow: /restablecer-contrasena
+Disallow: /bienvenida
+
+Sitemap: https://nexoat.com/sitemap.xml

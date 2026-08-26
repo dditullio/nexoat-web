@@ -345,6 +345,7 @@ import { useTrackStore } from '@/stores/track'
 import { useAuthStore } from '@/stores/auth'
 import { getCategoryTheme, LEVEL_CHIPS, TRACK_CHIPS } from '@/utils/theme'
 import { useReveal } from '@/composables/useReveal'
+import { useSeoMeta } from '@/composables/useSeoMeta'
 import ArticleCard from '@/components/blog/ArticleCard.vue'
 import CategoryCard from '@/components/blog/CategoryCard.vue'
 import HeroArticleStack from '@/components/blog/HeroArticleStack.vue'
@@ -357,6 +358,13 @@ const store = useBlogStore()
 const trackStore = useTrackStore()
 const authStore = useAuthStore()
 const { filteredArticles } = storeToRefs(store)
+
+useSeoMeta({
+  title: 'Inicio',
+  description:
+    'Artículos especializados sobre acompañamiento terapéutico y cuidado de personas, escritos para familias y profesionales.',
+  path: '/',
+})
 
 useReveal()
 

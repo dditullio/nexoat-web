@@ -125,9 +125,16 @@
 
 <script setup lang="ts">
 import { useReveal } from '@/composables/useReveal'
+import { useSeoMeta } from '@/composables/useSeoMeta'
 import { useAuthStore } from '@/stores/auth'
 import NewsletterForm from '@/components/blog/NewsletterForm.vue'
 import type { SubscriptionTier } from '@/types/auth'
+
+useSeoMeta({
+  title: 'Planes de suscripción',
+  description: 'Comparación de planes y beneficios de suscribirte a NexoAT.',
+  path: '/planes',
+})
 
 useReveal()
 

@@ -39,6 +39,7 @@
           <span v-if="article.readingTimeMinutes">
             {{ article.readingTimeMinutes }} min de lectura
           </span>
+          <a href="#comentarios" class="art-head__comments-link">Comentarios</a>
           <ArticleShare
             :title="article.title"
             :excerpt="article.excerpt"
@@ -190,6 +191,8 @@
             <span v-for="kw in article.keywords" :key="kw" class="art__tag">{{ kw }}</span>
           </div>
         </footer>
+
+        <CommentsSection :slug="article.slug" />
       </article>
 
       <aside ref="asideEl" class="side">
@@ -258,6 +261,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watchEffect } from 'vue'
+import { useHead } from '@unhead/vue'
 import { useRoute } from 'vue-router'
 import { useBlogStore } from '@/stores/blog'
 import { useAuthStore } from '@/stores/auth'
@@ -265,10 +269,14 @@ import { getCategoryTheme, SCOPE_CHIPS } from '@/utils/theme'
 import { http } from '@/services/http'
 import { renderMarkdown } from '@/utils/markdown'
 import { getSavedStatus, saveArticle, unsaveArticle } from '@/services/saved-articles.api'
+import { useSeoMeta } from '@/composables/useSeoMeta'
 import AppChip from '@/components/ui/AppChip.vue'
 import ArticleShare from '@/components/blog/ArticleShare.vue'
 import SaveArticlePrompt from '@/components/blog/SaveArticlePrompt.vue'
+import CommentsSection from '@/components/blog/CommentsSection.vue'
 import type { ArticleFull } from '@/types'
+
+const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 
 const route = useRoute()
 const store = useBlogStore()
@@ -281,6 +289,42 @@ const article = ref<ArticleFull | null>(null)
 const isLoading = ref(true)
 
 const contentHtml = computed(() => (article.value ? renderMarkdown(article.value.content) : ''))
+
+useSeoMeta({
+  title: () => article.value?.title ?? 'Artículo',
+  description: () => article.value?.excerpt,
+  path: () => `/articulo/${route.params.slug}`,
+  image: () => article.value?.coverImage,
+  type: 'article',
+})
+
+// JSON-LD (schema.org Article) — ayuda a que Google entienda el contenido
+// como artículo editorial (fecha, portada, "publisher") de cara a rich
+// results. Ver docs/features/seo.md, Fase 1.
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      // `useHead()` (a diferencia del componente `<Head>`) espera
+      // `innerHTML`, no `children`, para el contenido de un <script>.
+      innerHTML: () => {
+        if (!article.value) return ''
+        return JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: article.value.title,
+          description: article.value.excerpt,
+          image: article.value.coverImage ? [article.value.coverImage] : undefined,
+          datePublished: article.value.date,
+          dateModified: article.value.date,
+          author: { '@type': 'Organization', name: 'NexoAT' },
+          publisher: { '@type': 'Organization', name: 'NexoAT' },
+          mainEntityOfPage: `${SITE_URL}/articulo/${article.value.slug}`,
+        })
+      },
+    },
+  ],
+})
 
 const isSaved = ref(false)
 const isSaving = ref(false)
@@ -542,6 +586,16 @@ async function onToggleSaved() {
 /* Empuja el "compartir" al espacio libre a la derecha de la fecha, en la
    misma línea — en mobile (sin lugar) pasa a la línea de abajo, por el
    flex-wrap de .art-head__meta. */
+.art-head__comments-link {
+  font-weight: 700;
+  color: var(--color-ink-faint);
+  transition: color 0.2s ease;
+}
+
+.art-head__comments-link:hover {
+  color: var(--color-primary-dark);
+}
+
 .art-head__share {
   margin-left: auto;
 }
