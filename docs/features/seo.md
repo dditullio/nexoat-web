@@ -84,9 +84,9 @@ Para un sitio cuyo modelo depende de que lo encuentren en Google (y de que los a
 
 ## Pendiente
 
-- Alta en Google Search Console + envío del sitemap (acción manual, fuera del código — la hace quien tenga acceso a la cuenta de Google del dominio).
-- Alta en **Bing Webmaster Tools** con el mismo sitemap — gratis, mismo esfuerzo que Search Console, sin costo de código adicional.
-- Medir resultado real (cobertura en Search Console, previews en WhatsApp/redes) antes de decidir si se invierte en la Fase 3.
+- ~~Alta en Google Search Console + envío del sitemap~~ — hecho (26 de agosto de 2026).
+- ~~Alta en Bing Webmaster Tools con el mismo sitemap~~ — hecho (26 de agosto de 2026).
+- Medir resultado real (cobertura en Search Console, previews en WhatsApp/redes) antes de decidir si se invierte en la Fase 3 — dar unos días para que Google/Bing rastreen el sitemap recién enviado antes de sacar conclusiones.
 - **Google Indexing API**: llamada desde el backend al publicar/actualizar un artículo (`UrlNotifications: publish`), para pedirle a Google que lo recrawlee de inmediato en vez de esperar el rastreo espontáneo — requiere una cuenta de servicio de Google Cloud verificada como dueña de la propiedad en Search Console. Evaluar junto con la Fase 3; no se implementa todavía por no tener aún ese alta hecha.
 - `sitemap-index` con `lastmod` a nivel de imagen (`image:image` en el XML) si en algún momento se quiere aprovechar Google Images — no se hizo en esta fase por alcance.
 - **Explícitamente descartado** (visto en una revisión de tips genéricos de YouTube, no aplican a este caso): migrar de dominio ante problemas de indexación (no hay evidencia de que `nexoat.com` tenga un problema real) y comprar paquetes de backlinks/servicios de indexación paga (riesgo de penalización por señales artificiales, resultados que el propio material fuente reconoce como irregulares).
