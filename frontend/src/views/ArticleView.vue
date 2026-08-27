@@ -320,6 +320,13 @@ useHead({
           author: { '@type': 'Organization', name: 'NexoAT' },
           publisher: { '@type': 'Organization', name: 'NexoAT' },
           mainEntityOfPage: `${SITE_URL}/articulo/${article.value.slug}`,
+          // Tags del artículo (frases de long tail curadas a mano al
+          // publicar) — sin esto Google nunca las ve: hoy solo alimentan el
+          // buscador interno y los chips #tag del pie del artículo. No
+          // garantiza posicionar por esas frases, pero es la señal
+          // estructurada correcta para dárselas a entender. Ver charla
+          // sobre long tail en docs/features/seo.md.
+          keywords: article.value.keywords.length ? article.value.keywords.join(', ') : undefined,
         })
       },
     },

@@ -31,7 +31,7 @@ Para un sitio cuyo modelo depende de que lo encuentren en Google (y de que los a
 - `frontend/src/composables/useSeoMeta.ts`: composable central que arma `title`, `meta description`, `canonical`, Open Graph (`og:title`, `og:description`, `og:image`, `og:type`, `og:url`) y Twitter Card, con defaults del sitio y overrides por página. Reemplaza el `document.title` manual del router guard.
 - Cada vista pública (`HomeView`, `CategoryView`, `ArticleView`, `SearchView`, `AboutView`, `PlansView`) llama a `useSeoMeta()` con sus propios título/descripción/imagen — en `ArticleView`/`CategoryView`, derivados de los datos reales del artículo/categoría (no un texto genérico).
 - `VITE_SITE_URL` (nueva env var, `https://nexoat.com` en producción) para armar URLs absolutas de `canonical` y `og:url`/`og:image` — Vite la inlinea en build igual que `VITE_API_URL`.
-- JSON-LD `Article` inyectado en `ArticleView` vía el mismo `useHead` (script `type="application/ld+json"`), con `headline`, `description`, `image`, `datePublished`, `author` (nombre fijo del sitio, no hay autoría individual hoy), `publisher`.
+- JSON-LD `Article` inyectado en `ArticleView` vía el mismo `useHead` (script `type="application/ld+json"`), con `headline`, `description`, `image`, `datePublished`, `author` (nombre fijo del sitio, no hay autoría individual hoy), `publisher`, `keywords` (los tags del artículo, cuando tiene — ver "Long tail" más abajo).
 - Rutas privadas/transaccionales (`/nexoat-admin/*`, `/mi-cuenta/*`, `/ingresar*`, `/registrarme*`, flujos de auth) reciben `<meta name="robots" content="noindex, nofollow">` vía el mismo composable — no tiene sentido que Google las indexe y en algunos casos (login, reset de contraseña) es directamente indeseable.
 
 ### Archivos
@@ -81,6 +81,20 @@ Para un sitio cuyo modelo depende de que lo encuentren en Google (y de que los a
 5. Ya en producción: `curl -I https://nexoat.com/sitemap.xml` devuelve `200` con `Content-Type: application/xml`; `curl https://nexoat.com/robots.txt` devuelve el `Disallow` esperado.
 6. Dar de alta la propiedad `nexoat.com` en Google Search Console (si no existe todavía), enviar el sitemap, y a los pocos días revisar cobertura/indexación — esa lectura es la que decide si hace falta la Fase 3.
 7. Probar compartir un link de artículo real en WhatsApp y confirmar si genera preview (imagen/título/descripción) — si no, es la señal concreta de que vale la pena la Fase 3 (esos bots no ejecutan JS, por más que los meta tags de la Fase 1 estén bien armados client-side).
+
+## Long tail
+
+Posicionar frases de long tail (búsquedas específicas de varias palabras, ej. "cómo manejar una crisis de agresividad en acompañamiento terapéutico") es mayormente un problema de **contenido**, no de código — no hay ningún cambio técnico que por sí solo haga posicionar una frase que ningún artículo responde. Lo que sí es responsabilidad de código es no desperdiciar la señal que el contenido ya tiene.
+
+**Punto de partida real** (revisado contra la base de producción, 26 de agosto de 2026): 264 de 291 artículos (91%) ya tienen `keywords`/tags cargados a mano al publicar, con frases que ya leen como long tail real ("análisis funcional de la conducta", "manejo de crisis en AT", "comunicación no verbal en el autismo") — no hay que inventar nada, ya está. El problema es que esos tags **nunca llegaban a Google**: solo alimentaban el buscador interno (`stores/blog.ts`) y los chips `#tag` del pie del artículo (`ArticleView.vue`). Se corrigió sumándolos al `keywords` del JSON-LD (Fase 1, campo opcional — se omite si el artículo no tiene tags).
+
+Lo que de verdad mueve la aguja en long tail, en orden de esfuerzo:
+
+1. **Título/H1/primer párrafo alineados con la frase objetivo** — el título ya es lo que arma `useSeoMeta`/`<h1>` en `ArticleView.vue`, así que esto es 100% editorial al momento de escribir/titular cada artículo, no algo que el código decida.
+2. **Google Search Console, pestaña "Rendimiento" → "Consultas"**, una vez que haya algunas semanas de datos: es la fuente más confiable de long tail real, mejor que cualquier herramienta externa — muestra las frases exactas por las que el sitio _ya_ aparece (aunque sea en posición 15-30) con impresiones/clics. Frases con impresiones altas y posición floja son candidatas directas a: retocar el título/primer párrafo de ESE artículo, o sumar un párrafo que responda esa pregunta puntual.
+3. **Enlazado interno más inteligente**: hoy "Seguir leyendo" (sidebar de `ArticleView.vue`) relaciona solo por categoría compartida (primeros 3 matches). Cruzar también por `keywords`/tags en común daría clusters temáticos más ajustados — señal de relevancia semántica para Google, no solo para el lector. No implementado todavía, evaluar si vale la pena una vez que haya datos de Search Console mostrando qué temas concentran más búsquedas.
+4. **Páginas de tag/tema** (`/tema/:tag`, agregando todos los artículos con un tag dado): es el patrón clásico de sitios de contenido para long tail — cada tag se vuelve una landing indexable propia, más específica que una categoría. Es una feature nueva de verdad (ruta, vista, quizás endpoint), no un ajuste — si se decide encarar, le corresponde su propio doc en `docs/features/` antes de tocar código, no un agregado suelto acá.
+5. Backfillear tags en los 27 artículos que todavía no tienen (9% del total) — trabajo editorial en el admin, no de código.
 
 ## Pendiente
 
