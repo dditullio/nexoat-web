@@ -108,6 +108,12 @@ Con el sitio recién indexado, el reporte "Páginas" mostró tres categorías de
   2. El CTA "Accedé para comentar" (`CommentForm.vue`, `RouterLink` a `/registrarme`) — Google lo seguía desde cualquier artículo con comentarios y de ahí encadenaba hacia el resto del flujo de auth. Se le agregó `rel="nofollow"`.
   3. **`api.nexoat.com` nunca tuvo `robots.txt` propio** — cualquier endpoint de la API era rastreable sin restricción. Se agregó `GET /robots.txt` (`backend/src/sitemap/robots.controller.ts`, mismo patrón `VERSION_NEUTRAL` que el sitemap) con `Disallow: /` total — el dominio de la API no tiene contenido propio que indexar, todo lo público vive en `nexoat.com`.
 
+### Favicon (3 de septiembre de 2026)
+
+`frontend/index.html` siempre había referenciado `<link rel="icon" href="/favicon.ico">`, pero ese archivo nunca existió — 404 en producción desde el primer día. Consecuencia visible: Google mostraba el ícono de globo genérico al lado de cada resultado en vez de un ícono de marca (se detectó mirando resultados reales de búsqueda).
+
+Se generaron `favicon.ico` (multi-resolución 16/32/48/64/128/256), `favicon.svg` (vectorial, el que prefieren los navegadores modernos) y `apple-touch-icon.png` (180×180), con el **motivo del arco** del sistema de diseño («Humanista cálido» — ver `.claude/skills/nexoat-design-system/SKILL.md`) en salvia de marca sobre fondo redondeado, no un logo/texto (a 16px un monograma con letra no se lee bien; la forma del arco sí es reconocible incluso muy chica). Generados con Python/Pillow (sin dependencias nuevas en el repo — los assets finales son binarios commiteados, no hay script de build).
+
 ## Pendiente
 
 - ~~Alta en Google Search Console + envío del sitemap~~ — hecho (26 de agosto de 2026).

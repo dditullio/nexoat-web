@@ -2,7 +2,17 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.ico" />
+    <!--
+      El motivo del arco (ver .claude/skills/nexoat-design-system) en el
+      salvia de marca — antes este archivo no existía (404), Google
+      mostraba un ícono de globo genérico al lado de los resultados.
+      sizes="any" en el .ico + el SVG aparte: los navegadores modernos
+      prefieren el SVG (nítido en cualquier tamaño), .ico es el fallback
+      que además siguen esperando encontrar los crawlers.
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
       Fallback estático para crawlers que NO ejecutan JS (WhatsApp,
