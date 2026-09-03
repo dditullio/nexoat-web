@@ -112,7 +112,7 @@ Con el sitio recién indexado, el reporte "Páginas" mostró tres categorías de
 
 `frontend/index.html` siempre había referenciado `<link rel="icon" href="/favicon.ico">`, pero ese archivo nunca existió — 404 en producción desde el primer día. Consecuencia visible: Google mostraba el ícono de globo genérico al lado de cada resultado en vez de un ícono de marca (se detectó mirando resultados reales de búsqueda).
 
-Se generaron `favicon.ico` (multi-resolución 16/32/48/64/128/256), `favicon.svg` (vectorial, el que prefieren los navegadores modernos) y `apple-touch-icon.png` (180×180), con el **motivo del arco** del sistema de diseño («Humanista cálido» — ver `.claude/skills/nexoat-design-system/SKILL.md`) en salvia de marca sobre fondo redondeado, no un logo/texto (a 16px un monograma con letra no se lee bien; la forma del arco sí es reconocible incluso muy chica). Generados con Python/Pillow (sin dependencias nuevas en el repo — los assets finales son binarios commiteados, no hay script de build).
+Se generaron `favicon.ico` (multi-resolución 16/32/48/64/128/256), `favicon.svg` (vectorial, el que prefieren los navegadores modernos) y `apple-touch-icon.png` (180×180). El ícono combina el **motivo del arco** del sistema de diseño («Humanista cálido» — ver `.claude/skills/nexoat-design-system/SKILL.md`) con la sigla **AT**, en crema sobre salvia y con el arco en arcilla: así se conserva la identidad visual y se aclara que refiere a Acompañamiento Terapéutico. Los trazos de las letras son deliberadamente gruesos para conservarse legibles a 16 px. Los assets finales son binarios commiteados, sin script de build.
 
 ## Pendiente
 
