@@ -44,9 +44,15 @@
         Cancelar
       </button>
 
+      <!-- rel="nofollow": sin esto, Google seguía este link desde
+           cualquier artículo con comentarios y encadenaba hacia el resto
+           del flujo de auth (/ingresar, /registrarme/correo) — todo
+           noindex igual, pero gastaba rastreo en páginas que nunca van a
+           indexarse. Ver docs/features/seo.md, sección "Long tail". -->
       <RouterLink
         v-if="!authStore.isAuthenticated"
         :to="ctaTarget"
+        rel="nofollow"
         class="btn btn--primary cf__submit"
         @click="onCtaClick"
       >

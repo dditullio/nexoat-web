@@ -96,6 +96,18 @@ Lo que de verdad mueve la aguja en long tail, en orden de esfuerzo:
 4. **Páginas de tag/tema** (`/tema/:tag`, agregando todos los artículos con un tag dado): es el patrón clásico de sitios de contenido para long tail — cada tag se vuelve una landing indexable propia, más específica que una categoría. Es una feature nueva de verdad (ruta, vista, quizás endpoint), no un ajuste — si se decide encarar, le corresponde su propio doc en `docs/features/` antes de tocar código, no un agregado suelto acá.
 5. Backfillear tags en los 27 artículos que todavía no tienen (9% del total) — trabajo editorial en el admin, no de código.
 
+### Hallazgos de Search Console (27 de agosto de 2026)
+
+Con el sitio recién indexado, el reporte "Páginas" mostró tres categorías de "no indexada" — dos son ruido esperable/inofensivo, una era un problema real de código, ya corregido:
+
+- **"Descubierta, actualmente sin indexar" (201 de ~316 URLs)**: normal, Google todavía no las rastreó — cuestión de tiempo, no requiere acción.
+- **"Página con redirección" (1)**: el redirect 301 de `www.nexoat.com` a `nexoat.com` (a propósito, ver `docs/features/deploy-vps-traefik.md`) — correcto.
+- **"Duplicada: no se indicó canónica" (8) / "canónica distinta" (1)**: consecuencia directa de ser una SPA sin SSR — el HTML crudo (antes de que corra el JS) es prácticamente idéntico para cualquier URL (mismo `<title>`, mismo `<meta description>`, sin `<link rel="canonical">`, todo eso lo agrega `useHead` recién en el cliente). Sin parche rápido posible sin SSR real: no se le puede poner un canonical "correcto" al HTML estático porque no se sabe de antemano qué URL se va a pedir. Es evidencia concreta a favor de la Fase 3 si este número crece con el tiempo — por ahora es chico (9 de ~316) y no amerita todavía la inversión.
+- **"Excluida por noindex" (7) — investigado y corregido**: las 7 URLs eran válidas (rutas de auth que correctamente no deben indexarse: `/registrarme`, `/ingresar`, `/registrarme/correo`, y el propio endpoint `api.nexoat.com/v1/auth/google?...`), pero revelaron dos bugs de higiene de rastreo:
+  1. El botón de "Continuar con Google" (`OAuthButtons.vue`) es un `<a href>` real hacia `api.nexoat.com` (tiene que salir de la SPA) — Google lo seguía como cualquier link. Se le agregó `rel="nofollow noopener"`.
+  2. El CTA "Accedé para comentar" (`CommentForm.vue`, `RouterLink` a `/registrarme`) — Google lo seguía desde cualquier artículo con comentarios y de ahí encadenaba hacia el resto del flujo de auth. Se le agregó `rel="nofollow"`.
+  3. **`api.nexoat.com` nunca tuvo `robots.txt` propio** — cualquier endpoint de la API era rastreable sin restricción. Se agregó `GET /robots.txt` (`backend/src/sitemap/robots.controller.ts`, mismo patrón `VERSION_NEUTRAL` que el sitemap) con `Disallow: /` total — el dominio de la API no tiene contenido propio que indexar, todo lo público vive en `nexoat.com`.
+
 ## Pendiente
 
 - ~~Alta en Google Search Console + envío del sitemap~~ — hecho (26 de agosto de 2026).

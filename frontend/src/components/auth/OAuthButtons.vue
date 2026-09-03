@@ -2,10 +2,16 @@
   <template v-if="activeProviders.length">
     <div v-if="variant === 'secondary'" class="oauth-divider"><span>o continuá con</span></div>
     <div class="oauth-buttons" :class="{ 'oauth-buttons--stacked': variant === 'primary' }">
+      <!-- rel="nofollow": es un <a href> real (no un RouterLink, tiene que
+           salir de la SPA), así que Google lo sigue como cualquier link —
+           sin esto terminaba rastreando `api.nexoat.com/v1/auth/...` desde
+           cualquier página que muestre este botón (ver docs/features/seo.md,
+           sección "Long tail" / hallazgos de Search Console). -->
       <a
         v-for="(provider, i) in activeProviders"
         :key="provider"
         :href="href(provider)"
+        rel="nofollow noopener"
         class="btn"
         :class="variant === 'primary' && i === 0 ? 'btn--primary' : 'btn--ghost'"
       >
